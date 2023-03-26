@@ -8,6 +8,8 @@ export default function handler(
   if (req.method === "GET") {
     res.status(200).json({
       id: "book_id_1",
+      name: "landing page",
+      description: "translations for the landing page",
       langs: ["en", "es", "it", "pt", "ru", "de", "us"],
       defaultLang: "en",
       sheetsInfo: [

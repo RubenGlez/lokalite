@@ -17,12 +17,14 @@ interface LayoutProps {
 
 const navigation = [
   { name: "Dashboard", href: "/", Icon: HomeIcon },
-  { name: "Projects", href: "/projects", Icon: Squares2X2Icon },
+  { name: "Books", href: "/books", Icon: Squares2X2Icon },
   { name: "Example", href: "/example", Icon: BeakerIcon },
 ];
 
 export default function Layout({ children, title }: LayoutProps) {
   const router = useRouter();
+
+  console.log({ router });
 
   return (
     <div className="h-full bg-slate-900 flex">
@@ -61,12 +63,19 @@ export default function Layout({ children, title }: LayoutProps) {
             <Text as="h1" size="xs">
               Lokalite
             </Text>
-            <Text size="xs" color="secondary">
-              {"/"}
-            </Text>
-            <Text as="h1" size="xs">
-              {router.pathname.replace("/", "")}
-            </Text>
+            {router.pathname
+              .split("/")
+              .slice(1)
+              .map((path) => (
+                <>
+                  <Text size="xs" color="secondary">
+                    {"/"}
+                  </Text>
+                  <Text as="h1" size="xs" key={path}>
+                    {path}
+                  </Text>
+                </>
+              ))}
           </header>
         </div>
         <main className="flex flex-1">{children}</main>
