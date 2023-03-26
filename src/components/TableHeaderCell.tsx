@@ -1,21 +1,12 @@
-import { cls } from "@/utils";
 import { ReactNode } from "react";
 
 interface TableHeaderCell {
   children: ReactNode;
-  index: number;
 }
 
-export default function TableHeaderCell({ children, index }: TableHeaderCell) {
-  const isFirstCell = index === 0;
+export default function TableHeaderCell({ children }: TableHeaderCell) {
   return (
-    <th
-      className={cls({
-        "text-left text-base text-slate-200 px-2 py-2 border-t border-b border-r border-slate-600 bg-slate-700":
-          true,
-        "border-l": isFirstCell,
-      })}
-    >
+    <th className="text-left text-sm text-slate-300 px-2 py-2 border-b border-r border-slate-800 bg-slate-700">
       {children}
     </th>
   );

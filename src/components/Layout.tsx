@@ -1,5 +1,14 @@
-import { classNames } from "@/utils";
 import { ReactNode } from "react";
+import Link from "next/link";
+import {
+  BeakerIcon,
+  FireIcon,
+  HomeIcon,
+  Squares2X2Icon,
+} from "@heroicons/react/24/outline";
+import Text from "@/components/Text";
+import { useRouter } from "next/router";
+import { cls } from "@/utils";
 
 interface LayoutProps {
   children: ReactNode;
@@ -7,30 +16,38 @@ interface LayoutProps {
 }
 
 const navigation = [
-  { name: "Dashboard", href: "/" },
-  { name: "Example", href: "/example" },
+  { name: "Dashboard", href: "/", Icon: HomeIcon },
+  { name: "Projects", href: "/projects", Icon: Squares2X2Icon },
+  { name: "Example", href: "/example", Icon: BeakerIcon },
 ];
 
 export default function Layout({ children, title }: LayoutProps) {
+  const router = useRouter();
+
   return (
-    <div className="h-full bg-slate-800">
-      <div className="border-b border-slate-700 flex items-center justify-between px-4 py-2">
-        <div>
-          <span className="text-xl text-slate-100">Lokalite</span>
+    <div className="h-full bg-slate-900 flex">
+      <div className="border-r border-slate-800 w-14">
+        <div className="flex items-center justify-center h-12">
+          <FireIcon className="h-8 w-8 text-sky-500" />
         </div>
-        <nav>
-          <ul className="flex items-center gap-x-2">
-            {navigation.map((item, index) => {
-              const isCurrent = false;
+        <nav className="py-4">
+          <ul className="flex flex-col items-center gap-4">
+            {navigation.map(({ name, href, Icon }, index) => {
+              const isActive = router.pathname === href;
               return (
-                <li key={`${item.name}_${index}`}>
-                  <a
-                    href={item.href}
-                    className="inline-flex px-4 py-2 text-base text-slate-400 hover:text-slate-200"
-                    aria-current={isCurrent ? "page" : undefined}
+                <li key={`${name}_${index}`}>
+                  <Link
+                    href={href}
+                    className={cls({
+                      "flex items-center justify-center w-10 h-10 rounded":
+                        true,
+                      "bg-slate-800 text-slate-100": isActive,
+                      "text-slate-500": !isActive,
+                      "hover:text-slate-100 hover:bg-slate-800": true,
+                    })}
                   >
-                    {item.name}
-                  </a>
+                    <Icon className="h-6 w-6 text-color-inherit" />
+                  </Link>
                 </li>
               );
             })}
@@ -38,11 +55,21 @@ export default function Layout({ children, title }: LayoutProps) {
         </nav>
       </div>
 
-      <div>
-        <header className="border-b border-slate-700 mx-4 py-3">
-          <h1 className="text-base text-slate-500">{title}</h1>
-        </header>
-        <main>{children}</main>
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="border-b border-slate-800 h-12">
+          <header className="flex items-center gap-2 h-full px-4">
+            <Text as="h1" size="xs">
+              Lokalite
+            </Text>
+            <Text size="xs" color="secondary">
+              {"/"}
+            </Text>
+            <Text as="h1" size="xs">
+              {router.pathname.replace("/", "")}
+            </Text>
+          </header>
+        </div>
+        <main className="flex flex-1">{children}</main>
       </div>
     </div>
   );
