@@ -1,54 +1,71 @@
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { Listbox, Transition } from "@headlessui/react";
 import { CheckIcon, ChevronUpDownIcon } from "@heroicons/react/24/outline";
 import { cls } from "@/utils";
+import LabelInput from "./LabelInput";
 
 export interface ListBoxOption {
-  value: string;
+  value: string | number;
   label: string;
 }
 
 interface ListBoxProps {
-  options?: ListBoxOption[];
-  value?: ListBoxOption["value"];
-  handleChange: (value: ListBoxOption["value"]) => void;
+  label?: string;
   placeholder?: string;
+  defaultValue?: ListBoxOption["value"];
+  handleChange?: (value: ListBoxOption["value"]) => void;
+  options: ListBoxOption[];
+  className?: string;
+  name?: string;
 }
 
 const EMPTY_STATE_TEXT = "No hay opciones disponibles";
+const DEFAULT_PLACEHOLDER = "Elige una opción";
 
 export default function ListBox({
+  label,
+  placeholder = DEFAULT_PLACEHOLDER,
   options = [],
-  value,
+  defaultValue,
   handleChange,
-  placeholder = "Selecciona algo...",
+  className = "",
+  name,
 }: ListBoxProps) {
-  const optionSelected = options.find((opt) => opt.value === value);
+  const [selected, setSelected] = useState(defaultValue);
+  const optionSelected = options.find((opt) => opt.value === selected);
   const onChange = (opt: any) => {
-    handleChange(opt.value);
+    setSelected(opt.value);
+    handleChange?.(opt.value);
   };
 
   return (
-    <Listbox value={value} onChange={onChange}>
+    <Listbox name={name} defaultValue={selected} onChange={onChange}>
       <div className="relative">
-        <Listbox.Button className="border border-slate-700 relative w-full rounded-md bg-slate-900 py-1 pl-3 pr-10 text-left text-sm">
-          <span className="block truncate text-slate-400">
-            {!!optionSelected ? optionSelected.label : placeholder}
-          </span>
-          <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-            <ChevronUpDownIcon
-              className="h-4 w-4 text-slate-400"
-              aria-hidden="true"
-            />
-          </span>
-        </Listbox.Button>
+        <div className={`flex flex-col ${className}`}>
+          {label && (
+            <div className="mb-1">
+              <LabelInput text={label} />
+            </div>
+          )}
+          <Listbox.Button className="px-3 py-2 border border-slate-700 bg-slate-900 focus:outline-none focus:border-slate-100 rounded-md text-left text-sm text-slate-100">
+            <span className="block truncate text-slate-400">
+              {!!optionSelected ? optionSelected.label : placeholder}
+            </span>
+            <span className="pointer-events-none absolute inset-y-0 right-2 top-7 flex items-center">
+              <ChevronUpDownIcon
+                className="h-5 w-5 text-slate-400"
+                aria-hidden="true"
+              />
+            </span>
+          </Listbox.Button>
+        </div>
         <Transition
           as={Fragment}
           leave="transition ease-in duration-100"
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <Listbox.Options className="border border-slate-700 absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-slate-900 py-1 text-sm">
+          <Listbox.Options className="border border-slate-700 bg-slate-900 absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-slate-900 py-1 text-sm focus:outline-none focus:border-slate-100">
             {options.length > 0 ? (
               options.map((option) => {
                 const isSelected = option.value === optionSelected?.value;
@@ -57,7 +74,7 @@ export default function ListBox({
                     key={option.value}
                     value={option}
                     className={({ active }) =>
-                      `relative cursor-default select-none py-2 pl-10 pr-4 ${
+                      `relative cursor-default select-none py-2 pl-11 pr-4 ${
                         active
                           ? "bg-slate-800 text-slate-100"
                           : "text-slate-400"
@@ -74,7 +91,7 @@ export default function ListBox({
                     </span>
                     {isSelected && (
                       <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-100">
-                        <CheckIcon className="h-4 w-4" aria-hidden="true" />
+                        <CheckIcon className="h-5 w-5" aria-hidden="true" />
                       </span>
                     )}
                   </Listbox.Option>

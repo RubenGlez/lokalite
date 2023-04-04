@@ -1,40 +1,55 @@
 import Card from "@/components/Card";
 import Layout from "@/components/Layout";
-import { useFetch } from "@/hooks/useFetch";
+import { Book } from "@/lib/database.types";
+import getAllBooks from "@/lib/queries/getAllBooks";
 import { useRouter } from "next/router";
-import { Book } from "../api/book";
 
-export default function Books() {
+export interface BooksPageProps {
+  books: Book[];
+}
+
+export default function BooksPage({ books }: BooksPageProps) {
   const router = useRouter();
-  const { data } = useFetch<Book[]>("/api/book");
-  const handleCardClick = (bookId: string) => () => {
+  const handleCardClick = (bookId: number) => () => {
     router.push(`/books/${bookId}`);
   };
   const handleCreateCardClick = () => {
-    // TODO navigate
+    router.push("/books/create");
   };
 
   return (
-    <Layout title="Books">
+    <Layout>
       <div className="px-8 py-8">
         <div className="grid grid-cols-4 gap-6">
-          {data?.map((book) => (
+          {books?.map((book) => (
             <Card
               key={book.id}
               title={book.name}
               subtitle={book.description}
-              description={`[${book.defaultLang}] ${book.langs.join(", ")}`}
+              description={`[${book.default_language}] ${book.languages?.join(
+                ", "
+              )}`}
               onClick={handleCardClick(book.id)}
             />
           ))}
           <Card
             title="+ Crear libro"
             subtitle="Haz click para crear un nuevo libro"
-            description=""
+            description="lets go!"
             onClick={handleCreateCardClick}
           />
         </div>
       </div>
     </Layout>
   );
+}
+
+export async function getServerSideProps() {
+  const { data } = await getAllBooks();
+
+  return {
+    props: {
+      books: data,
+    },
+  };
 }

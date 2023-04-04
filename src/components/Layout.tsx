@@ -1,10 +1,10 @@
-import { ReactNode } from "react";
+import { Fragment, ReactNode } from "react";
 import Link from "next/link";
 import {
-  BeakerIcon,
+  ArchiveBoxIcon,
   FireIcon,
   HomeIcon,
-  Squares2X2Icon,
+  RectangleStackIcon,
 } from "@heroicons/react/24/outline";
 import Text from "@/components/Text";
 import { useRouter } from "next/router";
@@ -12,23 +12,20 @@ import { cls } from "@/utils";
 
 interface LayoutProps {
   children: ReactNode;
-  title: string;
 }
 
 const navigation = [
   { name: "Dashboard", href: "/", Icon: HomeIcon },
-  { name: "Books", href: "/books", Icon: Squares2X2Icon },
-  { name: "Example", href: "/example", Icon: BeakerIcon },
+  { name: "Books", href: "/books", Icon: RectangleStackIcon },
+  { name: "Sandbox", href: "/sandbox", Icon: ArchiveBoxIcon },
 ];
 
-export default function Layout({ children, title }: LayoutProps) {
+export default function Layout({ children }: LayoutProps) {
   const router = useRouter();
-
-  console.log({ router });
 
   return (
     <div className="h-full bg-slate-900 flex">
-      <div className="border-r border-slate-800 w-14">
+      <div className="border-r border-slate-700 w-14">
         <div className="flex items-center justify-center h-12">
           <FireIcon className="h-8 w-8 text-sky-500" />
         </div>
@@ -58,7 +55,7 @@ export default function Layout({ children, title }: LayoutProps) {
       </div>
 
       <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="border-b border-slate-800 h-12">
+        <div className="border-b border-slate-700 h-12">
           <header className="flex items-center gap-2 h-full px-4">
             <Text as="h1" size="xs">
               Lokalite
@@ -67,18 +64,20 @@ export default function Layout({ children, title }: LayoutProps) {
               .split("/")
               .slice(1)
               .map((path) => (
-                <>
+                <Fragment key={path}>
                   <Text size="xs" color="secondary">
                     {"/"}
                   </Text>
                   <Text as="h1" size="xs" key={path}>
                     {path}
                   </Text>
-                </>
+                </Fragment>
               ))}
           </header>
         </div>
-        <main className="flex flex-1">{children}</main>
+        <main className="flex flex-1 overflow-auto">
+          <div className="w-full">{children}</div>
+        </main>
       </div>
     </div>
   );

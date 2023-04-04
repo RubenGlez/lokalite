@@ -3,7 +3,7 @@ import { ReactNode } from "react";
 export interface TextProps {
   as?: "a" | "p" | "span" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
   children: ReactNode;
-  size?: "xs" | "base" | "lg";
+  size?: "xs" | "sm" | "base" | "lg";
   color?: "primary" | "secondary";
   weight?: "thin" | "normal" | "bold";
   align?: "left" | "center" | "right";
@@ -17,6 +17,7 @@ const colors = {
 
 const sizes = {
   xs: "text-xs",
+  sm: "text-sm",
   base: "text-base",
   lg: "text-lg",
 };
