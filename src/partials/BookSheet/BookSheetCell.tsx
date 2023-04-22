@@ -5,6 +5,9 @@ export default function BookSheetCell({
   value,
   colWidth,
   colType,
+  colLabel,
+  translationId,
+  handleChangeCell,
 }: BookSheetCellProps) {
   return (
     <div className={`border-r border-slate-700 ${colWidth}`}>
@@ -14,14 +17,18 @@ export default function BookSheetCell({
         </div>
       ) : colType === "key" ? (
         <input
+          className="w-full text-slate-100 text-sm rounded-0 bg-slate-900 border-0 outline-none focus:border focus:border-sky-500 px-2"
+          name={`${translationId}_${colLabel}`}
           type="text"
           defaultValue={value}
-          className="w-full text-slate-100 text-sm rounded-0 bg-slate-900 border-0 outline-none focus:border focus:border-sky-500 px-2"
+          onChange={handleChangeCell}
         />
       ) : (
         <textarea
-          defaultValue={value}
           className="resize-none w-full text-slate-100 text-sm rounded-0 bg-slate-900 border-0 outline-none focus:border focus:border-sky-500 px-2"
+          name={`${translationId}_${colLabel}`}
+          defaultValue={value}
+          onChange={handleChangeCell}
         />
       )}
     </div>

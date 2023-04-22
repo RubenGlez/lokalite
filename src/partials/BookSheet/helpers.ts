@@ -20,17 +20,16 @@ export const getSheetColumns = (
     : [];
   const sheetColumns: SheetColumn[] = [
     { type: "index", label: "" },
-    { type: "key", label: "Key" },
+    { type: "key", label: "key" },
     { type: "defaultLang", label: defaultLang ?? "" },
     ...langColumns,
   ];
   return sheetColumns;
 };
 
-export const DEFAULT_ROW: Translation = {
+export const DEFAULT_ROW: Omit<Translation, "id"> = {
   copies: {},
   created_at: "",
-  id: 0,
   key: "",
   sheet_id: 0,
   updated_at: "",
@@ -45,11 +44,14 @@ export const getCells = (
     let value = "";
     if (col.type === "index") {
       value = String(index);
+    } else if (col.type === "key") {
+      value = row.key ?? "";
     } else {
-      value = row.copies?.[col.label];
+      value = row.copies?.[col.label] ?? "";
     }
 
     return {
+      colLabel: col.label,
       colType: col.type,
       colWidth: COLUMN_WIDTHS[col.type],
       value,

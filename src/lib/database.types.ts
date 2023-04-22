@@ -8,6 +8,8 @@ export type Json =
   | { [key: string]: Json }
   | Json[];
 
+export type Copies = Record<string, string | undefined> | null;
+
 export interface Database {
   public: {
     Tables: {
@@ -68,7 +70,7 @@ export interface Database {
       };
       translations: {
         Row: {
-          copies: Json | null;
+          copies: Copies | null;
           created_at: string | null;
           id: number;
           key: string | null;
@@ -76,7 +78,7 @@ export interface Database {
           updated_at: string | null;
         };
         Insert: {
-          copies?: Json | null;
+          copies?: Copies | null;
           created_at?: string | null;
           id?: number;
           key?: string | null;
@@ -84,7 +86,7 @@ export interface Database {
           updated_at?: string | null;
         };
         Update: {
-          copies?: Json | null;
+          copies?: Copies | null;
           created_at?: string | null;
           id?: number;
           key?: string | null;
