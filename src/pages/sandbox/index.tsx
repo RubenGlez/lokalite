@@ -1,9 +1,11 @@
 import Button from "@/components/Button";
 import Checkbox from "@/components/Checkbox";
+import Dropdown from "@/components/Dropdown";
 import Layout from "@/components/Layout";
 import ListBox from "@/components/ListBox";
 import Text from "@/components/Text";
 import TextInput from "@/components/TextInput";
+import { ChevronDownIcon } from "@heroicons/react/24/outline";
 const options = [
   {
     label: "Opción 1",
@@ -20,6 +22,24 @@ const options = [
   {
     label: "Opción 4",
     value: "opt4",
+  },
+];
+
+const dropdownOpts = [
+  {
+    label: "option 1",
+    Icon: ChevronDownIcon,
+    onClick: () => {},
+  },
+  {
+    label: "option 2",
+    Icon: ChevronDownIcon,
+    onClick: () => {},
+  },
+  {
+    label: "option 3",
+    Icon: ChevronDownIcon,
+    onClick: () => {},
   },
 ];
 
@@ -48,11 +68,11 @@ export default function SandboxPage() {
             <Checkbox label="Checkbox" className="mb-4" />
             <Button
               text={"Botón"}
-              type="secondary"
+              template="secondary"
               onClick={() => {}}
               className="mr-4"
             />
-            <Button text={"Botón"} type="primary" onClick={() => {}} />
+            <Button text={"Botón"} template="primary" onClick={() => {}} />
           </div>
           <div>
             <Text className="mb-4" as="h3">
@@ -71,14 +91,20 @@ export default function SandboxPage() {
               options={options}
               className="mb-4"
             />
+            <Dropdown
+              items={dropdownOpts}
+              placeholder={"Settings"}
+              className="mb-4"
+            />
+
             <Checkbox label="Checkbox" className="mb-4" />
             <Button
               text={"Botón"}
-              type="secondary"
+              template="secondary"
               onClick={() => {}}
               className="mr-4"
             />
-            <Button text={"Botón"} type="primary" onClick={() => {}} />
+            <Button text={"Botón"} template="primary" onClick={() => {}} />
           </div>
         </div>
       </div>

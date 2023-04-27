@@ -12,7 +12,7 @@ export default function BookSheetCell({
   return (
     <div className={`border-r border-slate-700 ${colWidth}`}>
       {colType === "index" ? (
-        <div className="flex items-center px-2 w-full h-full">
+        <div className="flex items-center justify-center px-2 w-full h-full">
           <Text size="sm">{value}</Text>
         </div>
       ) : colType === "key" ? (

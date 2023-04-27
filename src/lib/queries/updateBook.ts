@@ -7,5 +7,8 @@ export type UpdateBookBody = Pick<
 >;
 
 export default function updateBook(book: UpdateBookBody) {
-  return supabase.from("books").update(book).eq("id", book.id);
+  return supabase
+    .from("books")
+    .update({ ...book, updated_at: new Date().toISOString() })
+    .eq("id", book.id);
 }

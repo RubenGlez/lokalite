@@ -2,6 +2,9 @@ import BookSheetRow from "./BookSheetRow";
 import { BookSheetContentProps } from "./types";
 import { getCells } from "./helpers";
 import { useTranslations } from "@/hooks/useTranslations";
+import { useAppContext } from "@/contexts/AppContext";
+import Button from "@/components/Button";
+import { Translation } from "@/lib/database.types";
 import Text from "@/components/Text";
 
 export default function BookSheetContent({
@@ -9,26 +12,34 @@ export default function BookSheetContent({
   columns,
 }: BookSheetContentProps) {
   const {
-    getterError,
-    getterIsLoading,
+    // get
+    error,
+    getTranslations,
+    isLoading,
     translations,
-    updaterError,
-    updaterIsLoading,
+    // update
+    errorUpdating,
+    isUpdating,
     updateTranslation,
+    // create
+    createAndGet,
+    errorCreatingAndGetting,
+    isCreatingAndGetting,
   } = useTranslations({
     sheetId,
   });
+  const createEmptyRows = () => {
+    const emptyRows = Array.from({ length: 10 }).fill({
+      sheet_id: sheetId,
+    });
+    createAndGet(emptyRows as Translation[]);
+  };
 
   return (
     <div className="relative">
-      {getterIsLoading && (
-        <div className="absolute top-0 right-0 bottom-0 left-0 bg-slate-900 bg-opacity-80 flex items-center justify-center">
-          <Text>Getting...</Text>
-        </div>
-      )}
-      {updaterIsLoading && (
-        <div className="absolute top-0 right-0 bottom-0 left-0 bg-slate-900 bg-opacity-80 flex items-center justify-center">
-          <Text>Updating...</Text>
+      {isCreatingAndGetting && (
+        <div className="absolute top-0 right-0 bottom-0 left-0 bg-slate-900 flex justify-center items-center bg-opacity-90">
+          <Text>Creando nuevas filas...</Text>
         </div>
       )}
       {translations.map((row, index) => {
@@ -43,6 +54,9 @@ export default function BookSheetContent({
           />
         );
       })}
+      <div className="pt-4 pl-4">
+        <Button text="Añadir 10 filas" onClick={createEmptyRows} />
+      </div>
     </div>
   );
 }

@@ -14,7 +14,8 @@ export default function updateTranslation({
 }: UpdateTranslationPayload) {
   return supabase
     .from("translations")
-    .upsert({ id, key, sheet_id, copies })
+    .update({ id, key, sheet_id, copies, updated_at: new Date().toISOString() })
     .eq("id", id)
-    .select();
+    .select()
+    .order("created_at", { ascending: true });
 }

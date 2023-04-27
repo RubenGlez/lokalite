@@ -10,6 +10,7 @@ import { useState } from "react";
 import Text from "@/components/Text";
 import Button from "@/components/Button";
 import BookSheet from "@/partials/BookSheet";
+import { useAppContext } from "@/contexts/AppContext";
 
 export interface BooksPageProps {
   book: Book;
@@ -17,6 +18,8 @@ export interface BooksPageProps {
 }
 
 export default function BookDetails({ book, sheets = [] }: BooksPageProps) {
+  const { isLoadingGettingTranslations, isLoadingUpdatingTranslations } =
+    useAppContext();
   const router = useRouter();
   const handleEditBook = () => {
     router.push(`/books/edit/${book.id}`);
@@ -47,7 +50,11 @@ export default function BookDetails({ book, sheets = [] }: BooksPageProps) {
 
   return (
     <Layout>
-      <div className="absolute top-0 right-0 pr-4 flex gap-x-4">
+      <div className="absolute top-0 right-0 pr-4 flex gap-x-4 h-12 flex items-center">
+        {isLoadingGettingTranslations && (
+          <Text size="sm">Obteniendo datos...</Text>
+        )}
+        {isLoadingUpdatingTranslations && <Text size="sm">Guardando...</Text>}
         <ListBox
           options={sheetOpts}
           handleChange={handleChangeSheet}

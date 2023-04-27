@@ -1,23 +1,14 @@
 import { Translation } from "@/lib/database.types";
-import { fetcher } from "@/lib/fetcher";
-import { UpdateTranslationPayload } from "@/lib/queries/updateTranslation";
+import { useCreateTranslations } from "./useCreateTranslations";
+import { useGetTranslations } from "./useGetTranslations";
+import { useUpdateTranslations } from "./useUpdateTranslation";
 import { useEffect, useState } from "react";
 
-interface UseTransProps {
-  sheetId?: number;
+interface UseTranslationsProps {
+  sheetId: Translation["sheet_id"];
 }
-
-export const useTranslations = ({ sheetId }: UseTransProps) => {
-  const [getterState, setGetterState] = useState<{
-    error: string | undefined;
-    data: Translation[];
-    isLoading: boolean;
-  }>({
-    error: undefined,
-    data: [],
-    isLoading: false,
-  });
-  const [updaterState, setUpdaterState] = useState<{
+export const useTranslations = ({ sheetId }: UseTranslationsProps) => {
+  const [createAndGetState, setCreateAndGetState] = useState<{
     error: string | undefined;
     isLoading: boolean;
   }>({
@@ -25,59 +16,63 @@ export const useTranslations = ({ sheetId }: UseTransProps) => {
     isLoading: false,
   });
 
-  const getTranslations = async (sheetId: Translation["sheet_id"]) => {
-    setGetterState((prev) => ({ ...prev, isLoading: true }));
-    try {
-      const response = await fetcher.get<Translation[]>(
-        `/api/translations?sheetId=${sheetId}`
-      );
-      setGetterState({
-        error: undefined,
-        data: response,
-        isLoading: false,
-      });
-    } catch (error) {
-      setGetterState((prev) => ({
-        ...prev,
-        error: "Something went wrong",
-        isLoading: false,
-      }));
+  const getSuccessCallback = () => {
+    if (createAndGetState.isLoading) {
+      setCreateAndGetState({ error: undefined, isLoading: false });
     }
   };
-
-  const updateTranslation = async (payload: UpdateTranslationPayload) => {
-    setUpdaterState((prev) => ({ ...prev, isLoading: true }));
-    try {
-      await fetcher.update<UpdateTranslationPayload, Translation>(
-        "/api/translations",
-        payload
-      );
-      setUpdaterState((prev) => ({
-        ...prev,
-        error: undefined,
-        isLoading: false,
-      }));
-    } catch (error) {
-      setUpdaterState((prev) => ({
-        ...prev,
-        error: "Something went wrong",
-        isLoading: false,
-      }));
+  const getErrorCallback = () => {
+    if (createAndGetState.isLoading) {
+      setCreateAndGetState({ error: "Something went wrong", isLoading: false });
     }
+  };
+  const { error, getTranslations, isLoading, translations } =
+    useGetTranslations({
+      successCallback: getSuccessCallback,
+      errorCallback: getErrorCallback,
+    });
+
+  const {
+    error: errorUpdating,
+    isLoading: isUpdating,
+    updateTranslation,
+  } = useUpdateTranslations({});
+
+  const createSuccessCallback = () => {
+    getTranslations(sheetId);
+  };
+  const createErrorCallback = () => {
+    setCreateAndGetState({ error: "Something went wrong", isLoading: false });
+  };
+  const { createTranslations } = useCreateTranslations({
+    successCallback: createSuccessCallback,
+    errorCallback: createErrorCallback,
+  });
+
+  const createAndGet = (trans: Translation[]) => {
+    setCreateAndGetState((prev) => ({ ...prev, isLoading: true }));
+    createTranslations(trans);
   };
 
   useEffect(() => {
     if (sheetId) {
       getTranslations(sheetId);
     }
-  }, [sheetId]);
+  }, [getTranslations, sheetId]);
 
   return {
-    translations: getterState.data,
-    getterError: getterState.error,
-    getterIsLoading: getterState.isLoading,
-    updaterError: updaterState.error,
-    updaterIsLoading: updaterState.isLoading,
+    // get
+    error,
+    getTranslations,
+    isLoading,
+    translations,
+    // update
+    errorUpdating,
+    isUpdating,
     updateTranslation,
+    // create
+    createAndGet,
+    isCreatingAndGetting: createAndGetState.isLoading,
+    errorCreatingAndGetting: createAndGetState.error,
   };
 };
