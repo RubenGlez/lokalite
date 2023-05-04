@@ -14,9 +14,6 @@ export default function CreateSheetPage() {
       router.push(`/books/${bookId}`);
     }
   };
-  const handleCancel = () => {
-    router.back();
-  };
 
   return (
     <Layout>
@@ -24,7 +21,7 @@ export default function CreateSheetPage() {
         <Text as="h3" className="mb-4" size="lg">
           Crear hoja
         </Text>
-        <SheetForm handleSubmit={handleSubmit} handleCancel={handleCancel} />
+        <SheetForm handleSubmit={handleSubmit} />
       </div>
     </Layout>
   );

@@ -3,6 +3,7 @@ import CheckGroup from "@/components/CheckGroup";
 import ListBox from "@/components/ListBox";
 import TextInput from "@/components/TextInput";
 import { LANGUAGES } from "@/constants/languages";
+import { Book } from "@/lib/database.types";
 import { CreateBookBody } from "@/lib/queries/createBook";
 import { UpdateBookBody } from "@/lib/queries/updateBook";
 import { useRouter } from "next/router";
@@ -12,11 +13,14 @@ const LANG_PREFIX = "lang_";
 
 interface BookFormProps {
   handleSubmit: (form: CreateBookBody | UpdateBookBody) => void;
+  initialData?: Book;
 }
 
-export default function BookForm({ handleSubmit }: BookFormProps) {
+export default function BookForm({ handleSubmit, initialData }: BookFormProps) {
   const router = useRouter();
-  const [defaultLang, setDefaultLang] = useState("");
+  const [defaultLang, setDefaultLang] = useState(
+    initialData?.default_language ?? ""
+  );
   const defaultLangOptions = LANGUAGES.map((lang) => ({
     value: lang.code,
     label: lang.name,
@@ -26,7 +30,7 @@ export default function BookForm({ handleSubmit }: BookFormProps) {
   ).map((lang) => ({
     name: `${LANG_PREFIX}${lang.code}`,
     label: lang.name,
-    defaultChecked: false,
+    defaultChecked: initialData?.languages?.includes(lang.code),
   }));
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -40,6 +44,7 @@ export default function BookForm({ handleSubmit }: BookFormProps) {
     }, []);
     const { name, description } = formJson;
     const form = {
+      ...(initialData || {}),
       name: String(name),
       description: String(description),
       default_language: String(formJson["default_lang[value]"]),
@@ -62,12 +67,14 @@ export default function BookForm({ handleSubmit }: BookFormProps) {
         label={"Nombre"}
         placeholder={"Nombre del libro"}
         className="mb-4"
+        defaultValue={initialData?.name ?? ""}
       />
       <TextInput
         name="description"
         label={"Descripción"}
         placeholder={"Descripción del libro"}
         className="mb-4"
+        defaultValue={initialData?.description ?? ""}
       />
       <ListBox
         name="default_lang"
@@ -75,6 +82,7 @@ export default function BookForm({ handleSubmit }: BookFormProps) {
         label="Idioma por defecto"
         className="mb-4"
         handleChange={handleChange}
+        defaultValue={initialData?.default_language ?? ""}
       />
       <CheckGroup
         label="Selecciona los idiomas"

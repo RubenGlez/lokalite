@@ -21,30 +21,27 @@ export const useGetTranslations = ({
     isLoading: false,
   });
 
-  const getTranslations = useCallback(
-    async (sheetId: Translation["sheet_id"]) => {
-      setGetterState((prev) => ({ ...prev, isLoading: true }));
-      try {
-        const response = await fetcher.get<Translation[]>(
-          `/api/translations?sheetId=${sheetId}`
-        );
-        setGetterState({
-          error: undefined,
-          data: response,
-          isLoading: false,
-        });
-        successCallback?.();
-      } catch (error) {
-        setGetterState((prev) => ({
-          ...prev,
-          error: "Something went wrong",
-          isLoading: false,
-        }));
-        errorCallback?.();
-      }
-    },
-    [errorCallback, successCallback]
-  );
+  const getTranslations = async (sheetId: Translation["sheet_id"]) => {
+    setGetterState((prev) => ({ ...prev, isLoading: true }));
+    try {
+      const response = await fetcher.get<Translation[]>(
+        `/api/translations?sheetId=${sheetId}`
+      );
+      setGetterState({
+        error: undefined,
+        data: response,
+        isLoading: false,
+      });
+      successCallback?.();
+    } catch (error) {
+      setGetterState((prev) => ({
+        ...prev,
+        error: "Something went wrong",
+        isLoading: false,
+      }));
+      errorCallback?.();
+    }
+  };
 
   return {
     translations: getterState.data,

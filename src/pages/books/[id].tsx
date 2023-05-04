@@ -1,7 +1,11 @@
 import Layout from "@/components/Layout";
 import ListBox from "@/components/ListBox";
 import Dropdown from "@/components/Dropdown";
-import { PencilSquareIcon, TrashIcon } from "@heroicons/react/24/outline";
+import {
+  PencilSquareIcon,
+  TrashIcon,
+  FaceSmileIcon,
+} from "@heroicons/react/24/outline";
 import getBookById from "@/lib/queries/getBookById";
 import { Book, Sheet } from "@/lib/database.types";
 import { useRouter } from "next/router";
@@ -21,19 +25,27 @@ export default function BookDetails({ book, sheets = [] }: BooksPageProps) {
   const { isLoadingGettingTranslations, isLoadingUpdatingTranslations } =
     useAppContext();
   const router = useRouter();
-  const handleEditBook = () => {
-    router.push(`/books/edit/${book.id}`);
-  };
   const settingsItems = [
     {
       label: "Edit book",
       Icon: PencilSquareIcon,
-      onClick: handleEditBook,
+      onClick: () => {
+        router.push(`/books/edit?id=${book.id}`);
+      },
     },
     {
       label: "Delete book",
       Icon: TrashIcon,
-      onClick: () => {},
+      onClick: () => {
+        alert("Delete book not implemented");
+      },
+    },
+    {
+      label: "Add new sheet",
+      Icon: FaceSmileIcon,
+      onClick: () => {
+        router.push(`/sheets/create`);
+      },
     },
   ];
   const sheetOpts = sheets.map((sheet) => ({

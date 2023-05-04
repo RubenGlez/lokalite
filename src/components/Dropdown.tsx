@@ -43,7 +43,7 @@ export default function Dropdown({
           leaveFrom="transform opacity-100 scale-100"
           leaveTo="transform opacity-0 scale-95"
         >
-          <Menu.Items className="absolute right-0 mt-1 w-36 origin-top-right rounded-md bg-slate-900 border border-slate-700 py-1">
+          <Menu.Items className="absolute right-0 mt-1 w-36 origin-top-right rounded-md bg-slate-900 border border-slate-700 py-1 z-50">
             {items.map((item, index) => (
               <Menu.Item key={`menu_item_${index}`}>
                 {({ active }) => (
@@ -53,6 +53,7 @@ export default function Dropdown({
                       "text-slate-400": !active,
                       "text-slate-100 bg-slate-800": active,
                     })}
+                    onClick={item.onClick}
                   >
                     <item.Icon className="h-4 w-4" aria-hidden="true" />
                     <span className="block truncate text-left text-sm">

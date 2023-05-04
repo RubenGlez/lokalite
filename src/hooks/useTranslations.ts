@@ -58,7 +58,8 @@ export const useTranslations = ({ sheetId }: UseTranslationsProps) => {
     if (sheetId) {
       getTranslations(sheetId);
     }
-  }, [getTranslations, sheetId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheetId]);
 
   return {
     // get

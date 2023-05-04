@@ -6,18 +6,19 @@ import { FormEvent } from "react";
 export type SheetFormData = Pick<Sheet, "name" | "description">;
 interface SheetFormProps {
   handleSubmit: (form: SheetFormData) => void;
-  handleCancel: () => void;
+  initialData?: Sheet;
 }
 
 export default function SheetForm({
   handleSubmit,
-  handleCancel,
+  initialData,
 }: SheetFormProps) {
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const formJson = Object.fromEntries(formData.entries());
     const form = {
+      ...(initialData || {}),
       name: String(formJson.name),
       description: String(formJson.description),
     };
@@ -32,21 +33,17 @@ export default function SheetForm({
         label={"Nombre"}
         placeholder={"Nombre de la hoja"}
         className="mb-4"
+        defaultValue={initialData?.name ?? ""}
       />
       <TextInput
         name="description"
         label={"Descripción"}
         placeholder={"Descripción de la hoja"}
         className="mb-4"
+        defaultValue={initialData?.description ?? ""}
       />
 
       <div className="mt-8">
-        <Button
-          text={"Cancelar"}
-          onClick={handleCancel}
-          template="secondary"
-          className="mr-8"
-        />
         <Button type="submit" text={"Guardar"} />
       </div>
     </form>

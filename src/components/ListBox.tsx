@@ -66,7 +66,7 @@ export default function ListBox({
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <Listbox.Options className="border border-slate-700 bg-slate-900 absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-slate-900 py-1 text-sm focus:outline-none focus:border-slate-100">
+            <Listbox.Options className="border border-slate-700 bg-slate-900 absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-slate-900 py-1 text-sm focus:outline-none focus:border-slate-100 z-50">
               {options.length > 0 ? (
                 options.map((option) => {
                   const isSelected = option.value === optionSelected?.value;
