@@ -17,14 +17,10 @@ export const useTranslations = ({ sheetId }: UseTranslationsProps) => {
   });
 
   const getSuccessCallback = () => {
-    if (createAndGetState.isLoading) {
-      setCreateAndGetState({ error: undefined, isLoading: false });
-    }
+    setCreateAndGetState({ error: undefined, isLoading: false });
   };
   const getErrorCallback = () => {
-    if (createAndGetState.isLoading) {
-      setCreateAndGetState({ error: "Something went wrong", isLoading: false });
-    }
+    setCreateAndGetState({ error: "Something went wrong", isLoading: false });
   };
   const { error, getTranslations, isLoading, translations } =
     useGetTranslations({

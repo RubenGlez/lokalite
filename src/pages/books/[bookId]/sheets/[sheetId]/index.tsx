@@ -4,33 +4,35 @@ import Dropdown from "@/components/Dropdown";
 import {
   PencilSquareIcon,
   TrashIcon,
-  FaceSmileIcon,
+  DocumentPlusIcon,
+  DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 import getBookById from "@/lib/queries/getBookById";
-import { Book, Sheet } from "@/lib/database.types";
-import { useRouter } from "next/router";
 import getSheetsByBookId from "@/lib/queries/getSheetsByBookId";
-import { useState } from "react";
 import Text from "@/components/Text";
-import Button from "@/components/Button";
 import BookSheet from "@/partials/BookSheet";
 import { useAppContext } from "@/contexts/AppContext";
+import { useNavigation } from "@/hooks/useNavigation";
 
-export interface BooksPageProps {
-  book: Book;
-  sheets: Sheet[];
+interface PageContext {
+  query: {
+    bookId: string;
+    sheetId: string;
+  };
 }
 
-export default function BookDetails({ book, sheets = [] }: BooksPageProps) {
+type PageProps = Awaited<ReturnType<typeof getServerSideProps>>["props"];
+
+export default function BookDetails({ book, sheets, sheetId }: PageProps) {
   const { isLoadingGettingTranslations, isLoadingUpdatingTranslations } =
     useAppContext();
-  const router = useRouter();
+  const { goTo } = useNavigation();
   const settingsItems = [
     {
       label: "Edit book",
       Icon: PencilSquareIcon,
       onClick: () => {
-        router.push(`/books/edit?id=${book.id}`);
+        goTo("updateBook", { bookId: book?.id });
       },
     },
     {
@@ -42,9 +44,16 @@ export default function BookDetails({ book, sheets = [] }: BooksPageProps) {
     },
     {
       label: "Add new sheet",
-      Icon: FaceSmileIcon,
+      Icon: DocumentPlusIcon,
       onClick: () => {
-        router.push(`/sheets/create`);
+        goTo("createSheet", { bookId: book?.id });
+      },
+    },
+    {
+      label: "Edit sheet",
+      Icon: DocumentTextIcon,
+      onClick: () => {
+        goTo("updateSheet", { bookId: book?.id, sheetId });
       },
     },
   ];
@@ -52,12 +61,11 @@ export default function BookDetails({ book, sheets = [] }: BooksPageProps) {
     value: sheet.id,
     label: sheet.name ?? "",
   }));
-  const [selectedSheetId, setSelectedSheetId] = useState(sheetOpts[0]?.value);
   const handleChangeSheet = (val: string | number) => {
-    setSelectedSheetId(Number(val));
+    goTo("readSheet", { bookId: book?.id, sheetId: val });
   };
   const handleCreateSheet = () => {
-    router.push(`/sheets/create?bookId=${book.id}`);
+    goTo("createSheet", { bookId: book?.id });
   };
 
   return (
@@ -70,40 +78,33 @@ export default function BookDetails({ book, sheets = [] }: BooksPageProps) {
         <ListBox
           options={sheetOpts}
           handleChange={handleChangeSheet}
-          defaultValue={selectedSheetId}
+          defaultValue={sheetId}
           placeholder="Selecciona una hoja"
           className="w-48"
         />
         <Dropdown items={settingsItems} placeholder={"Settings"} />
       </div>
       <div className="h-full w-full">
-        {!!selectedSheetId ? (
-          <BookSheet
-            languages={book.languages}
-            defaultLanguage={book.default_language}
-            sheetId={selectedSheetId}
-          />
-        ) : (
-          <div>
-            <Text as="p">Libro vacío</Text>
-            <Text as="p">Crea una hoja para empezar</Text>
-            <Button text={"Nueva hoja"} onClick={handleCreateSheet} />
-          </div>
-        )}
+        <BookSheet
+          languages={book?.languages ?? []}
+          defaultLanguage={book?.default_language ?? ""}
+          sheetId={sheetId}
+        />
       </div>
     </Layout>
   );
 }
 
-export async function getServerSideProps(context: { query: { id: string } }) {
-  const { id } = context.query;
-  const { data: bookData } = await getBookById(Number(id));
-  const { data: sheetsData } = await getSheetsByBookId(Number(id));
+export async function getServerSideProps(context: PageContext) {
+  const { bookId, sheetId } = context.query;
+  const { data: bookData } = await getBookById(Number(bookId));
+  const { data: sheetsData } = await getSheetsByBookId(Number(bookId));
 
   return {
     props: {
       book: bookData?.[0],
-      sheets: sheetsData,
+      sheets: sheetsData ?? [],
+      sheetId: Number(sheetId),
     },
   };
 }

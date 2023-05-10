@@ -1,5 +1,6 @@
 import Card from "@/components/Card";
 import Layout from "@/components/Layout";
+import { useNavigation } from "@/hooks/useNavigation";
 import { Book } from "@/lib/database.types";
 import getAllBooks from "@/lib/queries/getAllBooks";
 import { useRouter } from "next/router";
@@ -9,12 +10,12 @@ export interface BooksPageProps {
 }
 
 export default function BooksPage({ books }: BooksPageProps) {
-  const router = useRouter();
+  const { goTo } = useNavigation();
   const handleCardClick = (bookId: number) => () => {
-    router.push(`/books/${bookId}`);
+    goTo("readBook", { bookId });
   };
   const handleCreateCardClick = () => {
-    router.push("/books/create");
+    goTo("createBook");
   };
 
   return (

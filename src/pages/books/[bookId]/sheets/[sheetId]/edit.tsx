@@ -1,22 +1,28 @@
 import Layout from "@/components/Layout";
 import { HTTP_STATUS } from "@/constants/httpStatus";
-import createSheet from "@/lib/queries/createSheet";
-import { useRouter } from "next/router";
 import Text from "@/components/Text";
 import SheetForm, { SheetFormData } from "@/partials/SheetForm";
 import getSheetById from "@/lib/queries/getSheetById";
 import { Sheet } from "@/lib/database.types";
+import updateSheet from "@/lib/queries/updateSheet";
+import { useNavigation } from "@/hooks/useNavigation";
 
 interface EditSheetPageProps {
   sheet: Sheet;
 }
 
+interface PageContext {
+  query: {
+    sheetId: string;
+  };
+}
+
 export default function EditSheetPage({ sheet }: EditSheetPageProps) {
-  const router = useRouter();
+  const { goTo } = useNavigation();
   const handleSubmit = async (form: SheetFormData) => {
-    const { status } = await createSheet({ ...form, book_id: sheet.id });
-    if (status === HTTP_STATUS.CREATED) {
-      router.push(`/books/${sheet.id}`);
+    const { status } = await updateSheet({ ...form, id: sheet.id });
+    if (status === HTTP_STATUS.UPDATED) {
+      goTo("readBook", { bookId: sheet.book_id });
     }
   };
 
@@ -32,9 +38,9 @@ export default function EditSheetPage({ sheet }: EditSheetPageProps) {
   );
 }
 
-export async function getServerSideProps(context: { query: { id: string } }) {
-  const { id } = context.query;
-  const { data: sheetsData } = await getSheetById(Number(id));
+export async function getServerSideProps(context: PageContext) {
+  const { sheetId } = context.query;
+  const { data: sheetsData } = await getSheetById(Number(sheetId));
 
   return {
     props: {

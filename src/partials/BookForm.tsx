@@ -3,6 +3,7 @@ import CheckGroup from "@/components/CheckGroup";
 import ListBox from "@/components/ListBox";
 import TextInput from "@/components/TextInput";
 import { LANGUAGES } from "@/constants/languages";
+import { useNavigation } from "@/hooks/useNavigation";
 import { Book } from "@/lib/database.types";
 import { CreateBookBody } from "@/lib/queries/createBook";
 import { UpdateBookBody } from "@/lib/queries/updateBook";
@@ -18,6 +19,7 @@ interface BookFormProps {
 
 export default function BookForm({ handleSubmit, initialData }: BookFormProps) {
   const router = useRouter();
+  const { goTo } = useNavigation();
   const [defaultLang, setDefaultLang] = useState(
     initialData?.default_language ?? ""
   );
@@ -54,7 +56,7 @@ export default function BookForm({ handleSubmit, initialData }: BookFormProps) {
     handleSubmit(form);
   };
   const handleCancel = () => {
-    router.push("/books");
+    goTo("books");
   };
   const handleChange = (val: string | number) => {
     setDefaultLang(String(val));

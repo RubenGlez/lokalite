@@ -2,17 +2,17 @@ import Layout from "@/components/Layout";
 import { HTTP_STATUS } from "@/constants/httpStatus";
 import createBook, { CreateBookBody } from "@/lib/queries/createBook";
 import BookForm from "@/partials/BookForm";
-import { useRouter } from "next/router";
 import Text from "@/components/Text";
+import { useNavigation } from "@/hooks/useNavigation";
 
 export default function CreateBookPage() {
-  const router = useRouter();
+  const { goTo } = useNavigation();
   const handleSubmit = async (form: CreateBookBody) => {
     const { status: createBookStatus } = await createBook({
       ...form,
     });
     if (createBookStatus === HTTP_STATUS.CREATED) {
-      router.push("/books");
+      goTo("books");
     }
   };
 

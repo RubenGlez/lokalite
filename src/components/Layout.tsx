@@ -9,6 +9,7 @@ import {
 import Text from "@/components/Text";
 import { useRouter } from "next/router";
 import { cls } from "@/utils";
+import { useBreadcrumbs } from "@/hooks/useBreadCrumbs";
 
 interface LayoutProps {
   children: ReactNode;
@@ -22,6 +23,7 @@ const navigation = [
 
 export default function Layout({ children }: LayoutProps) {
   const router = useRouter();
+  const breadcrumbs = useBreadcrumbs();
 
   return (
     <div className="h-full bg-slate-900 flex">
@@ -57,22 +59,26 @@ export default function Layout({ children }: LayoutProps) {
       <div className="flex flex-1 flex-col overflow-hidden">
         <div className="border-b border-slate-700 h-12">
           <header className="flex items-center gap-2 h-full px-4">
-            <Text as="h1" size="xs">
-              Lokalite
-            </Text>
-            {router.pathname
-              .split("/")
-              .slice(1)
-              .map((path) => (
-                <Fragment key={path}>
-                  <Text size="xs" color="secondary">
-                    {"/"}
-                  </Text>
-                  <Text as="h1" size="xs" key={path}>
-                    {path}
-                  </Text>
-                </Fragment>
-              ))}
+            {breadcrumbs.map((breadcrumb, idx) => {
+              return (
+                <>
+                  {idx !== 0 && (
+                    <Text size="xs" color="secondary">
+                      {"/"}
+                    </Text>
+                  )}
+                  {!!breadcrumb.link ? (
+                    <Link key={breadcrumb.label} href={breadcrumb.link}>
+                      <Text size="xs">{breadcrumb.label}</Text>
+                    </Link>
+                  ) : (
+                    <Fragment key={breadcrumb.label}>
+                      <Text size="xs">{breadcrumb.label}</Text>
+                    </Fragment>
+                  )}
+                </>
+              );
+            })}
           </header>
         </div>
         <main className="flex flex-1 overflow-auto">

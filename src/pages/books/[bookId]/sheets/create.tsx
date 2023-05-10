@@ -4,14 +4,16 @@ import createSheet from "@/lib/queries/createSheet";
 import { useRouter } from "next/router";
 import Text from "@/components/Text";
 import SheetForm, { SheetFormData } from "@/partials/SheetForm";
+import { useNavigation } from "@/hooks/useNavigation";
 
 export default function CreateSheetPage() {
   const router = useRouter();
+  const { goTo } = useNavigation();
   const handleSubmit = async (form: SheetFormData) => {
     const bookId = Number(router.query.bookId);
     const { status } = await createSheet({ ...form, book_id: bookId });
     if (status === HTTP_STATUS.CREATED) {
-      router.push(`/books/${bookId}`);
+      goTo("readBook", { bookId });
     }
   };
 
