@@ -13,7 +13,7 @@ interface PageContext {
 
 type PageProps = Awaited<ReturnType<typeof getServerSideProps>>["props"];
 
-export default function BookDetails({ sheets, bookId }: PageProps) {
+export default function SheetsPage({ sheets, bookId }: PageProps) {
   const { getRoute, goTo } = useNavigation();
   const handleGoToCreateSheet = () => {
     goTo("createSheet", { bookId });

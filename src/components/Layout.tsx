@@ -67,8 +67,8 @@ export default function Layout({ children }: LayoutProps) {
                       {"/"}
                     </Text>
                   )}
-                  {!!breadcrumb.link ? (
-                    <Link key={breadcrumb.label} href={breadcrumb.link}>
+                  {breadcrumbs.length !== idx - 1 ? (
+                    <Link key={breadcrumb.label} href={breadcrumb.href}>
                       <Text size="xs">{breadcrumb.label}</Text>
                     </Link>
                   ) : (

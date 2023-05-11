@@ -15,16 +15,24 @@ const getFinalRoute = (
 export const useNavigation = () => {
   const router = useRouter();
 
-  const goTo = (
+  const getRoute = (
     routeKey: Routes,
     queryParams?: Record<string, string | number | null | undefined>
   ) => {
     const route = routes[routeKey].href;
     const finalRoute = queryParams ? getFinalRoute(route, queryParams) : route;
-    router.push(finalRoute);
+    return finalRoute;
+  };
+
+  const goTo = (
+    routeKey: Routes,
+    queryParams?: Record<string, string | number | null | undefined>
+  ) => {
+    const route = getRoute(routeKey, queryParams);
+    router.push(route);
   };
 
   const goBack = router.back;
 
-  return { goTo, goBack };
+  return { goTo, goBack, getRoute };
 };

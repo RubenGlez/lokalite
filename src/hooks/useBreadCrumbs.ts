@@ -1,101 +1,16 @@
 import { useRouter } from "next/router";
+import { routes } from "@/constants/routes";
 
 const getBreadCrumbs = (pathname: string) => {
-  switch (pathname) {
-    case "/books": {
-      return [
-        {
-          label: "Lokalite",
-          link: "/",
-        },
-        {
-          label: "books",
-        },
-      ];
-    }
-    case "/books/[id]": {
-      return [
-        {
-          label: "Lokalite",
-          link: "/",
-        },
-        {
-          label: "Books",
-          link: "/books",
-        },
-        {
-          label: "[id]",
-        },
-      ];
-    }
-    case "/books/edit": {
-      return [
-        {
-          label: "Lokalite",
-          link: "/",
-        },
-        {
-          label: "Books",
-          link: "/books",
-        },
-        {
-          label: "Edit",
-        },
-      ];
-    }
-    case "/books/create": {
-      return [
-        {
-          label: "Lokalite",
-          link: "/",
-        },
-        {
-          label: "Books",
-          link: "/books",
-        },
-        {
-          label: "Create",
-        },
-      ];
-    }
-    case "/sheets/create": {
-      return [
-        {
-          label: "Lokalite",
-          link: "/",
-        },
-        {
-          label: "Sheets",
-          link: "/sheets",
-        },
-        {
-          label: "Create",
-        },
-      ];
-    }
-    case "/sheets/edit": {
-      return [
-        {
-          label: "Lokalite",
-          link: "/",
-        },
-        {
-          label: "Sheets",
-          link: "/sheets",
-        },
-        {
-          label: "Edit",
-        },
-      ];
-    }
-    default: {
-      return [
-        {
-          label: "Lokalite",
-        },
-      ];
-    }
-  }
+  const parts = pathname.split("/").slice(1);
+  const breadcrumbs = parts.map((_, index) => {
+    const path = `/${parts.slice(0, index + 1).join("/")}`;
+    const routeName = Object.keys(routes).find((key) => {
+      return routes[key as keyof typeof routes]?.href === path;
+    });
+    return routes[routeName as keyof typeof routes];
+  });
+  return breadcrumbs;
 };
 
 export const useBreadcrumbs = () => {
