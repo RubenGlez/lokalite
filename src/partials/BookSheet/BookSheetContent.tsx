@@ -2,7 +2,6 @@ import BookSheetRow from "./BookSheetRow";
 import { BookSheetContentProps } from "./types";
 import { getCells } from "./helpers";
 import { useTranslations } from "@/hooks/useTranslations";
-import { useAppContext } from "@/contexts/AppContext";
 import Button from "@/components/Button";
 import { Translation } from "@/lib/database.types";
 import Text from "@/components/Text";
@@ -10,6 +9,7 @@ import Text from "@/components/Text";
 export default function BookSheetContent({
   sheetId,
   columns,
+  handleOpenSidebar,
 }: BookSheetContentProps) {
   const {
     // get
@@ -51,6 +51,7 @@ export default function BookSheetContent({
             sheetId={sheetId}
             cells={cells}
             updateTranslation={updateTranslation}
+            handleOpenSidebar={handleOpenSidebar}
           />
         );
       })}

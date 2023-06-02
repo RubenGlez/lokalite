@@ -10,6 +10,7 @@ export default function BookSheetRow({
   cells,
   updateTranslation,
   sheetId,
+  handleOpenSidebar,
 }: BookSheetRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const getRowData = () => {
@@ -56,6 +57,7 @@ export default function BookSheetRow({
             colLabel={cell.colLabel}
             translationId={translationId}
             handleChangeCell={handleChangeCell}
+            handleOpenSidebar={handleOpenSidebar}
           />
         );
       })}

@@ -11,7 +11,7 @@ export default function BookSheetHeader({ columns }: BookSheetHeaderProps) {
         return (
           <div
             key={`header_col_${index}`}
-            className={`flex items-center px-2 border-r border-slate-700 ${colClassName}`}
+            className={`flex items-center px-2 border-r border-slate-700 ${colClassName} shrink-0`}
           >
             <Text>{col.label}</Text>
             {isDefault && <Text size="xs">(default)</Text>}

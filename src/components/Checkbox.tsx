@@ -13,7 +13,7 @@ export default function Checkbox({
   label,
   defaultChecked,
   handleChange,
-  className,
+  className = "",
   name,
 }: CheckboxProps) {
   const id = useId();

@@ -1,11 +1,12 @@
 import { Book, Sheet, Translation } from "@/lib/database.types";
 import { UpdateTranslationPayload } from "@/lib/queries/updateTranslation";
-import { ChangeEventHandler, FocusEventHandler } from "react";
+import { ChangeEventHandler } from "react";
 
 export interface SheetProps {
   languages: Book["languages"];
   defaultLanguage: Book["default_language"];
   sheetId: Sheet["id"];
+  handleOpenSidebar: (translationId: Translation["id"]) => () => void;
 }
 
 export interface SheetColumn {
@@ -27,6 +28,7 @@ export interface BookSheetHeaderProps {
 export interface BookSheetContentProps {
   sheetId: number;
   columns: SheetColumn[];
+  handleOpenSidebar: (translationId: Translation["id"]) => () => void;
 }
 
 export interface BookSheetRowProps {
@@ -34,10 +36,12 @@ export interface BookSheetRowProps {
   translationId: Translation["id"];
   sheetId: Translation["sheet_id"];
   updateTranslation: (payload: UpdateTranslationPayload) => Promise<void>;
+  handleOpenSidebar: (translationId: Translation["id"]) => () => void;
 }
 
 export interface BookSheetCellProps
   extends SheetCell,
     Pick<BookSheetRowProps, "translationId"> {
   handleChangeCell: ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement>;
+  handleOpenSidebar: (translationId: Translation["id"]) => () => void;
 }

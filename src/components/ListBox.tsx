@@ -48,8 +48,12 @@ export default function ListBox({
                 <LabelInput text={label} />
               </div>
             )}
-            <Listbox.Button className="relative px-3 py-2 border border-slate-700 bg-slate-900 focus:outline-none focus:border-slate-100 rounded-md text-left text-sm text-slate-100">
-              <span className="block truncate text-slate-400">
+            <Listbox.Button className="relative px-3 py-2 border border-slate-700 bg-slate-900 focus:outline-none focus:border-slate-100 rounded-md text-left text-sm">
+              <span
+                className={`block truncate ${
+                  !!optionSelected ? "text-slate-100" : "text-slate-400"
+                }`}
+              >
                 {!!optionSelected ? optionSelected.label : placeholder}
               </span>
               <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center">

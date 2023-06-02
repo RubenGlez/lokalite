@@ -1,9 +1,9 @@
 import Card from "@/components/Card";
-import Layout from "@/components/Layout";
+import Text from "@/components/Text";
+import Layout from "@/partials/Layout";
 import { useNavigation } from "@/hooks/useNavigation";
 import { Book } from "@/lib/database.types";
 import getAllBooks from "@/lib/queries/getAllBooks";
-import { useRouter } from "next/router";
 
 export interface BooksPageProps {
   books: Book[];
@@ -20,8 +20,11 @@ export default function BooksPage({ books }: BooksPageProps) {
 
   return (
     <Layout>
-      <div className="px-8 py-8">
-        <div className="grid grid-cols-4 gap-6">
+      <div className="p-8">
+        <Text as="p" size="xs" color="secondary" className="mb-6">
+          {"LIBROS"}
+        </Text>
+        <div className="grid grid-flow-col gap-6">
           {books?.map((book) => (
             <Card
               key={book.id}

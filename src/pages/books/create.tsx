@@ -1,4 +1,4 @@
-import Layout from "@/components/Layout";
+import Layout from "@/partials/Layout";
 import { HTTP_STATUS } from "@/constants/httpStatus";
 import createBook, { CreateBookBody } from "@/lib/queries/createBook";
 import BookForm from "@/partials/BookForm";

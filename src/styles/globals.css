@@ -11,3 +11,12 @@
     @apply h-full;
   }
 }
+
+/* Custom styles */
+.leading-zero {
+  line-height: 0;
+}
+
+.cellWrapper:hover .cellAction {
+  opacity: 1;
+}

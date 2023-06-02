@@ -8,7 +8,7 @@ import { Book } from "@/lib/database.types";
 import { CreateBookBody } from "@/lib/queries/createBook";
 import { UpdateBookBody } from "@/lib/queries/updateBook";
 import { useRouter } from "next/router";
-import { FormEvent, SetStateAction, useState } from "react";
+import { FormEvent, useState } from "react";
 
 const LANG_PREFIX = "lang_";
 
@@ -18,7 +18,6 @@ interface BookFormProps {
 }
 
 export default function BookForm({ handleSubmit, initialData }: BookFormProps) {
-  const router = useRouter();
   const { goTo } = useNavigation();
   const [defaultLang, setDefaultLang] = useState(
     initialData?.default_language ?? ""
@@ -93,13 +92,8 @@ export default function BookForm({ handleSubmit, initialData }: BookFormProps) {
         checkboxes={langOptions}
       />
 
-      <div className="mt-8">
-        <Button
-          text={"Cancelar"}
-          onClick={handleCancel}
-          template="secondary"
-          className="mr-8"
-        />
+      <div className="mt-8 flex gap-4">
+        <Button text={"Cancelar"} onClick={handleCancel} template="secondary" />
         <Button type="submit" text={"Guardar"} />
       </div>
     </form>

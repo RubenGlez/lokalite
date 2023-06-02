@@ -26,7 +26,7 @@ export default function Card({
           size="xs"
           color="secondary"
           weight="thin"
-          className="mb-4"
+          className="mb-4 mt-4"
         >
           {subtitle}
         </Text>

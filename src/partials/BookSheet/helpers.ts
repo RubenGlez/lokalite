@@ -2,7 +2,7 @@ import { Translation } from "@/lib/database.types";
 import { SheetProps, SheetColumn } from "./types";
 
 export const COLUMN_WIDTHS = {
-  index: "w-8",
+  index: "w-12",
   key: "w-48",
   defaultLang: "w-48",
   lang: "w-48",

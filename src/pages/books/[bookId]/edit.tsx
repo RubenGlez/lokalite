@@ -1,4 +1,4 @@
-import Layout from "@/components/Layout";
+import Layout from "@/partials/Layout";
 import { HTTP_STATUS } from "@/constants/httpStatus";
 import BookForm from "@/partials/BookForm";
 import Text from "@/components/Text";
@@ -30,9 +30,9 @@ export default function EditBookPage({ book }: EditBookPageProps) {
 
   return (
     <Layout>
-      <div className="px-8 py-8">
-        <Text as="h3" className="mb-4" size="lg">
-          Editar libro
+      <div className="p-8 w-full">
+        <Text as="p" size="xs" color="secondary" className="mb-6">
+          {"EDITAR LIBRO"}
         </Text>
         <BookForm handleSubmit={handleSubmit} initialData={book} />
       </div>

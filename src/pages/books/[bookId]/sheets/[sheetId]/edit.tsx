@@ -1,4 +1,4 @@
-import Layout from "@/components/Layout";
+import Layout from "@/partials/Layout";
 import { HTTP_STATUS } from "@/constants/httpStatus";
 import Text from "@/components/Text";
 import SheetForm, { SheetFormData } from "@/partials/SheetForm";
@@ -28,9 +28,9 @@ export default function EditSheetPage({ sheet }: EditSheetPageProps) {
 
   return (
     <Layout>
-      <div className="px-8 py-8">
-        <Text as="h3" className="mb-4" size="lg">
-          Crear hoja
+      <div className="p-8 w-full">
+        <Text as="p" size="xs" color="secondary" className="mb-6">
+          {"DETALES DE LA HOJA"}
         </Text>
         <SheetForm handleSubmit={handleSubmit} initialData={sheet} />
       </div>

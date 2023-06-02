@@ -13,7 +13,7 @@ export const routes = {
     href: "/books/create",
   },
   readBook: {
-    label: "Read book",
+    label: "Book details",
     href: "/books/[bookId]",
   },
   updateBook: {
@@ -26,7 +26,7 @@ export const routes = {
   },
   // sheets
   sheets: {
-    label: "Book sheets",
+    label: "Sheets list",
     href: "/books/[bookId]/sheets",
   },
   createSheet: {
@@ -34,7 +34,7 @@ export const routes = {
     href: "/books/[bookId]/sheets/create",
   },
   readSheet: {
-    label: "Read sheet",
+    label: "Sheet details",
     href: "/books/[bookId]/sheets/[sheetId]",
   },
   updateSheet: {
@@ -44,6 +44,11 @@ export const routes = {
   deleteSheet: {
     label: "Delete sheet",
     href: "/books/[bookId]/sheets/[sheetId]/delete",
+  },
+  // sandbox
+  sandbox: {
+    label: "Sandbox",
+    href: "/sandbox",
   },
 };
 

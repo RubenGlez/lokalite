@@ -1,5 +1,6 @@
 import Button from "@/components/Button";
 import TextInput from "@/components/TextInput";
+import { useNavigation } from "@/hooks/useNavigation";
 import { Sheet } from "@/lib/database.types";
 import { FormEvent } from "react";
 
@@ -13,6 +14,7 @@ export default function SheetForm({
   handleSubmit,
   initialData,
 }: SheetFormProps) {
+  const { goTo } = useNavigation();
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -24,6 +26,9 @@ export default function SheetForm({
     };
 
     handleSubmit(form);
+  };
+  const handleCancel = () => {
+    goTo("sheets", { bookId: initialData?.book_id });
   };
 
   return (
@@ -43,7 +48,8 @@ export default function SheetForm({
         defaultValue={initialData?.description ?? ""}
       />
 
-      <div className="mt-8">
+      <div className="mt-8 flex gap-4">
+        <Button text={"Cancelar"} onClick={handleCancel} template="secondary" />
         <Button type="submit" text={"Guardar"} />
       </div>
     </form>

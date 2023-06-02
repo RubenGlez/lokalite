@@ -1,7 +1,7 @@
 import React, { ChangeEvent, useId } from "react";
 import LabelInput from "./LabelInput";
 
-export interface TextInputProps {
+export interface TextAreaProps {
   label?: string;
   placeholder?: string;
   defaultValue?: string;
@@ -10,17 +10,17 @@ export interface TextInputProps {
   name?: string;
 }
 
-export default function TextInput({
+export default function TextArea({
   label,
   placeholder,
   defaultValue,
   handleChange,
   className = "",
   name,
-}: TextInputProps) {
+}: TextAreaProps) {
   const id = useId();
 
-  const onChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const onChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     handleChange?.(e.target.value);
   };
 
@@ -31,10 +31,9 @@ export default function TextInput({
           <LabelInput id={id} text={label} />
         </div>
       )}
-      <input
+      <textarea
         name={name}
         id={id}
-        type="text"
         className="px-3 py-2 border border-slate-700 bg-slate-900 focus:outline-none focus:border-slate-100 rounded-md text-left text-sm text-slate-100"
         placeholder={placeholder}
         defaultValue={defaultValue}

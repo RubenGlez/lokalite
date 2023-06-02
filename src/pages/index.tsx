@@ -1,11 +1,13 @@
-import Layout from "@/components/Layout";
+import Layout from "@/partials/Layout";
 import Text from "@/components/Text";
 
 export default function DashboardPage() {
   return (
     <Layout>
-      <div className="px-8 py-8">
-        <Text>Esto es el dashboard, no sabemos que habrá aqui</Text>
+      <div className="p-8">
+        <Text as="p" size="xs" color="secondary" className="mb-6">
+          HOME
+        </Text>
       </div>
     </Layout>
   );

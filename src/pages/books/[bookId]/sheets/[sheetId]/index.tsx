@@ -1,4 +1,4 @@
-import Layout from "@/components/Layout";
+import Layout from "@/partials/Layout";
 import ListBox from "@/components/ListBox";
 import Dropdown from "@/components/Dropdown";
 import {
@@ -11,8 +11,11 @@ import getBookById from "@/lib/queries/getBookById";
 import getSheetsByBookId from "@/lib/queries/getSheetsByBookId";
 import Text from "@/components/Text";
 import BookSheet from "@/partials/BookSheet";
-import { useAppContext } from "@/contexts/AppContext";
 import { useNavigation } from "@/hooks/useNavigation";
+import Sidebar from "@/partials/Sidebar";
+import { useAppContext } from "@/hooks/useAppContext";
+import { Translation } from "@/lib/database.types";
+import { useState } from "react";
 
 interface PageContext {
   query: {
@@ -27,6 +30,9 @@ export default function BookDetails({ book, sheets, sheetId }: PageProps) {
   const { isLoadingGettingTranslations, isLoadingUpdatingTranslations } =
     useAppContext();
   const { goTo } = useNavigation();
+  const [translationId, setSelectedTranslationId] = useState<
+    Translation["id"] | null
+  >(null);
   const settingsItems = [
     {
       label: "Edit book",
@@ -64,32 +70,47 @@ export default function BookDetails({ book, sheets, sheetId }: PageProps) {
   const handleChangeSheet = (val: string | number) => {
     goTo("readSheet", { bookId: book?.id, sheetId: val });
   };
-  const handleCreateSheet = () => {
-    goTo("createSheet", { bookId: book?.id });
+
+  const handleOpenSidebar = (translationId: Translation["id"]) => () => {
+    setSelectedTranslationId(translationId);
+    // todo
+  };
+  const handleCloseSidebar = () => {
+    setSelectedTranslationId(null);
   };
 
   return (
     <Layout>
-      <div className="absolute top-0 right-0 pr-4 flex gap-x-4 h-12 flex items-center">
-        {isLoadingGettingTranslations && (
-          <Text size="sm">Obteniendo datos...</Text>
-        )}
-        {isLoadingUpdatingTranslations && <Text size="sm">Guardando...</Text>}
-        <ListBox
-          options={sheetOpts}
-          handleChange={handleChangeSheet}
-          defaultValue={sheetId}
-          placeholder="Selecciona una hoja"
-          className="w-48"
-        />
-        <Dropdown items={settingsItems} placeholder={"Settings"} />
-      </div>
-      <div className="h-full w-full">
-        <BookSheet
-          languages={book?.languages ?? []}
-          defaultLanguage={book?.default_language ?? ""}
-          sheetId={sheetId}
-        />
+      <div>
+        <div className="absolute top-0 right-0 pr-4 flex gap-x-4 h-12 flex items-center">
+          {isLoadingGettingTranslations && (
+            <Text size="sm">Obteniendo datos...</Text>
+          )}
+          {isLoadingUpdatingTranslations && <Text size="sm">Guardando...</Text>}
+          <ListBox
+            options={sheetOpts}
+            handleChange={handleChangeSheet}
+            defaultValue={sheetId}
+            placeholder="Selecciona una hoja"
+            className="w-48"
+          />
+          <Dropdown items={settingsItems} placeholder={"Settings"} />
+        </div>
+        <div className="h-full">
+          <BookSheet
+            languages={book?.languages ?? []}
+            defaultLanguage={book?.default_language ?? ""}
+            sheetId={sheetId}
+            handleOpenSidebar={handleOpenSidebar}
+          />
+
+          <Sidebar
+            handleCloseSidebar={handleCloseSidebar}
+            translationId={translationId}
+            languages={book?.languages ?? []}
+            defaultLanguage={book?.default_language ?? ""}
+          />
+        </div>
       </div>
     </Layout>
   );

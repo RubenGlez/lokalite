@@ -16,22 +16,14 @@ const initialState: IAppState = {
   isLoadingUpdatingTranslations: false,
 };
 
-interface IAppContext {
+export interface IAppContext {
   isLoadingGettingTranslations: boolean;
   isLoadingUpdatingTranslations: boolean;
   setIsLoadingGettingTranslations: (isLoading: boolean) => void;
   setIsLoadingUpdatingTranslations: (isLoading: boolean) => void;
 }
 
-const AppContext = createContext<IAppContext | undefined>(undefined);
-
-export const useAppContext = (): IAppContext => {
-  const context = useContext(AppContext);
-  if (!context) {
-    throw new Error("useAppContext must be used inside a AppContextProvider");
-  }
-  return context;
-};
+export const AppContext = createContext<IAppContext | undefined>(undefined);
 
 interface AppContextProviderProps {
   children: ReactNode;
@@ -48,6 +40,7 @@ export const AppContextProvider = ({
       isLoadingGettingTranslations: isLoading,
     }));
   }, []);
+
   const setIsLoadingUpdatingTranslations = useCallback((isLoading: boolean) => {
     setSharedState((prev) => ({
       ...prev,

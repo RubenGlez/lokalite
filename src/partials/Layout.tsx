@@ -61,7 +61,7 @@ export default function Layout({ children }: LayoutProps) {
           <header className="flex items-center gap-2 h-full px-4">
             {breadcrumbs.map((breadcrumb, idx) => {
               return (
-                <>
+                <div key={`breadcrumb_${idx}`}>
                   {idx !== 0 && (
                     <Text size="xs" color="secondary">
                       {"/"}
@@ -76,14 +76,12 @@ export default function Layout({ children }: LayoutProps) {
                       <Text size="xs">{breadcrumb.label}</Text>
                     </Fragment>
                   )}
-                </>
+                </div>
               );
             })}
           </header>
         </div>
-        <main className="flex flex-1 overflow-auto">
-          <div className="w-full">{children}</div>
-        </main>
+        <main className="flex flex-1 overflow-auto">{children}</main>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import Layout from "@/components/Layout";
+import Layout from "@/partials/Layout";
 import Text from "@/components/Text";
 
 export default function DeleteBookPage() {

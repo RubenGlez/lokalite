@@ -20,7 +20,7 @@ const columClasses = {
 export default function CheckGroup({
   label,
   handleChange,
-  className,
+  className = "",
   checkboxes,
   columns = 1,
 }: CheckGroupProps) {
