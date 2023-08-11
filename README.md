@@ -20,4 +20,4 @@
 
 - [ ] Fix breadcrumbs
 - [ ] Implement /books/id page
-- [ ] Add ia for translation
+- [ ] Improve ia for translation
