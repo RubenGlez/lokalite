@@ -8,6 +8,7 @@ export interface TextAreaProps {
   handleChange?: (val: string | undefined) => void;
   className?: string;
   name?: string;
+  value?: string;
 }
 
 export default function TextArea({
@@ -17,6 +18,7 @@ export default function TextArea({
   handleChange,
   className = "",
   name,
+  value,
 }: TextAreaProps) {
   const id = useId();
 
@@ -38,6 +40,7 @@ export default function TextArea({
         placeholder={placeholder}
         defaultValue={defaultValue}
         onChange={onChange}
+        value={value}
       />
     </div>
   );

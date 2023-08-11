@@ -36,7 +36,7 @@ export default function BookSheetCell({
         />
       )}
 
-      {colType !== "index" && (
+      {colType === "key" && (
         <div
           className="cellAction opacity-0 transition-opacity absolute top-0 bottom-0 right-0 flex items-center justify-center h-full"
           onClick={handleOpenSidebar(translationId)}

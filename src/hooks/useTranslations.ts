@@ -1,7 +1,7 @@
 import { Translation } from "@/lib/database.types";
 import { useCreateTranslations } from "./useCreateTranslations";
 import { useGetTranslations } from "./useGetTranslations";
-import { useUpdateTranslations } from "./useUpdateTranslation";
+import { useUpdateTranslation } from "./useUpdateTranslation";
 import { useEffect, useState } from "react";
 
 interface UseTranslationsProps {
@@ -32,7 +32,7 @@ export const useTranslations = ({ sheetId }: UseTranslationsProps) => {
     error: errorUpdating,
     isLoading: isUpdating,
     updateTranslation,
-  } = useUpdateTranslations({});
+  } = useUpdateTranslation({});
 
   const createSuccessCallback = () => {
     getTranslations(sheetId);

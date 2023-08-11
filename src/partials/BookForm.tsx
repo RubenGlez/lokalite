@@ -2,15 +2,13 @@ import Button from "@/components/Button";
 import CheckGroup from "@/components/CheckGroup";
 import ListBox from "@/components/ListBox";
 import TextInput from "@/components/TextInput";
+import { LANG_PREFIX } from "@/constants/global";
 import { LANGUAGES } from "@/constants/languages";
 import { useNavigation } from "@/hooks/useNavigation";
 import { Book } from "@/lib/database.types";
 import { CreateBookBody } from "@/lib/queries/createBook";
 import { UpdateBookBody } from "@/lib/queries/updateBook";
-import { useRouter } from "next/router";
 import { FormEvent, useState } from "react";
-
-const LANG_PREFIX = "lang_";
 
 interface BookFormProps {
   handleSubmit: (form: CreateBookBody | UpdateBookBody) => void;

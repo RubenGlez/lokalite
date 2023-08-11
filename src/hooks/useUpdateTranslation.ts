@@ -8,7 +8,7 @@ interface UseUpdateTranslationsProps {
   errorCallback?: () => void;
 }
 
-export const useUpdateTranslations = ({
+export const useUpdateTranslation = ({
   successCallback,
   errorCallback,
 }: UseUpdateTranslationsProps) => {
