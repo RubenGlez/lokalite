@@ -1,10 +1,13 @@
+import { TypographyH1, TypographyP } from "@/components/ui/typography";
+
 export default function Dashboard() {
   return (
-    <main className="p-24">
-      <h1 className="text-xl mb-2">Dashboard</h1>
-      <p className="text-sm text-slate-500">
+    <>
+      <TypographyH1>Dashboard</TypographyH1>
+
+      <TypographyP>
         This page is private, only logged users can access to
-      </p>
-    </main>
+      </TypographyP>
+    </>
   );
 }
