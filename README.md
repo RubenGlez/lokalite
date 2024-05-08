@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+## Database Schema
 
-## Getting Started
+### 1. Users
 
-First, run the development server:
+Table that stores information about users, including their credentials and roles.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Table: Users**
+  - `user_id` (PK): Unique identifier for each user.
+  - `name`: User's name.
+  - `email`: User's email address, used for login.
+  - `password_hash`: Hashed password for security.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Projects
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Table that stores projects created by users. Each project can have multiple sheets for different translation needs.
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+- **Table: Projects**
+  - `project_id` (PK): Unique identifier for each project.
+  - `name`: Name of the project.
+  - `description`: Brief description of the project.
+  - `creation_date`: Date when the project was created.
+  - `user_id` (FK): Identifier of the user who created the project.
 
-## Learn More
+### 3. Sheets
 
-To learn more about Next.js, take a look at the following resources:
+Each project can include multiple sheets. Each sheet corresponds to a specific translation need, such as different platforms or functionalities.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Table: Sheets**
+  - `sheet_id` (PK): Unique identifier for each sheet.
+  - `project_id` (FK): Foreign key that links to the Projects table.
+  - `name`: Name of the sheet (e.g., Mobile, Web).
+  - `source_language`: Source language code (e.g., "EN").
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+### 4. Copy
 
-## Deploy on Vercel
+Table that stores the copy to be translated, linked to each sheet. Each piece of copy has an original version.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Table: Copy**
+  - `copy_id` (PK): Unique identifier for each piece of copy.
+  - `sheet_id` (FK): Foreign key that links to the Sheets table.
+  - `copy_key`: Key or identifier used to reference the copy (used in the code or application).
+  - `original_text`: Original text of the copy in the source language.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+### 5. Target Languages
+
+Table that stores the relationship between sheets and their target languages. This allows for managing multiple target languages for each sheet.
+
+- **Table: Target Languages**
+  - `target_language_id` (PK): Unique identifier for each target language relation.
+  - `sheet_id` (FK): Foreign key that links to the Sheets table.
+  - `language_code`: Language code (e.g., "ES", "FR").
+
+### 6. Translations
+
+Table that stores translations for each copy in various target languages.
+
+- **Table: Translations**
+  - `translation_id` (PK): Unique identifier for each translation.
+  - `copy_id` (FK): Foreign key that links to the Copy table.
+  - `language_code`: Language code of the translation (corresponding to one of the target languages).
+  - `translated_copy`: The translated copy in the target language.
