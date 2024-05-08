@@ -45,17 +45,8 @@ import {
 
 const groups = [
   {
-    label: "Personal Account",
-    teams: [
-      {
-        label: "Alicia Koch",
-        value: "personal",
-      },
-    ],
-  },
-  {
-    label: "Teams",
-    teams: [
+    label: "Projects",
+    projects: [
       {
         label: "Acme Inc.",
         value: "acme-inc",
@@ -68,73 +59,73 @@ const groups = [
   },
 ];
 
-type Team = (typeof groups)[number]["teams"][number];
+type Project = (typeof groups)[number]["projects"][number];
 
 type PopoverTriggerProps = React.ComponentPropsWithoutRef<
   typeof PopoverTrigger
 >;
 
-interface TeamSwitcherProps extends PopoverTriggerProps {}
+interface ProjectSwitcherProps extends PopoverTriggerProps {}
 
-export default function TeamSwitcher({ className }: TeamSwitcherProps) {
+export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
   const [open, setOpen] = React.useState(false);
-  const [showNewTeamDialog, setShowNewTeamDialog] = React.useState(false);
-  const [selectedTeam, setSelectedTeam] = React.useState<Team>(
-    groups[0].teams[0]
+  const [showNewProjectDialog, setShowNewProjectDialog] = React.useState(false);
+  const [selectedProject, setSelectedProject] = React.useState<Project>(
+    groups[0].projects[0]
   );
 
   return (
-    <Dialog open={showNewTeamDialog} onOpenChange={setShowNewTeamDialog}>
+    <Dialog open={showNewProjectDialog} onOpenChange={setShowNewProjectDialog}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            aria-label="Select a team"
+            aria-label="Select a project"
             className={cn("w-[200px] justify-between", className)}
           >
             <Avatar className="mr-2 h-5 w-5">
               <AvatarImage
-                src={`https://avatar.vercel.sh/${selectedTeam.value}.png`}
-                alt={selectedTeam.label}
+                src={"https://picsum.photos/100/100"}
+                alt={selectedProject.label}
                 className="grayscale"
               />
               <AvatarFallback>SC</AvatarFallback>
             </Avatar>
-            {selectedTeam.label}
+            {selectedProject.label}
             <CaretSortIcon className="ml-auto h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[200px] p-0">
           <Command>
             <CommandList>
-              <CommandInput placeholder="Search team..." />
-              <CommandEmpty>No team found.</CommandEmpty>
+              <CommandInput placeholder="Search project..." />
+              <CommandEmpty>No project found.</CommandEmpty>
               {groups.map((group) => (
                 <CommandGroup key={group.label} heading={group.label}>
-                  {group.teams.map((team) => (
+                  {group.projects.map((project) => (
                     <CommandItem
-                      key={team.value}
+                      key={project.value}
                       onSelect={() => {
-                        setSelectedTeam(team);
+                        setSelectedProject(project);
                         setOpen(false);
                       }}
                       className="text-sm"
                     >
                       <Avatar className="mr-2 h-5 w-5">
                         <AvatarImage
-                          src={`https://avatar.vercel.sh/${team.value}.png`}
-                          alt={team.label}
+                          src={"https://picsum.photos/100/100"}
+                          alt={project.label}
                           className="grayscale"
                         />
                         <AvatarFallback>SC</AvatarFallback>
                       </Avatar>
-                      {team.label}
+                      {project.label}
                       <CheckIcon
                         className={cn(
                           "ml-auto h-4 w-4",
-                          selectedTeam.value === team.value
+                          selectedProject.value === project.value
                             ? "opacity-100"
                             : "opacity-0"
                         )}
@@ -151,11 +142,11 @@ export default function TeamSwitcher({ className }: TeamSwitcherProps) {
                   <CommandItem
                     onSelect={() => {
                       setOpen(false);
-                      setShowNewTeamDialog(true);
+                      setShowNewProjectDialog(true);
                     }}
                   >
                     <PlusCircledIcon className="mr-2 h-5 w-5" />
-                    Create Team
+                    Create Project
                   </CommandItem>
                 </DialogTrigger>
               </CommandGroup>
@@ -163,17 +154,18 @@ export default function TeamSwitcher({ className }: TeamSwitcherProps) {
           </Command>
         </PopoverContent>
       </Popover>
+
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create team</DialogTitle>
+          <DialogTitle>Create project</DialogTitle>
           <DialogDescription>
-            Add a new team to manage products and customers.
+            Add a new project to manage products and customers.
           </DialogDescription>
         </DialogHeader>
         <div>
           <div className="space-y-4 py-2 pb-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Team name</Label>
+              <Label htmlFor="name">Project name</Label>
               <Input id="name" placeholder="Acme Inc." />
             </div>
             <div className="space-y-2">
@@ -201,7 +193,10 @@ export default function TeamSwitcher({ className }: TeamSwitcherProps) {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setShowNewTeamDialog(false)}>
+          <Button
+            variant="outline"
+            onClick={() => setShowNewProjectDialog(false)}
+          >
             Cancel
           </Button>
           <Button type="submit">Continue</Button>
