@@ -1,11 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  CaretSortIcon,
-  CheckIcon,
-  PlusCircledIcon,
-} from "@radix-ui/react-icons";
+import { ChevronsUpDown, CheckIcon, PlusCircleIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -35,13 +31,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 const groups = [
   {
@@ -94,9 +84,10 @@ export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
               <AvatarFallback>SC</AvatarFallback>
             </Avatar>
             {selectedProject.label}
-            <CaretSortIcon className="ml-auto h-4 w-4 shrink-0 opacity-50" />
+            <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
+
         <PopoverContent className="w-[200px] p-0">
           <Command>
             <CommandList>
@@ -135,7 +126,9 @@ export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
                 </CommandGroup>
               ))}
             </CommandList>
+
             <CommandSeparator />
+
             <CommandList>
               <CommandGroup>
                 <DialogTrigger asChild>
@@ -145,7 +138,7 @@ export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
                       setShowNewProjectDialog(true);
                     }}
                   >
-                    <PlusCircledIcon className="mr-2 h-5 w-5" />
+                    <PlusCircleIcon className="mr-2 h-5 w-5" />
                     Create Project
                   </CommandItem>
                 </DialogTrigger>
@@ -159,7 +152,7 @@ export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
         <DialogHeader>
           <DialogTitle>Create project</DialogTitle>
           <DialogDescription>
-            Add a new project to manage products and customers.
+            Add a new project to manage the translations.
           </DialogDescription>
         </DialogHeader>
         <div>
@@ -169,26 +162,11 @@ export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
               <Input id="name" placeholder="Acme Inc." />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="plan">Subscription plan</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a plan" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="free">
-                    <span className="font-medium">Free</span> -{" "}
-                    <span className="text-muted-foreground">
-                      Trial for two weeks
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="pro">
-                    <span className="font-medium">Pro</span> -{" "}
-                    <span className="text-muted-foreground">
-                      $9/month per user
-                    </span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Type your description here."
+              />
             </div>
           </div>
         </div>
