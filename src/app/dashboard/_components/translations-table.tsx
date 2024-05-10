@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable
 } from '@tanstack/react-table'
-import { MoreHorizontal } from 'lucide-react'
+import { Copy, MoreHorizontal, Trash } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -21,11 +21,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -37,7 +34,24 @@ import {
 
 const data: SheetRow[] = [
   {
-    id: '1',
+    copyKey: 'greeting',
+    originalText: 'Hello World!',
+    'es-ES': 'Hola Mundo!',
+    'fr-FR': 'Hola monde!'
+  },
+  {
+    copyKey: 'greeting',
+    originalText: 'Hello World!',
+    'es-ES': 'Hola Mundo!',
+    'fr-FR': 'Hola monde!'
+  },
+  {
+    copyKey: 'greeting',
+    originalText: 'Hello World!',
+    'es-ES': 'Hola Mundo!',
+    'fr-FR': 'Hola monde!'
+  },
+  {
     copyKey: 'greeting',
     originalText: 'Hello World!',
     'es-ES': 'Hola Mundo!',
@@ -46,7 +60,6 @@ const data: SheetRow[] = [
 ]
 
 export type SheetRow = {
-  id: '1'
   copyKey: 'greeting'
   originalText: 'Hello World!'
   [key: string]: string
@@ -77,12 +90,12 @@ export const columns: ColumnDef<SheetRow>[] = [
   },
   {
     accessorKey: 'copyKey',
-    header: 'copyKey',
+    header: 'Key',
     cell: ({ row }) => <div>{row.getValue('copyKey')}</div>
   },
   {
     accessorKey: 'originalText',
-    header: 'originalText',
+    header: 'Original Text',
     cell: ({ row }) => <div>{row.getValue('originalText')}</div>
   },
   {
@@ -98,7 +111,7 @@ export const columns: ColumnDef<SheetRow>[] = [
   {
     id: 'actions',
     enableHiding: false,
-    cell: ({ row }) => {
+    cell: () => {
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -108,9 +121,14 @@ export const columns: ColumnDef<SheetRow>[] = [
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem>Delete</DropdownMenuItem>
-            <DropdownMenuItem>Duplicate</DropdownMenuItem>
+            <DropdownMenuItem>
+              <Copy className="h-4 w-4 mr-2" />
+              Duplicate
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-red-600">
+              <Trash className="h-4 w-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )

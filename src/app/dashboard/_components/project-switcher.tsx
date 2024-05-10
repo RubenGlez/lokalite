@@ -2,9 +2,7 @@
 
 import * as React from 'react'
 import { ChevronsUpDown, CheckIcon, PlusCircleIcon } from 'lucide-react'
-
 import { cn } from '@/lib/utils'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
   Command,
@@ -71,22 +69,14 @@ export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
             role="combobox"
             aria-expanded={open}
             aria-label="Select a project"
-            className={cn('w-[200px] justify-between', className)}
+            className={cn('w-[140px]', className)}
           >
-            <Avatar className="mr-2 h-5 w-5">
-              <AvatarImage
-                src={'https://picsum.photos/100/100'}
-                alt={selectedProject.label}
-                className="grayscale"
-              />
-              <AvatarFallback>SC</AvatarFallback>
-            </Avatar>
             {selectedProject.label}
             <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
 
-        <PopoverContent className="w-[200px] p-0">
+        <PopoverContent className="w-[200px] p-0" align="start">
           <Command>
             <CommandList>
               <CommandInput placeholder="Search project..." />
@@ -102,14 +92,6 @@ export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
                       }}
                       className="text-sm"
                     >
-                      <Avatar className="mr-2 h-5 w-5">
-                        <AvatarImage
-                          src={'https://picsum.photos/100/100'}
-                          alt={project.label}
-                          className="grayscale"
-                        />
-                        <AvatarFallback>SC</AvatarFallback>
-                      </Avatar>
                       {project.label}
                       <CheckIcon
                         className={cn(
@@ -136,7 +118,7 @@ export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
                       setShowNewProjectDialog(true)
                     }}
                   >
-                    <PlusCircleIcon className="mr-2 h-5 w-5" />
+                    <PlusCircleIcon className="mr-2 h-4 w-4" />
                     Create Project
                   </CommandItem>
                 </DialogTrigger>

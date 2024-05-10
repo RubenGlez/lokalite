@@ -1,19 +1,21 @@
 import SheetSwitcher from './_components/sheet-switcher'
-import SheetSettings from './_components/sheet-settings'
 import { TranslationsTable } from './_components/translations-table'
+import SheetSettings from './_components/sheet-settings'
 
 export default function Dashboard() {
   return (
-    <div className="flex-1 p-8 pt-6">
+    <div className="flex flex-col flex-1 px-4 py-8 gap-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        <div className="flex items-center space-x-4">
+        <div>
           <SheetSwitcher />
+        </div>
+
+        <div className="flex items-center gap-2">
           <SheetSettings />
         </div>
       </div>
 
-      <div>
+      <div className="flex-1">
         <TranslationsTable />
       </div>
     </div>
