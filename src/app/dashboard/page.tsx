@@ -1,6 +1,6 @@
-import SheetSwitcher from "./_components/sheet-switcher";
-import SheetSettings from "./_components/sheet-settings";
-import { TranslationsTable } from "./_components/translations-table";
+import SheetSwitcher from './_components/sheet-switcher'
+import SheetSettings from './_components/sheet-settings'
+import { TranslationsTable } from './_components/translations-table'
 
 export default function Dashboard() {
   return (
@@ -17,5 +17,5 @@ export default function Dashboard() {
         <TranslationsTable />
       </div>
     </div>
-  );
+  )
 }

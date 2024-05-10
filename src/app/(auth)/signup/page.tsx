@@ -1,4 +1,4 @@
-import { TypographyH1, TypographyP } from "@/components/ui/typography";
+import { TypographyH1, TypographyP } from '@/components/ui/typography'
 
 export default function SignUp() {
   return (
@@ -9,5 +9,5 @@ export default function SignUp() {
         This page is public, is the place for registering new users
       </TypographyP>
     </>
-  );
+  )
 }

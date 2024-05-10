@@ -1,32 +1,32 @@
-"use client";
+'use client'
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-} from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
+  DropdownMenuCheckboxItem
+} from '@/components/ui/dropdown-menu'
+import { ChevronDown } from 'lucide-react'
 
 const options = [
   {
-    value: "webapp",
-    label: "Web App",
+    value: 'webapp',
+    label: 'Web App'
   },
   {
-    value: "iosapp",
-    label: "iOS App",
+    value: 'iosapp',
+    label: 'iOS App'
   },
   {
-    value: "androidapp",
-    label: "Android App",
+    value: 'androidapp',
+    label: 'Android App'
   },
   {
-    value: "landing",
-    label: "Landing",
-  },
-];
+    value: 'landing',
+    label: 'Landing'
+  }
+]
 
 export default function SheetSwitcher() {
   return (
@@ -42,14 +42,14 @@ export default function SheetSwitcher() {
             <DropdownMenuCheckboxItem
               key={value}
               className="capitalize"
-              checked={value === "webapp"}
+              checked={value === 'webapp'}
               onCheckedChange={() => {}}
             >
               {label}
             </DropdownMenuCheckboxItem>
-          );
+          )
         })}
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }

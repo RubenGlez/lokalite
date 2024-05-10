@@ -1,11 +1,11 @@
-"use client";
+'use client'
 
-import * as React from "react";
-import { ChevronsUpDown, CheckIcon, PlusCircleIcon } from "lucide-react";
+import * as React from 'react'
+import { ChevronsUpDown, CheckIcon, PlusCircleIcon } from 'lucide-react'
 
-import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { cn } from '@/lib/utils'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
 import {
   Command,
   CommandEmpty,
@@ -13,8 +13,8 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
-} from "@/components/ui/command";
+  CommandSeparator
+} from '@/components/ui/command'
 import {
   Dialog,
   DialogContent,
@@ -22,47 +22,45 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+  DialogTrigger
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Popover,
   PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
+  PopoverTrigger
+} from '@/components/ui/popover'
+import { Textarea } from '@/components/ui/textarea'
 
 const groups = [
   {
-    label: "Projects",
+    label: 'Projects',
     projects: [
       {
-        label: "Acme Inc.",
-        value: "acme-inc",
+        label: 'Acme Inc.',
+        value: 'acme-inc'
       },
       {
-        label: "Monsters Inc.",
-        value: "monsters",
-      },
-    ],
-  },
-];
+        label: 'Monsters Inc.',
+        value: 'monsters'
+      }
+    ]
+  }
+]
 
-type Project = (typeof groups)[number]["projects"][number];
+type Project = (typeof groups)[number]['projects'][number]
 
-type PopoverTriggerProps = React.ComponentPropsWithoutRef<
-  typeof PopoverTrigger
->;
+type PopoverTriggerProps = React.ComponentPropsWithoutRef<typeof PopoverTrigger>
 
 interface ProjectSwitcherProps extends PopoverTriggerProps {}
 
 export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
-  const [open, setOpen] = React.useState(false);
-  const [showNewProjectDialog, setShowNewProjectDialog] = React.useState(false);
+  const [open, setOpen] = React.useState(false)
+  const [showNewProjectDialog, setShowNewProjectDialog] = React.useState(false)
   const [selectedProject, setSelectedProject] = React.useState<Project>(
     groups[0].projects[0]
-  );
+  )
 
   return (
     <Dialog open={showNewProjectDialog} onOpenChange={setShowNewProjectDialog}>
@@ -73,11 +71,11 @@ export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
             role="combobox"
             aria-expanded={open}
             aria-label="Select a project"
-            className={cn("w-[200px] justify-between", className)}
+            className={cn('w-[200px] justify-between', className)}
           >
             <Avatar className="mr-2 h-5 w-5">
               <AvatarImage
-                src={"https://picsum.photos/100/100"}
+                src={'https://picsum.photos/100/100'}
                 alt={selectedProject.label}
                 className="grayscale"
               />
@@ -99,14 +97,14 @@ export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
                     <CommandItem
                       key={project.value}
                       onSelect={() => {
-                        setSelectedProject(project);
-                        setOpen(false);
+                        setSelectedProject(project)
+                        setOpen(false)
                       }}
                       className="text-sm"
                     >
                       <Avatar className="mr-2 h-5 w-5">
                         <AvatarImage
-                          src={"https://picsum.photos/100/100"}
+                          src={'https://picsum.photos/100/100'}
                           alt={project.label}
                           className="grayscale"
                         />
@@ -115,10 +113,10 @@ export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
                       {project.label}
                       <CheckIcon
                         className={cn(
-                          "ml-auto h-4 w-4",
+                          'ml-auto h-4 w-4',
                           selectedProject.value === project.value
-                            ? "opacity-100"
-                            : "opacity-0"
+                            ? 'opacity-100'
+                            : 'opacity-0'
                         )}
                       />
                     </CommandItem>
@@ -134,8 +132,8 @@ export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
                 <DialogTrigger asChild>
                   <CommandItem
                     onSelect={() => {
-                      setOpen(false);
-                      setShowNewProjectDialog(true);
+                      setOpen(false)
+                      setShowNewProjectDialog(true)
                     }}
                   >
                     <PlusCircleIcon className="mr-2 h-5 w-5" />
@@ -181,5 +179,5 @@ export default function ProjectSwitcher({ className }: ProjectSwitcherProps) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

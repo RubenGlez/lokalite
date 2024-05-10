@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import * as React from "react";
+import * as React from 'react'
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -11,55 +11,55 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
-import { MoreHorizontal } from "lucide-react";
+  useReactTable
+} from '@tanstack/react-table'
+import { MoreHorizontal } from 'lucide-react'
 
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  TableRow
+} from '@/components/ui/table'
 
 const data: SheetRow[] = [
   {
-    id: "1",
-    copyKey: "greeting",
-    originalText: "Hello World!",
-    "es-ES": "Hola Mundo!",
-    "fr-FR": "Hola monde!",
-  },
-];
+    id: '1',
+    copyKey: 'greeting',
+    originalText: 'Hello World!',
+    'es-ES': 'Hola Mundo!',
+    'fr-FR': 'Hola monde!'
+  }
+]
 
 export type SheetRow = {
-  id: "1";
-  copyKey: "greeting";
-  originalText: "Hello World!";
-  [key: string]: string;
-};
+  id: '1'
+  copyKey: 'greeting'
+  originalText: 'Hello World!'
+  [key: string]: string
+}
 
 export const columns: ColumnDef<SheetRow>[] = [
   {
-    id: "select",
+    id: 'select',
     header: ({ table }) => (
       <Checkbox
         checked={
           table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && "indeterminate")
+          (table.getIsSomePageRowsSelected() && 'indeterminate')
         }
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
         aria-label="Select all"
@@ -73,30 +73,30 @@ export const columns: ColumnDef<SheetRow>[] = [
       />
     ),
     enableSorting: false,
-    enableHiding: false,
+    enableHiding: false
   },
   {
-    accessorKey: "copyKey",
-    header: "copyKey",
-    cell: ({ row }) => <div>{row.getValue("copyKey")}</div>,
+    accessorKey: 'copyKey',
+    header: 'copyKey',
+    cell: ({ row }) => <div>{row.getValue('copyKey')}</div>
   },
   {
-    accessorKey: "originalText",
-    header: "originalText",
-    cell: ({ row }) => <div>{row.getValue("originalText")}</div>,
+    accessorKey: 'originalText',
+    header: 'originalText',
+    cell: ({ row }) => <div>{row.getValue('originalText')}</div>
   },
   {
-    accessorKey: "es-ES",
-    header: "es-ES",
-    cell: ({ row }) => <div>{row.getValue("es-ES")}</div>,
+    accessorKey: 'es-ES',
+    header: 'es-ES',
+    cell: ({ row }) => <div>{row.getValue('es-ES')}</div>
   },
   {
-    accessorKey: "fr-FR",
-    header: "fr-FR",
-    cell: ({ row }) => <div>{row.getValue("fr-FR")}</div>,
+    accessorKey: 'fr-FR',
+    header: 'fr-FR',
+    cell: ({ row }) => <div>{row.getValue('fr-FR')}</div>
   },
   {
-    id: "actions",
+    id: 'actions',
     enableHiding: false,
     cell: ({ row }) => {
       return (
@@ -113,19 +113,19 @@ export const columns: ColumnDef<SheetRow>[] = [
             <DropdownMenuItem>Duplicate</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      );
-    },
-  },
-];
+      )
+    }
+  }
+]
 
 export function TranslationsTable() {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
-  );
+  )
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = React.useState({});
+    React.useState<VisibilityState>({})
+  const [rowSelection, setRowSelection] = React.useState({})
 
   const table = useReactTable({
     data,
@@ -142,9 +142,9 @@ export function TranslationsTable() {
       sorting,
       columnFilters,
       columnVisibility,
-      rowSelection,
-    },
-  });
+      rowSelection
+    }
+  })
 
   return (
     <div className="w-full">
@@ -163,7 +163,7 @@ export function TranslationsTable() {
                             header.getContext()
                           )}
                     </TableHead>
-                  );
+                  )
                 })}
               </TableRow>
             ))}
@@ -173,7 +173,7 @@ export function TranslationsTable() {
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
+                  data-state={row.getIsSelected() && 'selected'}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -201,7 +201,7 @@ export function TranslationsTable() {
 
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {table.getFilteredSelectedRowModel().rows.length} of{' '}
           {table.getFilteredRowModel().rows.length} row(s) selected.
         </div>
         <div className="space-x-2">
@@ -224,5 +224,5 @@ export function TranslationsTable() {
         </div>
       </div>
     </div>
-  );
+  )
 }

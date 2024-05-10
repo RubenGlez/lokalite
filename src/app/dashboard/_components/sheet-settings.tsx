@@ -2,28 +2,28 @@ import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { Settings } from "lucide-react";
+  DropdownMenuItem
+} from '@/components/ui/dropdown-menu'
+import { Button } from '@/components/ui/button'
+import { Settings } from 'lucide-react'
 
 const options = [
   {
-    id: "1",
-    label: "Configuration",
-    onClick: () => {},
+    id: '1',
+    label: 'Configuration',
+    onClick: () => {}
   },
   {
-    id: "2",
-    label: "Configuration",
-    onClick: () => {},
+    id: '2',
+    label: 'Configuration',
+    onClick: () => {}
   },
   {
-    id: "3",
-    label: "Configuration",
-    onClick: () => {},
-  },
-];
+    id: '3',
+    label: 'Configuration',
+    onClick: () => {}
+  }
+]
 
 export default function SheetSettings() {
   return (
@@ -43,5 +43,5 @@ export default function SheetSettings() {
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }

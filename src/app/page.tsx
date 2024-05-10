@@ -1,6 +1,6 @@
-import { Button } from "@/components/ui/button";
-import { TypographyH1, TypographyP } from "@/components/ui/typography";
-import Link from "next/link";
+import { Button } from '@/components/ui/button'
+import { TypographyH1, TypographyP } from '@/components/ui/typography'
+import Link from 'next/link'
 
 export default function Home() {
   return (
@@ -20,5 +20,5 @@ export default function Home() {
         </Button>
       </div>
     </main>
-  );
+  )
 }

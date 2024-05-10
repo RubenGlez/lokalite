@@ -1,5 +1,5 @@
-import ProjectSwitcher from "./project-switcher";
-import { UserNav } from "./user-nav";
+import ProjectSwitcher from './project-switcher'
+import { UserNav } from './user-nav'
 
 export default function DashboardHeader() {
   return (
@@ -9,5 +9,5 @@ export default function DashboardHeader() {
         <UserNav />
       </div>
     </header>
-  );
+  )
 }

@@ -1,12 +1,12 @@
-"use client";
+'use client'
 
-import { ThemeProvider } from "next-themes";
-import { Provider as BalancerProvider } from "react-wrap-balancer";
+import { ThemeProvider } from 'next-themes'
+import { Provider as BalancerProvider } from 'react-wrap-balancer'
 
 export function Providers({
-  children,
+  children
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
     <ThemeProvider
@@ -17,5 +17,5 @@ export function Providers({
     >
       <BalancerProvider>{children}</BalancerProvider>
     </ThemeProvider>
-  );
+  )
 }
