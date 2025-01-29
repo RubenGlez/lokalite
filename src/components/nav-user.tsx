@@ -20,15 +20,13 @@ import {
   useSidebar
 } from '~/components/ui/sidebar'
 
-export function NavUser({
-  user
-}: {
-  user: {
-    name: string
-    email: string
-    avatar: string
-  }
-}) {
+const user = {
+  name: 'ruben',
+  email: 'ruben@glez.com',
+  avatar: 'https://picsum.photos/100/100'
+}
+
+export function NavUser() {
   const { isMobile } = useSidebar()
 
   return (
