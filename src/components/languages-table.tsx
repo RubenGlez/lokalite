@@ -35,6 +35,7 @@ import {
   SortingState,
   flexRender
 } from '@tanstack/react-table'
+import { LanguageCreator } from './language-creator'
 
 export const columns: ColumnDef<Language>[] = [
   {
@@ -109,8 +110,11 @@ export const columns: ColumnDef<Language>[] = [
     }
   }
 ]
-
-export function LanguagesTable({ languages }: { languages: Language[] }) {
+interface LanguagesTableProps {
+  projectId: string
+  languages: Language[]
+}
+export function LanguagesTable({ projectId, languages }: LanguagesTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -141,14 +145,21 @@ export function LanguagesTable({ languages }: { languages: Language[] }) {
   return (
     <div className="w-full">
       <div className="flex items-center py-4">
-        <Input
-          placeholder="Filter languages..."
-          value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
-          onChange={(event) =>
-            table.getColumn('name')?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm"
-        />
+        <div className="flex items-center gap-4">
+          <LanguageCreator projectId={projectId}>
+            <Button className="ml-auto">Add Language</Button>
+          </LanguageCreator>
+
+          <Input
+            placeholder="Filter languages..."
+            value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
+            onChange={(event) =>
+              table.getColumn('name')?.setFilterValue(event.target.value)
+            }
+            className="max-w-sm"
+          />
+        </div>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">

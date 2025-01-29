@@ -5,6 +5,7 @@ import { createTRPCRouter, publicProcedure } from '~/server/api/trpc'
 import { translationKeys, translations } from '~/server/db/schema'
 
 export const translationKeysRouter = createTRPCRouter({
+  // Get all translation keys by project id
   getAllByProjectId: publicProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -12,6 +13,16 @@ export const translationKeysRouter = createTRPCRouter({
         .select()
         .from(translationKeys)
         .where(eq(translationKeys.projectId, input.projectId))
+    }),
+
+  // Get all translation keys by page id
+  getAllByPageId: publicProcedure
+    .input(z.object({ pageId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db
+        .select()
+        .from(translationKeys)
+        .where(eq(translationKeys.pageId, input.pageId))
     }),
 
   // Create a new translation key

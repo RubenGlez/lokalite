@@ -82,7 +82,7 @@ export default function ProjectOverview() {
         </Card>
       </div>
 
-      <LanguagesTable languages={languages ?? []} />
+      <LanguagesTable languages={languages ?? []} projectId={project.id} />
     </div>
   )
 }
