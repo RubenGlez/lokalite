@@ -23,6 +23,17 @@ export const pagesRouter = createTRPCRouter({
         .then((rows) => rows[0]) // Return the first (and only) matching row
     }),
 
+  // Get a single page by slug
+  getBySlug: publicProcedure
+    .input(z.object({ slug: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db
+        .select()
+        .from(pages)
+        .where(eq(pages.slug, input.slug))
+        .then((rows) => rows[0]) // Return the first (and only) matching row
+    }),
+
   // Create a new page
   create: publicProcedure
     .input(

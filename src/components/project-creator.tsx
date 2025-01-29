@@ -59,7 +59,8 @@ export function ProjectCreator({ children }: ProjectCreatorProps) {
   })
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    createProject.mutate(values)
+    const slug = values.slug.toLowerCase().replace(/ /g, '-')
+    createProject.mutate({ ...values, slug })
   }
 
   return (

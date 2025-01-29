@@ -63,8 +63,8 @@ export function PageCreator({ projectId, children }: PageCreatorProps) {
   })
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log('Submitting form with values:', values)
-    createPage.mutate(values)
+    const slug = values.slug.toLowerCase().replace(/ /g, '-')
+    createPage.mutate({ ...values, slug })
   }
 
   return (

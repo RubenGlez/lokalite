@@ -29,7 +29,7 @@ export function NavPages() {
         {pages?.map((page) => (
           <SidebarMenuItem key={page.id}>
             <SidebarMenuButton asChild>
-              <a href={`/${page.slug}`}>
+              <a href={`/${project?.slug}/pages/${page.slug}`}>
                 <FileIcon />
                 <span>{page.name}</span>
               </a>

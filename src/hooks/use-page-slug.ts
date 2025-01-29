@@ -1,6 +1,6 @@
 import { useParams } from 'next/navigation'
 
-export function usePageId() {
+export function usePageSlug() {
   const params = useParams()
-  return params.pageId as string
+  return params.pageSlug as string
 }
