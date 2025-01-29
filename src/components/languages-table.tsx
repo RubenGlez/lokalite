@@ -1,25 +1,16 @@
 'use client'
 
 import * as React from 'react'
-import {
-  ColumnFiltersState,
-  RowData,
-  SortingState,
-  VisibilityState,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable
-} from '@tanstack/react-table'
-import { ChevronDown } from 'lucide-react'
+
+import { ArrowUpDown, ChevronDown, MoreHorizontal } from 'lucide-react'
 
 import { Button } from '~/components/ui/button'
+import { Checkbox } from '~/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger
 } from '~/components/ui/dropdown-menu'
 import { Input } from '~/components/ui/input'
@@ -31,37 +22,105 @@ import {
   TableHeader,
   TableRow
 } from '~/components/ui/table'
-import { columns } from './columns'
-import { ComposedTranslation } from '~/server/db/types'
-import { useSkipper } from './use-skipper'
-import { useState } from 'react'
+import { Language } from '~/server/db/types'
+import {
+  ColumnDef,
+  getFilteredRowModel,
+  getSortedRowModel,
+  getPaginationRowModel,
+  getCoreRowModel,
+  useReactTable,
+  VisibilityState,
+  ColumnFiltersState,
+  SortingState,
+  flexRender
+} from '@tanstack/react-table'
 
-declare module '@tanstack/react-table' {
-  interface TableMeta<TData extends RowData> {
-    updateCell: (
-      translationId: string | null,
-      columnId: string,
-      value: TData[keyof TData]
-    ) => void
+export const columns: ColumnDef<Language>[] = [
+  {
+    id: 'select',
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && 'indeterminate')
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false
+  },
+  {
+    accessorKey: 'name',
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Name
+          <ArrowUpDown />
+        </Button>
+      )
+    },
+    cell: ({ row }) => <div>{row.getValue('name')}</div>
+  },
+  {
+    accessorKey: 'code',
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Code
+          <ArrowUpDown />
+        </Button>
+      )
+    },
+    cell: ({ row }) => <div>{row.getValue('code')}</div>
+  },
+  {
+    id: 'actions',
+    enableHiding: false,
+    cell: () => {
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Open menu</span>
+              <MoreHorizontal />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem>Delete</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )
+    }
   }
-}
+]
 
-interface TranslationsTableProps {
-  translations: ComposedTranslation[]
-}
-
-export function TranslationsTable({
-  translations = []
-}: TranslationsTableProps) {
-  const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
-
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = useState({})
+export function LanguagesTable({ languages }: { languages: Language[] }) {
+  const [sorting, setSorting] = React.useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  )
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({})
+  const [rowSelection, setRowSelection] = React.useState({})
 
   const table = useReactTable({
-    data: translations,
+    data: languages,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -76,15 +135,6 @@ export function TranslationsTable({
       columnFilters,
       columnVisibility,
       rowSelection
-    },
-    autoResetPageIndex,
-    meta: {
-      updateCell: (translationId, columnId, value) => {
-        // Skip page index reset until after next rerender
-        skipAutoResetPageIndex()
-
-        console.log('upsert translation', translationId, columnId, value)
-      }
     }
   })
 
@@ -92,10 +142,10 @@ export function TranslationsTable({
     <div className="w-full">
       <div className="flex items-center py-4">
         <Input
-          placeholder="Filter translations..."
-          value={(table.getColumn('key')?.getFilterValue() as string) ?? ''}
+          placeholder="Filter languages..."
+          value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
           onChange={(event) =>
-            table.getColumn('key')?.setFilterValue(event.target.value)
+            table.getColumn('name')?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
         />
@@ -126,7 +176,6 @@ export function TranslationsTable({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -147,7 +196,6 @@ export function TranslationsTable({
               </TableRow>
             ))}
           </TableHeader>
-
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
@@ -178,7 +226,6 @@ export function TranslationsTable({
           </TableBody>
         </Table>
       </div>
-
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
           {table.getFilteredSelectedRowModel().rows.length} of{' '}

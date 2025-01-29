@@ -2,20 +2,21 @@ import { CellContext } from '@tanstack/react-table'
 import { useEffect, useState } from 'react'
 
 import { ComposedTranslation } from '~/server/db/types'
+import { Input } from '../ui/input'
 
 export function EditableCell({
   getValue,
-  row: { index },
-  column: { id },
+  row,
+  column,
   table
 }: CellContext<ComposedTranslation, unknown>) {
-  const initialValue = getValue()
+  const initialValue = (getValue() as string) ?? ''
   // We need to keep and update the state of the cell normally
   const [value, setValue] = useState(initialValue)
 
   // When the input is blurred, we'll call our table meta's updateData function
   const onBlur = () => {
-    table.options.meta?.updateCell(index, id, value as string)
+    table.options.meta?.updateCell(row.original.id, column.id, value)
   }
 
   // If the initialValue is changed external, sync it up with our state
@@ -24,8 +25,8 @@ export function EditableCell({
   }, [initialValue])
 
   return (
-    <input
-      value={value as string}
+    <Input
+      value={value}
       onChange={(e) => setValue(e.target.value)}
       onBlur={onBlur}
     />

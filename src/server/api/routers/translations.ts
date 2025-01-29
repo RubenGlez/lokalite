@@ -11,6 +11,7 @@ export const translationsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       return ctx.db
         .select({
+          id: translations.id,
           key: translationKeys.key,
           description: translationKeys.description,
           language: languages.code,

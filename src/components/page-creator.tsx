@@ -32,8 +32,7 @@ const formSchema = z.object({
     .min(1, 'Slug is required')
     .regex(/^[a-z0-9-]+$/, {
       message: 'Slug can only contain lowercase letters, numbers, and hyphens'
-    }),
-  projectId: z.string().min(1, 'Project ID is required')
+    })
 })
 
 interface PageCreatorProps {
@@ -49,8 +48,7 @@ export function PageCreator({ projectId, children }: PageCreatorProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      slug: '',
-      projectId
+      slug: ''
     }
   })
 
@@ -64,7 +62,7 @@ export function PageCreator({ projectId, children }: PageCreatorProps) {
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     const slug = values.slug.toLowerCase().replace(/ /g, '-')
-    createPage.mutate({ ...values, slug })
+    createPage.mutate({ ...values, slug, projectId })
   }
 
   return (

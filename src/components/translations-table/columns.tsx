@@ -66,8 +66,8 @@ export const columns: ColumnDef<ComposedTranslation>[] = [
         </Button>
       )
     },
-    cell: ({ row }) => (
-      <div className="lowercase">{row.getValue('description')}</div>
+    cell: (props: CellContext<ComposedTranslation, unknown>) => (
+      <EditableCell {...props} />
     )
   },
   {
@@ -83,8 +83,8 @@ export const columns: ColumnDef<ComposedTranslation>[] = [
         </Button>
       )
     },
-    cell: ({ row }) => (
-      <div className="lowercase">{row.getValue('language')}</div>
+    cell: (props: CellContext<ComposedTranslation, unknown>) => (
+      <EditableCell {...props} />
     )
   },
   {
@@ -100,7 +100,9 @@ export const columns: ColumnDef<ComposedTranslation>[] = [
         </Button>
       )
     },
-    cell: ({ row }) => <div className="lowercase">{row.getValue('value')}</div>
+    cell: (props: CellContext<ComposedTranslation, unknown>) => (
+      <EditableCell {...props} />
+    )
   },
   {
     id: 'actions',
@@ -116,7 +118,7 @@ export const columns: ColumnDef<ComposedTranslation>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem>Translater</DropdownMenuItem>
+            <DropdownMenuItem>Translate</DropdownMenuItem>
             <DropdownMenuItem>Delete</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

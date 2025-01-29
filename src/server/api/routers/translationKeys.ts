@@ -5,6 +5,15 @@ import { createTRPCRouter, publicProcedure } from '~/server/api/trpc'
 import { translationKeys, translations } from '~/server/db/schema'
 
 export const translationKeysRouter = createTRPCRouter({
+  getAllByProjectId: publicProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db
+        .select()
+        .from(translationKeys)
+        .where(eq(translationKeys.projectId, input.projectId))
+    }),
+
   // Create a new translation key
   createKey: publicProcedure
     .input(

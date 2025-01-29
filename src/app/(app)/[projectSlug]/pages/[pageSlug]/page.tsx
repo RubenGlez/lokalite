@@ -15,7 +15,7 @@ export default function PageDetail() {
   const translations = [
     ...(data ?? []),
     {
-      id: 'new',
+      id: null,
       key: '',
       description: '',
       language: '',
@@ -29,3 +29,17 @@ export default function PageDetail() {
     </div>
   )
 }
+/**
+ * columns:
+ * - keys
+ * - language 1
+ * - language 2
+ * - language 3
+ * - language 4
+ * - language 5
+ * - language 6
+ * - language 7
+ * - language 8
+ * - language 9
+ * - language 10
+ */
