@@ -1,8 +1,5 @@
-'use client'
-
 import * as React from 'react'
 
-import { NavMain } from '~/components/nav-main'
 import { NavUser } from '~/components/nav-user'
 import {
   Sidebar,
@@ -12,15 +9,21 @@ import {
   SidebarRail
 } from '~/components/ui/sidebar'
 import { ProjectSwitcher } from './project-switcher'
+import { api } from '~/trpc/server'
+import { NavPages } from './nav-pages'
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export async function AppSidebar({
+  ...props
+}: React.ComponentProps<typeof Sidebar>) {
+  const projects = await api.projects.getAll()
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <ProjectSwitcher />
+        <ProjectSwitcher projects={projects} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain />
+        <NavPages />
       </SidebarContent>
       <SidebarFooter>
         <NavUser />

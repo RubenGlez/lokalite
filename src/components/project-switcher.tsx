@@ -18,83 +18,93 @@ import {
   SidebarMenuItem,
   useSidebar
 } from '~/components/ui/sidebar'
+import { useProjectSlug } from '~/hooks/use-project-slug'
+import { Project } from '~/server/db/types'
+import { useRouter } from 'next/navigation'
+import { ProjectCreator } from './project-creator'
+import { useRef } from 'react'
 
-const projects = [
-  {
-    name: 'Manager v2',
-    slug: 'manager-v2'
-  },
-  {
-    name: 'Product v2',
-    slug: 'product-v2'
-  },
-  {
-    name: 'iOS App',
-    slug: 'ios-app'
-  }
-]
-
-export function ProjectSwitcher() {
+export function ProjectSwitcher({ projects }: { projects: Project[] }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const router = useRouter()
   const { isMobile } = useSidebar()
-  const [activeProject, setActiveProject] = React.useState(projects[0])
+  const projectSlug = useProjectSlug()
+  const activeProject = projects.find((project) => project.slug === projectSlug)
+
+  const handleChangeActiveProject = (project: Project) => {
+    router.push(project.slug)
+  }
 
   return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            {activeProject && (
-              <SidebarMenuButton
-                size="lg"
-                className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-              >
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <GalleryVerticalEnd className="size-4" />
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">
-                    {activeProject.name}
-                  </span>
-                  <span className="truncate text-xs">{activeProject.slug}</span>
-                </div>
-                <ChevronsUpDown className="ml-auto" />
-              </SidebarMenuButton>
-            )}
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-            align="start"
-            side={isMobile ? 'bottom' : 'right'}
-            sideOffset={4}
-          >
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
-              Teams
-            </DropdownMenuLabel>
-            {projects.map((project, index) => (
+    <>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              {activeProject && (
+                <SidebarMenuButton
+                  size="lg"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                >
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                    <GalleryVerticalEnd className="size-4" />
+                  </div>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-semibold">
+                      {activeProject.name}
+                    </span>
+                    <span className="truncate text-xs">
+                      {activeProject.slug}
+                    </span>
+                  </div>
+                  <ChevronsUpDown className="ml-auto" />
+                </SidebarMenuButton>
+              )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+              align="start"
+              side={isMobile ? 'bottom' : 'right'}
+              sideOffset={4}
+            >
+              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                Projects
+              </DropdownMenuLabel>
+              {projects.map((project, index) => (
+                <DropdownMenuItem
+                  key={project.name}
+                  onClick={() => handleChangeActiveProject(project)}
+                  className="gap-2 p-2"
+                >
+                  <div className="flex size-6 items-center justify-center rounded-sm border">
+                    <GalleryVerticalEnd className="size-4 shrink-0" />
+                  </div>
+                  {project.name}
+                  <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
               <DropdownMenuItem
-                key={project.name}
-                onClick={() => setActiveProject(project)}
                 className="gap-2 p-2"
+                onClick={() => ref.current?.click()}
               >
-                <div className="flex size-6 items-center justify-center rounded-sm border">
-                  <GalleryVerticalEnd className="size-4 shrink-0" />
+                <div className="flex size-6 items-center justify-center rounded-md border bg-background">
+                  <Plus className="size-4" />
                 </div>
-                {project.name}
-                <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
+                <div className="font-medium text-muted-foreground">
+                  Add project
+                </div>
               </DropdownMenuItem>
-            ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2 p-2">
-              <div className="flex size-6 items-center justify-center rounded-md border bg-background">
-                <Plus className="size-4" />
-              </div>
-              <div className="font-medium text-muted-foreground">
-                Add project
-              </div>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
-    </SidebarMenu>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </SidebarMenuItem>
+      </SidebarMenu>
+
+      <ProjectCreator>
+        <span ref={ref} className="sr-only">
+          create project
+        </span>
+      </ProjectCreator>
+    </>
   )
 }

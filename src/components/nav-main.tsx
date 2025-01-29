@@ -25,6 +25,8 @@ import {
   CollapsibleTrigger
 } from './ui/collapsible'
 import { cn } from '~/lib/utils'
+import { api } from '~/trpc/react'
+import { useSelectedProject } from '~/hooks/use-selected-project'
 
 const items = [
   {
@@ -51,6 +53,14 @@ const items = [
 
 export function NavMain() {
   const pathname = usePathname()
+  const project = useSelectedProject()
+  const { data: pages } = api.pages.getByProject.useQuery({
+    projectId: project?.id ?? ''
+  })
+
+  if (!pages?.length) {
+    return null
+  }
 
   return (
     <SidebarGroup>
@@ -60,13 +70,13 @@ export function NavMain() {
           <SidebarMenuButton
             asChild
             className={cn(
-              pathname === '/dashboard' &&
+              pathname === '/' &&
                 'bg-sidebar-accent text-sidebar-accent-foreground rounded-md'
             )}
           >
-            <a href={'#'}>
+            <a href={'/'}>
               <LayoutDashboard />
-              <span>Dashboard</span>
+              <span>Home</span>
             </a>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -111,7 +121,7 @@ export function NavMain() {
                 'bg-sidebar-accent text-sidebar-accent-foreground rounded-md'
             )}
           >
-            <a href={'#'}>
+            <a href={'/settings'}>
               <Settings2 />
               <span>Settings</span>
             </a>

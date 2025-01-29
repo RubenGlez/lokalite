@@ -18,6 +18,17 @@ export const projectsRouter = createTRPCRouter({
         .then((res) => res[0])
     ),
 
+  // Get a project by slug
+  getBySlug: publicProcedure
+    .input(z.object({ slug: z.string() }))
+    .query(({ ctx, input }) =>
+      ctx.db
+        .select()
+        .from(projects)
+        .where(eq(projects.slug, input.slug))
+        .then((res) => res[0])
+    ),
+
   // Create a project
   create: publicProcedure
     .input(z.object({ name: z.string(), slug: z.string() }))

@@ -2,14 +2,15 @@ import { translationsRouter } from '~/server/api/routers/translations'
 import { translationKeysRouter } from '~/server/api/routers/translationKeys'
 import { languagesRouter } from '~/server/api/routers/languages'
 import { pagesRouter } from '~/server/api/routers/pages'
+import { projectsRouter } from '~/server/api/routers/projects'
 import { createCallerFactory, createTRPCRouter } from '~/server/api/trpc'
-
 /**
  * This is the primary router for your server.
  *
  * All routers added in /api/routers should be manually added here.
  */
 export const appRouter = createTRPCRouter({
+  projects: projectsRouter,
   translations: translationsRouter,
   translationKeys: translationKeysRouter,
   languages: languagesRouter,

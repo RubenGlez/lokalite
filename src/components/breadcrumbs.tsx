@@ -47,7 +47,7 @@ export function Breadcrumbs() {
     <Breadcrumb>
       <BreadcrumbList>
         {breadcrumbs.map((breadcrumb, index) => (
-          <div key={breadcrumb.href}>
+          <div key={breadcrumb.href} className="flex items-center gap-2">
             <BreadcrumbItem className="hidden md:block">
               {breadcrumb.isCurrentPage ? (
                 <BreadcrumbPage>{breadcrumb.label}</BreadcrumbPage>
