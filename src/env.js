@@ -1,5 +1,5 @@
-import { createEnv } from "@t3-oss/env-nextjs";
-import { z } from "zod";
+import { createEnv } from '@t3-oss/env-nextjs'
+import { z } from 'zod'
 
 export const env = createEnv({
   /**
@@ -9,8 +9,8 @@ export const env = createEnv({
   server: {
     DATABASE_URL: z.string().url(),
     NODE_ENV: z
-      .enum(["development", "test", "production"])
-      .default("development"),
+      .enum(['development', 'test', 'production'])
+      .default('development')
   },
 
   /**
@@ -28,7 +28,7 @@ export const env = createEnv({
    */
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
-    NODE_ENV: process.env.NODE_ENV,
+    NODE_ENV: process.env.NODE_ENV
     // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
   },
   /**
@@ -40,5 +40,5 @@ export const env = createEnv({
    * Makes it so that empty strings are treated as undefined. `SOME_VAR: z.string()` and
    * `SOME_VAR=''` will throw an error.
    */
-  emptyStringAsUndefined: true,
-});
+  emptyStringAsUndefined: true
+})

@@ -14,11 +14,9 @@ import {
   SidebarTrigger
 } from '~/components/ui/sidebar'
 
-import { api, HydrateClient } from '~/trpc/server'
+import { HydrateClient } from '~/trpc/server'
 
 export default async function Home() {
-  const hello = await api.post.hello({ text: 'from tRPC' })
-
   return (
     <HydrateClient>
       <SidebarProvider>
@@ -31,13 +29,11 @@ export default async function Home() {
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href="#">
-                      Building Your Application
-                    </BreadcrumbLink>
+                    <BreadcrumbLink href="#">Home</BreadcrumbLink>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator className="hidden md:block" />
                   <BreadcrumbItem>
-                    <BreadcrumbPage>Data Fetching</BreadcrumbPage>
+                    <BreadcrumbPage>Translations</BreadcrumbPage>
                   </BreadcrumbItem>
                 </BreadcrumbList>
               </Breadcrumb>
