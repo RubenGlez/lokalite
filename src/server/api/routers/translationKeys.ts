@@ -9,6 +9,7 @@ export const translationKeysRouter = createTRPCRouter({
   createKey: publicProcedure
     .input(
       z.object({
+        projectId: z.string(),
         pageId: z.string(),
         key: z.string(),
         description: z.string().optional()
@@ -16,6 +17,7 @@ export const translationKeysRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       return ctx.db.insert(translationKeys).values({
+        projectId: input.projectId,
         pageId: input.pageId,
         key: input.key,
         description: input.description

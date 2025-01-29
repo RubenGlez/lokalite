@@ -1,6 +1,6 @@
 'use client'
 
-import { type LucideIcon } from 'lucide-react'
+import { File } from 'lucide-react'
 
 import {
   SidebarGroup,
@@ -12,22 +12,21 @@ import {
 
 import { cn } from '~/lib/utils'
 
-export function NavMain({
-  items
+export function NavPages({
+  pages
 }: {
-  items: {
-    title: string
+  pages: {
+    name: string
     url: string
-    icon: LucideIcon
     isActive?: boolean
   }[]
 }) {
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Project</SidebarGroupLabel>
+      <SidebarGroupLabel>Pages</SidebarGroupLabel>
       <SidebarMenu>
-        {items.map((item) => (
-          <SidebarMenuItem key={item.title}>
+        {pages.map((item) => (
+          <SidebarMenuItem key={item.name}>
             <SidebarMenuButton
               asChild
               className={cn(
@@ -36,8 +35,8 @@ export function NavMain({
               )}
             >
               <a href={item.url}>
-                <item.icon />
-                <span>{item.title}</span>
+                <File />
+                <span>{item.name}</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

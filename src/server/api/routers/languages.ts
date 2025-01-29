@@ -5,10 +5,15 @@ import { createTRPCRouter, publicProcedure } from '~/server/api/trpc'
 import { languages } from '~/server/db/schema'
 
 export const languagesRouter = createTRPCRouter({
-  // Get all languages
-  getAll: publicProcedure.query(async ({ ctx }) => {
-    return ctx.db.select().from(languages)
-  }),
+  // Get all languages by project id
+  getByProject: publicProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(({ ctx, input }) =>
+      ctx.db
+        .select()
+        .from(languages)
+        .where(eq(languages.projectId, input.projectId))
+    ),
 
   // Get a single language by ID
   getById: publicProcedure
@@ -25,12 +30,14 @@ export const languagesRouter = createTRPCRouter({
   create: publicProcedure
     .input(
       z.object({
+        projectId: z.string(),
         code: z.string().length(2), // ISO 639-1 code (e.g., 'en', 'es')
         name: z.string()
       })
     )
     .mutation(async ({ ctx, input }) => {
       return ctx.db.insert(languages).values({
+        projectId: input.projectId,
         code: input.code,
         name: input.name
       })

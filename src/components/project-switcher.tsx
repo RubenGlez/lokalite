@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { ChevronsUpDown, Plus } from 'lucide-react'
+import { ChevronsUpDown, GalleryVerticalEnd, Plus } from 'lucide-react'
 
 import {
   DropdownMenu,
@@ -19,36 +19,35 @@ import {
   useSidebar
 } from '~/components/ui/sidebar'
 
-export function TeamSwitcher({
-  teams
+export function ProjectSwitcher({
+  projects
 }: {
-  teams: {
+  projects: {
     name: string
-    logo: React.ElementType
-    plan: string
+    slug: string
   }[]
 }) {
   const { isMobile } = useSidebar()
-  const [activeTeam, setActiveTeam] = React.useState(teams[0])
+  const [activeProject, setActiveProject] = React.useState(projects[0])
 
   return (
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            {activeTeam && (
+            {activeProject && (
               <SidebarMenuButton
                 size="lg"
                 className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
               >
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <activeTeam.logo className="size-4" />
+                  <GalleryVerticalEnd className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">
-                    {activeTeam.name}
+                    {activeProject.name}
                   </span>
-                  <span className="truncate text-xs">{activeTeam.plan}</span>
+                  <span className="truncate text-xs">{activeProject.slug}</span>
                 </div>
                 <ChevronsUpDown className="ml-auto" />
               </SidebarMenuButton>
@@ -63,16 +62,16 @@ export function TeamSwitcher({
             <DropdownMenuLabel className="text-xs text-muted-foreground">
               Teams
             </DropdownMenuLabel>
-            {teams.map((team, index) => (
+            {projects.map((project, index) => (
               <DropdownMenuItem
-                key={team.name}
-                onClick={() => setActiveTeam(team)}
+                key={project.name}
+                onClick={() => setActiveProject(project)}
                 className="gap-2 p-2"
               >
                 <div className="flex size-6 items-center justify-center rounded-sm border">
-                  <team.logo className="size-4 shrink-0" />
+                  <GalleryVerticalEnd className="size-4 shrink-0" />
                 </div>
-                {team.name}
+                {project.name}
                 <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
               </DropdownMenuItem>
             ))}
@@ -81,7 +80,9 @@ export function TeamSwitcher({
               <div className="flex size-6 items-center justify-center rounded-md border bg-background">
                 <Plus className="size-4" />
               </div>
-              <div className="font-medium text-muted-foreground">Add team</div>
+              <div className="font-medium text-muted-foreground">
+                Add project
+              </div>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

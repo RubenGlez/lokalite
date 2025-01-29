@@ -5,10 +5,12 @@ import { createTRPCRouter, publicProcedure } from '~/server/api/trpc'
 import { pages } from '~/server/db/schema'
 
 export const pagesRouter = createTRPCRouter({
-  // Get all pages
-  getAll: publicProcedure.query(async ({ ctx }) => {
-    return ctx.db.select().from(pages)
-  }),
+  // Get all pages by project id
+  getByProject: publicProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(({ ctx, input }) =>
+      ctx.db.select().from(pages).where(eq(pages.projectId, input.projectId))
+    ),
 
   // Get a single page by ID
   getById: publicProcedure
@@ -26,13 +28,15 @@ export const pagesRouter = createTRPCRouter({
     .input(
       z.object({
         name: z.string(),
-        slug: z.string()
+        slug: z.string(),
+        projectId: z.string()
       })
     )
     .mutation(async ({ ctx, input }) => {
       return ctx.db.insert(pages).values({
         name: input.name,
-        slug: input.slug
+        slug: input.slug,
+        projectId: input.projectId
       })
     }),
 
