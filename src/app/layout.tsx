@@ -4,6 +4,7 @@ import { GeistSans } from 'geist/font/sans'
 import { type Metadata } from 'next'
 
 import { TRPCReactProvider } from '~/trpc/react'
+import { Toaster } from '~/components/ui/toaster'
 
 export const metadata: Metadata = {
   title: 'Create T3 App',
@@ -29,6 +30,7 @@ export default async function RootLayout({
 
       <body>
         <TRPCReactProvider>{children}</TRPCReactProvider>
+        <Toaster />
       </body>
     </html>
   )

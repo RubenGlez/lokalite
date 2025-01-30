@@ -6,12 +6,14 @@ import { useNormalizedTranslationsByPage } from '~/hooks/use-normalized-translat
 import { useSelectedPage } from '~/hooks/use-selected-page'
 import { useSelectedProject } from '~/hooks/use-selected-project'
 import { api } from '~/trpc/react'
+import { useToast } from '~/hooks/use-toast'
+import { ToastAction } from '~/components/ui/toast'
 
 export default function PageDetail() {
   const utils = api.useUtils()
   const page = useSelectedPage()
   const project = useSelectedProject()
-
+  const { toast } = useToast()
   const normalizedTranslations = useNormalizedTranslationsByPage(page?.id)
 
   const { data: languages, isLoading: isLoadingLanguages } =
@@ -39,6 +41,25 @@ export default function PageDetail() {
   const upsertTranslationKey = api.translationKeys.upsertKey.useMutation({
     onSuccess: () => {
       utils.translationKeys.getAllByPageId.invalidate()
+    },
+    onError: (error) => {
+      console.error(error)
+      toast({
+        variant: 'destructive',
+        title: 'Error updating translation key',
+        description:
+          'You probably tried to update a translation key with a key that already exists',
+        action: (
+          <ToastAction
+            altText="Reload"
+            onClick={() => {
+              window.location.reload()
+            }}
+          >
+            Reload
+          </ToastAction>
+        )
+      })
     }
   })
 
