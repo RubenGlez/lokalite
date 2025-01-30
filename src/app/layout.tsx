@@ -11,11 +11,22 @@ export const metadata: Metadata = {
   icons: [{ rel: 'icon', url: '/favicon.ico' }]
 }
 
+const ENABLE_REACT_SCAN = false
+
 export default async function RootLayout({
   children
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${GeistSans.variable}`}>
+      {ENABLE_REACT_SCAN && (
+        <head>
+          <script
+            src="https://unpkg.com/react-scan/dist/auto.global.js"
+            async
+          />
+        </head>
+      )}
+
       <body>
         <TRPCReactProvider>{children}</TRPCReactProvider>
       </body>

@@ -32,9 +32,9 @@ import {
   TableRow
 } from '~/components/ui/table'
 import { getColumns } from './columns'
-import { Language, TranslationKey } from '~/server/db/types'
+import { Language, TranslationKey } from '~/server/db/schema'
 import { useSkipper } from './use-skipper'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 declare module '@tanstack/react-table' {
   interface TableMeta<TData extends RowData> {
@@ -49,6 +49,7 @@ declare module '@tanstack/react-table' {
 interface TranslationsTableProps {
   data: TranslationKey[] | undefined
   languages: Language[] | undefined
+  normalizedTranslations: Record<string, string>
   onUpdateCell: (
     translationId: string | null,
     columnId: string,
@@ -59,6 +60,7 @@ interface TranslationsTableProps {
 export function TranslationsTable({
   data = [],
   languages = [],
+  normalizedTranslations,
   onUpdateCell
 }: TranslationsTableProps) {
   const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
@@ -68,7 +70,10 @@ export function TranslationsTable({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = useState({})
 
-  const columns = getColumns(languages)
+  const columns = useMemo(
+    () => getColumns(languages, normalizedTranslations),
+    [languages, normalizedTranslations]
+  )
 
   const table = useReactTable({
     data,

@@ -19,9 +19,9 @@ export const translationsRouter = createTRPCRouter({
   upsertTranslation: publicProcedure
     .input(
       z.object({
-        pageId: z.string(),
-        translationKeyId: z.string(),
-        languageId: z.string(),
+        pageId: z.string().uuid(),
+        translationKeyId: z.string().uuid(),
+        languageId: z.string().uuid(),
         value: z.string()
       })
     )
@@ -35,8 +35,15 @@ export const translationsRouter = createTRPCRouter({
           value: input.value
         })
         .onConflictDoUpdate({
-          target: [translations.translationKeyId, translations.languageId],
-          set: { value: input.value }
+          target: [
+            translations.pageId,
+            translations.translationKeyId,
+            translations.languageId
+          ],
+          set: {
+            value: input.value,
+            updatedAt: new Date()
+          }
         })
     }),
 

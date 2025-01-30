@@ -15,41 +15,32 @@ export const translationKeysRouter = createTRPCRouter({
         .where(eq(translationKeys.pageId, input.pageId))
     }),
 
-  // Create a new translation key
-  createKey: publicProcedure
+  upsertKey: publicProcedure
     .input(
       z.object({
-        projectId: z.string(),
-        pageId: z.string(),
+        id: z.string().optional(),
         key: z.string(),
+        pageId: z.string(),
         description: z.string().optional()
       })
     )
     .mutation(async ({ ctx, input }) => {
+      if (input.id) {
+        return ctx.db
+          .update(translationKeys)
+          .set({
+            key: input.key,
+            description: input.description,
+            updatedAt: new Date()
+          })
+          .where(eq(translationKeys.id, input.id))
+      }
+
       return ctx.db.insert(translationKeys).values({
-        pageId: input.pageId,
         key: input.key,
+        pageId: input.pageId,
         description: input.description
       })
-    }),
-
-  // Update a translation key
-  updateKey: publicProcedure
-    .input(
-      z.object({
-        id: z.string(),
-        key: z.string().optional(),
-        description: z.string().optional()
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      return ctx.db
-        .update(translationKeys)
-        .set({
-          key: input.key,
-          description: input.description
-        })
-        .where(eq(translationKeys.id, input.id))
     }),
 
   // Delete a translation key (and its associated translations)

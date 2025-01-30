@@ -19,7 +19,7 @@ import {
   useSidebar
 } from '~/components/ui/sidebar'
 import { useProjectSlug } from '~/hooks/use-project-slug'
-import { Project } from '~/server/db/types'
+import { Project } from '~/server/db/schema'
 import { useRouter } from 'next/navigation'
 import { ProjectCreator } from './project-creator'
 import { useRef } from 'react'

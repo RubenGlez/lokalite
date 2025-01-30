@@ -8,7 +8,7 @@ import {
 } from '@radix-ui/react-dropdown-menu'
 import { CellContext, ColumnDef } from '@tanstack/react-table'
 import { ArrowUpDown, MoreHorizontal } from 'lucide-react'
-import { Language, TranslationKey } from '~/server/db/types'
+import { Language, TranslationKey } from '~/server/db/schema'
 import { Button } from '../ui/button'
 import { MemoizedEditableCell } from './editable-cell'
 
@@ -89,7 +89,10 @@ const actionColum: ColumnDef<TranslationKey> = {
   }
 }
 
-export const getColumns = (languages: Language[]) => {
+export const getColumns = (
+  languages: Language[],
+  normalizedTranslations: Record<string, string>
+) => {
   const languageColumns = languages.map((language) => {
     return {
       accessorKey: language.code,
@@ -106,16 +109,22 @@ export const getColumns = (languages: Language[]) => {
       },
       cell: (props) => {
         const onUpdateCell = (value: string) => {
-          console.log(
-            'updating language column',
+          props.table.options.meta?.updateCell(
             props.row.original.id,
             props.column.id,
             value
           )
         }
 
+        // This represents the translationKey.id and language.id
+        const translationIndexKey = `${props.row.original.id}_${language.id}`
+        const initialValue = normalizedTranslations[translationIndexKey] ?? ''
+
         return (
-          <MemoizedEditableCell onUpdateCell={onUpdateCell} initialValue={''} />
+          <MemoizedEditableCell
+            onUpdateCell={onUpdateCell}
+            initialValue={initialValue}
+          />
         )
       }
     } satisfies ColumnDef<TranslationKey>

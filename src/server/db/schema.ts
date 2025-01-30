@@ -1,4 +1,11 @@
-import { pgTable, uuid, timestamp, varchar, text } from 'drizzle-orm/pg-core'
+import {
+  pgTable,
+  uuid,
+  timestamp,
+  varchar,
+  text,
+  unique
+} from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
 // TABLES
@@ -10,51 +17,81 @@ export const projects = pgTable('projects', {
   updatedAt: timestamp('updated_at').defaultNow()
 })
 
-export const pages = pgTable('pages', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  projectId: uuid('project_id')
-    .notNull()
-    .references(() => projects.id),
-  name: varchar('name', { length: 255 }).notNull(),
-  slug: varchar('slug', { length: 255 }).notNull().unique(),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow()
-})
+export const pages = pgTable(
+  'pages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id),
+    name: varchar('name', { length: 255 }).notNull(),
+    slug: varchar('slug', { length: 255 }).notNull().unique(),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow()
+  },
+  (table) => ({
+    projectSlugIdx: unique().on(table.projectId, table.slug)
+  })
+)
 
-export const languages = pgTable('languages', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  projectId: uuid('project_id')
-    .notNull()
-    .references(() => projects.id),
-  code: varchar('code', { length: 10 }).notNull().unique(), // ISO 639-1 codes (en, es, fr, etc.)
-  name: varchar('name', { length: 255 }).notNull(),
-  createdAt: timestamp('created_at').defaultNow()
-})
+export const languages = pgTable(
+  'languages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id),
+    code: varchar('code', { length: 10 }).notNull().unique(),
+    name: varchar('name', { length: 255 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow()
+  },
+  (table) => ({
+    projectCodeIdx: unique().on(table.projectId, table.code)
+  })
+)
 
-export const translationKeys = pgTable('translation_keys', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  key: varchar('key', { length: 255 }).notNull(),
-  description: text('description'),
-  pageId: uuid('page_id').references(() => pages.id),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow()
-})
+export const translationKeys = pgTable(
+  'translation_keys',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    key: varchar('key', { length: 255 }).notNull(),
+    description: text('description'),
+    pageId: uuid('page_id')
+      .notNull()
+      .references(() => pages.id),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow()
+  },
+  (table) => ({
+    pageKeyIdx: unique().on(table.pageId, table.key)
+  })
+)
 
-export const translations = pgTable('translations', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  translationKeyId: uuid('translation_key_id')
-    .notNull()
-    .references(() => translationKeys.id),
-  pageId: uuid('page_id')
-    .notNull()
-    .references(() => pages.id),
-  languageId: uuid('language_id')
-    .notNull()
-    .references(() => languages.id),
-  value: text('value').notNull(),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow()
-})
+export const translations = pgTable(
+  'translations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    translationKeyId: uuid('translation_key_id')
+      .notNull()
+      .references(() => translationKeys.id),
+    pageId: uuid('page_id')
+      .notNull()
+      .references(() => pages.id),
+    languageId: uuid('language_id')
+      .notNull()
+      .references(() => languages.id),
+    value: text('value').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow()
+  },
+  (table) => ({
+    translationKeyLanguageIdx: unique().on(
+      table.pageId,
+      table.translationKeyId,
+      table.languageId
+    )
+  })
+)
 
 // RELATIONS
 export const projectRelations = relations(projects, ({ many }) => ({
@@ -104,3 +141,15 @@ export const translationRelations = relations(translations, ({ one }) => ({
     references: [languages.id]
   })
 }))
+
+// TYPES
+export type Project = typeof projects.$inferSelect
+export type NewProject = typeof projects.$inferInsert
+export type Language = typeof languages.$inferSelect
+export type NewLanguage = typeof languages.$inferInsert
+export type Page = typeof pages.$inferSelect
+export type NewPage = typeof pages.$inferInsert
+export type TranslationKey = typeof translationKeys.$inferSelect
+export type NewTranslationKey = typeof translationKeys.$inferInsert
+export type Translation = typeof translations.$inferSelect
+export type NewTranslation = typeof translations.$inferInsert

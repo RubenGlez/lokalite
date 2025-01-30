@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow
 } from '~/components/ui/table'
-import { Language } from '~/server/db/types'
+import { Language } from '~/server/db/schema'
 import {
   ColumnDef,
   getFilteredRowModel,
