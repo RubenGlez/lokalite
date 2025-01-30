@@ -14,7 +14,7 @@ export const projects = pgTable('projects', {
   name: varchar('name', { length: 255 }).notNull(),
   slug: varchar('slug', { length: 255 }).notNull().unique(),
   createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow()
+  updatedAt: timestamp('updated_at')
 })
 
 export const pages = pgTable(
@@ -27,7 +27,7 @@ export const pages = pgTable(
     name: varchar('name', { length: 255 }).notNull(),
     slug: varchar('slug', { length: 255 }).notNull().unique(),
     createdAt: timestamp('created_at').defaultNow(),
-    updatedAt: timestamp('updated_at').defaultNow()
+    updatedAt: timestamp('updated_at')
   },
   (table) => ({
     projectSlugIdx: unique().on(table.projectId, table.slug)
@@ -60,7 +60,7 @@ export const translationKeys = pgTable(
       .notNull()
       .references(() => pages.id),
     createdAt: timestamp('created_at').defaultNow(),
-    updatedAt: timestamp('updated_at').defaultNow()
+    updatedAt: timestamp('updated_at')
   },
   (table) => ({
     pageKeyIdx: unique().on(table.pageId, table.key)
@@ -82,7 +82,7 @@ export const translations = pgTable(
       .references(() => languages.id),
     value: text('value').notNull(),
     createdAt: timestamp('created_at').defaultNow(),
-    updatedAt: timestamp('updated_at').defaultNow()
+    updatedAt: timestamp('updated_at')
   },
   (table) => ({
     translationKeyLanguageIdx: unique().on(

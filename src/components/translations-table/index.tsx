@@ -58,8 +58,7 @@ interface TranslationsTableProps {
   ) => void
   onAddRow: () => void
   onRemoveRow: (translationKeyId: string) => void
-  onTranslateAll: (translations: string[]) => void
-  onTranslateRow: (translationKeyId: string) => void
+  onTranslate: (translations: string[]) => void
 }
 
 export function TranslationsTable({
@@ -69,8 +68,7 @@ export function TranslationsTable({
   onUpdateCell,
   onAddRow,
   onRemoveRow,
-  onTranslateAll,
-  onTranslateRow
+  onTranslate
 }: TranslationsTableProps) {
   const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
 
@@ -112,7 +110,7 @@ export function TranslationsTable({
         onRemoveRow(translationKeyId)
       },
       onTranslateRow: (translationKeyId: string) => {
-        onTranslateRow(translationKeyId)
+        onTranslate([translationKeyId])
       }
     }
   })
@@ -137,7 +135,7 @@ export function TranslationsTable({
             disabled={!table.getFilteredSelectedRowModel().rows.length}
             onClick={() => {
               skipAutoResetPageIndex()
-              onTranslateAll(
+              onTranslate(
                 table
                   .getFilteredSelectedRowModel()
                   .rows.map((row) => row.original.id)
