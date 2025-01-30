@@ -1,6 +1,5 @@
 'use client'
 
-import * as React from 'react'
 import {
   ColumnFiltersState,
   RowData,
@@ -43,6 +42,7 @@ declare module '@tanstack/react-table' {
       columnId: string,
       value: TData[keyof TData]
     ) => void
+    onRemoveRow: (translationKeyId: string) => void
   }
 }
 
@@ -56,6 +56,7 @@ interface TranslationsTableProps {
     value: string
   ) => void
   onAddRow: () => void
+  onRemoveRow: (translationKeyId: string) => void
 }
 
 export function TranslationsTable({
@@ -63,7 +64,8 @@ export function TranslationsTable({
   languages = [],
   normalizedTranslations,
   onUpdateCell,
-  onAddRow
+  onAddRow,
+  onRemoveRow
 }: TranslationsTableProps) {
   const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
 
@@ -100,6 +102,9 @@ export function TranslationsTable({
         // Skip page index reset until after next rerender
         skipAutoResetPageIndex()
         onUpdateCell(translationId, columnId, value as string)
+      },
+      onRemoveRow: (translationKeyId: string) => {
+        onRemoveRow(translationKeyId)
       }
     }
   })

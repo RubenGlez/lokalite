@@ -1,15 +1,15 @@
-import { Checkbox } from '@radix-ui/react-checkbox'
+import { Checkbox } from '~/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuLabel,
   DropdownMenuItem
-} from '@radix-ui/react-dropdown-menu'
+} from '~/components/ui/dropdown-menu'
 import { CellContext, ColumnDef } from '@tanstack/react-table'
 import { ArrowUpDown, MoreHorizontal } from 'lucide-react'
 import { Language, TranslationKey } from '~/server/db/schema'
-import { Button } from '../ui/button'
+import { Button } from '~/components/ui/button'
 import { MemoizedEditableCell } from './editable-cell'
 
 const basicColumns: ColumnDef<TranslationKey>[] = [
@@ -70,7 +70,7 @@ const basicColumns: ColumnDef<TranslationKey>[] = [
 const actionColum: ColumnDef<TranslationKey> = {
   id: 'actions',
   enableHiding: false,
-  cell: () => {
+  cell: ({ table, row }) => {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -82,7 +82,11 @@ const actionColum: ColumnDef<TranslationKey> = {
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
           <DropdownMenuItem>Translate</DropdownMenuItem>
-          <DropdownMenuItem>Delete</DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => table.options.meta?.onRemoveRow(row.original.id)}
+          >
+            Delete
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     )

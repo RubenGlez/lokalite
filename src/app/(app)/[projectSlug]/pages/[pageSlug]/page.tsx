@@ -39,6 +39,12 @@ export default function PageDetail() {
     }
   })
 
+  const deleteTranslationKey = api.translationKeys.deleteKey.useMutation({
+    onSuccess: () => {
+      utils.translationKeys.getAllByPageId.invalidate()
+    }
+  })
+
   const upsertTranslationKey = api.translationKeys.upsertKey.useMutation({
     onSuccess: () => {
       utils.translationKeys.getAllByPageId.invalidate()
@@ -123,6 +129,15 @@ export default function PageDetail() {
     })
   }, [page?.id, handleUpsertTranslationKey])
 
+  const handleRemoveRow = useCallback(
+    (translationKeyId: string) => {
+      deleteTranslationKey.mutate({
+        id: translationKeyId
+      })
+    },
+    [deleteTranslationKey]
+  )
+
   if (isLoadingTranslationKeys || isLoadingLanguages) return null
 
   return (
@@ -133,6 +148,7 @@ export default function PageDetail() {
         normalizedTranslations={normalizedTranslations}
         onUpdateCell={handleUpdateCell}
         onAddRow={handleAddRow}
+        onRemoveRow={handleRemoveRow}
       />
     </div>
   )
