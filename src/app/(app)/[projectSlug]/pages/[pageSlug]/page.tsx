@@ -1,45 +1,84 @@
 'use client'
+
 import { TranslationsTable } from '~/components/translations-table'
 import { useSelectedPage } from '~/hooks/use-selected-page'
+import { useSelectedProject } from '~/hooks/use-selected-project'
 import { api } from '~/trpc/react'
 
 export default function PageDetail() {
+  const utils = api.useUtils()
   const page = useSelectedPage()
-  const { data } = api.translations.getAllByPageId.useQuery(
-    {
-      pageId: page?.id ?? ''
-    },
-    { enabled: !!page?.id }
-  )
+  const project = useSelectedProject()
 
-  const translations = [
-    ...(data ?? []),
-    {
-      id: null,
-      key: '',
-      description: '',
-      language: '',
-      value: ''
+  // const normalizedTranslations = useNormalizedTranslationsByPage(page?.id)
+
+  const { data: languages, isLoading: isLoadingLanguages } =
+    api.languages.getByProject.useQuery(
+      {
+        projectId: project?.id ?? ''
+      },
+      { enabled: !!project?.id }
+    )
+
+  const { data: translationKeys, isLoading: isLoadingTranslationKeys } =
+    api.translationKeys.getAllByPageId.useQuery(
+      {
+        pageId: page?.id ?? ''
+      },
+      { enabled: !!page?.id }
+    )
+
+  const upsertTranslation = api.translations.upsertTranslation.useMutation({
+    onSuccess: () => {
+      utils.translations.getAllByPageId.invalidate()
     }
-  ]
+  })
+
+  const updateTranslationKey = api.translationKeys.updateKey.useMutation({
+    onSuccess: () => {
+      utils.translationKeys.getAllByPageId.invalidate()
+    }
+  })
+
+  const handleUpdateCell = (
+    translationKeyId: string | null,
+    columnId: string,
+    value: string
+  ) => {
+    if (!translationKeyId) return
+
+    if (columnId === 'translationKey') {
+      updateTranslationKey.mutate({
+        id: translationKeyId,
+        key: value
+      })
+    } else {
+      const [languageCode] = columnId.split('_')
+      const languageId = languages?.find(
+        (language) => language.code === languageCode
+      )?.id
+      if (!languageId) return
+
+      upsertTranslation.mutate({
+        pageId: page?.id ?? '',
+        languageId,
+        translationKeyId,
+        value
+      })
+    }
+  }
+
+  if (isLoadingLanguages || isLoadingTranslationKeys) {
+    return <div>Loading...</div>
+  }
 
   return (
     <div className="px-4">
-      <TranslationsTable translations={translations} />
+      <TranslationsTable
+        data={translationKeys}
+        languages={languages}
+        onUpdateCell={handleUpdateCell}
+      />
     </div>
   )
 }
-/**
- * columns:
- * - keys
- * - language 1
- * - language 2
- * - language 3
- * - language 4
- * - language 5
- * - language 6
- * - language 7
- * - language 8
- * - language 9
- * - language 10
- */

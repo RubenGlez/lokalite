@@ -22,7 +22,6 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { api } from '~/trpc/react'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import {
   Select,
   SelectContent,
@@ -30,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '~/components/ui/select'
+import { useRouter } from 'next/navigation'
 
 const formSchema = z.object({
   code: z.string().length(2, 'Language code must be exactly 2 characters')
@@ -64,8 +64,9 @@ const commonLanguages = [
 ] as const
 
 export function LanguageCreator({ children, projectId }: LanguageCreatorProps) {
-  const [open, setOpen] = useState(false)
+  const utils = api.useUtils()
   const router = useRouter()
+  const [open, setOpen] = useState(false)
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -81,6 +82,7 @@ export function LanguageCreator({ children, projectId }: LanguageCreatorProps) {
     onSuccess: () => {
       setOpen(false)
       form.reset()
+      utils.languages.getByProject.invalidate()
       router.refresh()
     }
   })

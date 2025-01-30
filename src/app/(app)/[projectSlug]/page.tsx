@@ -18,16 +18,6 @@ export default function ProjectOverview() {
     }
   )
 
-  const { data: translationKeys } =
-    api.translationKeys.getAllByProjectId.useQuery(
-      {
-        projectId: project?.id ?? ''
-      },
-      {
-        enabled: !!project?.id
-      }
-    )
-
   const { data: pages } = api.pages.getByProject.useQuery(
     {
       projectId: project?.id ?? ''
@@ -74,9 +64,7 @@ export default function ProjectOverview() {
             <BookA className="h-4 w-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {translationKeys?.length ?? 0}
-            </div>
+            <div className="text-2xl font-bold">TODO</div>
             <p className="text-xs text-muted-foreground">in all pages</p>
           </CardContent>
         </Card>

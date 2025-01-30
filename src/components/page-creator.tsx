@@ -41,6 +41,7 @@ interface PageCreatorProps {
 }
 
 export function PageCreator({ projectId, children }: PageCreatorProps) {
+  const utils = api.useUtils()
   const [open, setOpen] = useState(false)
   const router = useRouter()
 
@@ -56,13 +57,16 @@ export function PageCreator({ projectId, children }: PageCreatorProps) {
     onSuccess: () => {
       setOpen(false)
       form.reset()
+      utils.pages.getByProject.invalidate()
       router.refresh()
     }
   })
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    const slug = values.slug.toLowerCase().replace(/ /g, '-')
-    createPage.mutate({ ...values, slug, projectId })
+    createPage.mutate({
+      ...values,
+      projectId
+    })
   }
 
   return (

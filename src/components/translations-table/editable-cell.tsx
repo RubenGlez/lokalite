@@ -1,34 +1,27 @@
-import { CellContext } from '@tanstack/react-table'
-import { useEffect, useState } from 'react'
+import { memo, useCallback, useState } from 'react'
 
-import { ComposedTranslation } from '~/server/db/types'
 import { Input } from '../ui/input'
 
+interface EditableCellProps {
+  onUpdateCell: (value: string) => void
+  initialValue: string
+}
+
 export function EditableCell({
-  getValue,
-  row,
-  column,
-  table
-}: CellContext<ComposedTranslation, unknown>) {
-  const initialValue = (getValue() as string) ?? ''
-  // We need to keep and update the state of the cell normally
+  onUpdateCell,
+  initialValue
+}: EditableCellProps) {
   const [value, setValue] = useState(initialValue)
 
-  // When the input is blurred, we'll call our table meta's updateData function
-  const onBlur = () => {
-    table.options.meta?.updateCell(row.original.id, column.id, value)
-  }
+  const onBlur = useCallback(() => {
+    onUpdateCell(value)
+  }, [onUpdateCell, value])
 
-  // If the initialValue is changed external, sync it up with our state
-  useEffect(() => {
-    setValue(initialValue)
-  }, [initialValue])
+  const onChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setValue(e.target.value)
+  }, [])
 
-  return (
-    <Input
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      onBlur={onBlur}
-    />
-  )
+  return <Input value={value} onChange={onChange} onBlur={onBlur} />
 }
+
+export const MemoizedEditableCell = memo(EditableCell)

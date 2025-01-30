@@ -1,5 +1,5 @@
 import { translationsRouter } from '~/server/api/routers/translations'
-import { translationKeysRouter } from '~/server/api/routers/translationKeys'
+import { translationKeysRouter } from '~/server/api/routers/translation-keys'
 import { languagesRouter } from '~/server/api/routers/languages'
 import { pagesRouter } from '~/server/api/routers/pages'
 import { projectsRouter } from '~/server/api/routers/projects'

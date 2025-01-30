@@ -8,12 +8,11 @@ import {
 } from '@radix-ui/react-dropdown-menu'
 import { CellContext, ColumnDef } from '@tanstack/react-table'
 import { ArrowUpDown, MoreHorizontal } from 'lucide-react'
-import { ComposedTranslation } from '~/server/db/types'
+import { Language, TranslationKey } from '~/server/db/types'
 import { Button } from '../ui/button'
-import React from 'react'
-import { EditableCell } from './editable-cell'
+import { MemoizedEditableCell } from './editable-cell'
 
-export const columns: ColumnDef<ComposedTranslation>[] = [
+const basicColumns: ColumnDef<TranslationKey>[] = [
   {
     id: 'select',
     header: ({ table }) => (
@@ -49,80 +48,78 @@ export const columns: ColumnDef<ComposedTranslation>[] = [
         </Button>
       )
     },
-    cell: (props: CellContext<ComposedTranslation, unknown>) => (
-      <EditableCell {...props} />
-    )
-  },
-  {
-    accessorKey: 'description',
-    header: ({ column }) => {
+    cell: (props: CellContext<TranslationKey, unknown>) => {
+      const onUpdateCell = (value: string) => {
+        props.table.options.meta?.updateCell(
+          props.row.original.id,
+          props.column.id,
+          value
+        )
+      }
+
       return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Description
-          <ArrowUpDown />
-        </Button>
-      )
-    },
-    cell: (props: CellContext<ComposedTranslation, unknown>) => (
-      <EditableCell {...props} />
-    )
-  },
-  {
-    accessorKey: 'language',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Language
-          <ArrowUpDown />
-        </Button>
-      )
-    },
-    cell: (props: CellContext<ComposedTranslation, unknown>) => (
-      <EditableCell {...props} />
-    )
-  },
-  {
-    accessorKey: 'value',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Value
-          <ArrowUpDown />
-        </Button>
-      )
-    },
-    cell: (props: CellContext<ComposedTranslation, unknown>) => (
-      <EditableCell {...props} />
-    )
-  },
-  {
-    id: 'actions',
-    enableHiding: false,
-    cell: () => {
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem>Translate</DropdownMenuItem>
-            <DropdownMenuItem>Delete</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <MemoizedEditableCell
+          onUpdateCell={onUpdateCell}
+          initialValue={props.getValue() as string}
+        />
       )
     }
   }
 ]
+
+const actionColum: ColumnDef<TranslationKey> = {
+  id: 'actions',
+  enableHiding: false,
+  cell: () => {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-8 w-8 p-0">
+            <span className="sr-only">Open menu</span>
+            <MoreHorizontal />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuItem>Translate</DropdownMenuItem>
+          <DropdownMenuItem>Delete</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+  }
+}
+
+export const getColumns = (languages: Language[]) => {
+  const languageColumns = languages.map((language) => {
+    return {
+      accessorKey: language.code,
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          >
+            {language.name}
+            <ArrowUpDown />
+          </Button>
+        )
+      },
+      cell: (props) => {
+        const onUpdateCell = (value: string) => {
+          console.log(
+            'updating language column',
+            props.row.original.id,
+            props.column.id,
+            value
+          )
+        }
+
+        return (
+          <MemoizedEditableCell onUpdateCell={onUpdateCell} initialValue={''} />
+        )
+      }
+    } satisfies ColumnDef<TranslationKey>
+  })
+
+  return [...basicColumns, ...languageColumns, actionColum]
+}

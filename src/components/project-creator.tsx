@@ -40,6 +40,7 @@ interface ProjectCreatorProps {
 }
 
 export function ProjectCreator({ children }: ProjectCreatorProps) {
+  const utils = api.useUtils()
   const [open, setOpen] = useState(false)
   const router = useRouter()
   const form = useForm<z.infer<typeof formSchema>>({
@@ -54,13 +55,13 @@ export function ProjectCreator({ children }: ProjectCreatorProps) {
     onSuccess: () => {
       setOpen(false)
       form.reset()
+      utils.projects.getAll.invalidate()
       router.refresh()
     }
   })
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    const slug = values.slug.toLowerCase().replace(/ /g, '-')
-    createProject.mutate({ ...values, slug })
+    createProject.mutate(values)
   }
 
   return (

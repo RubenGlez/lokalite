@@ -2,7 +2,7 @@ import { eq, and } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { createTRPCRouter, publicProcedure } from '~/server/api/trpc'
-import { languages, translationKeys, translations } from '~/server/db/schema'
+import { translations } from '~/server/db/schema'
 
 export const translationsRouter = createTRPCRouter({
   // Get all translations for a specific page
@@ -10,26 +10,16 @@ export const translationsRouter = createTRPCRouter({
     .input(z.object({ pageId: z.string() }))
     .query(async ({ ctx, input }) => {
       return ctx.db
-        .select({
-          id: translations.id,
-          key: translationKeys.key,
-          description: translationKeys.description,
-          language: languages.code,
-          value: translations.value
-        })
-        .from(translationKeys)
-        .where(eq(translationKeys.pageId, input.pageId))
-        .leftJoin(
-          translations,
-          eq(translationKeys.id, translations.translationKeyId)
-        )
-        .leftJoin(languages, eq(translations.languageId, languages.id))
+        .select()
+        .from(translations)
+        .where(eq(translations.pageId, input.pageId))
     }),
 
   // Create or update a translation
   upsertTranslation: publicProcedure
     .input(
       z.object({
+        pageId: z.string(),
         translationKeyId: z.string(),
         languageId: z.string(),
         value: z.string()
@@ -39,6 +29,7 @@ export const translationsRouter = createTRPCRouter({
       return ctx.db
         .insert(translations)
         .values({
+          pageId: input.pageId,
           translationKeyId: input.translationKeyId,
           languageId: input.languageId,
           value: input.value

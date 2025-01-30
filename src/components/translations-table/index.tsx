@@ -31,8 +31,8 @@ import {
   TableHeader,
   TableRow
 } from '~/components/ui/table'
-import { columns } from './columns'
-import { ComposedTranslation } from '~/server/db/types'
+import { getColumns } from './columns'
+import { Language, TranslationKey } from '~/server/db/types'
 import { useSkipper } from './use-skipper'
 import { useState } from 'react'
 
@@ -47,11 +47,19 @@ declare module '@tanstack/react-table' {
 }
 
 interface TranslationsTableProps {
-  translations: ComposedTranslation[]
+  data: TranslationKey[] | undefined
+  languages: Language[] | undefined
+  onUpdateCell: (
+    translationId: string | null,
+    columnId: string,
+    value: string
+  ) => void
 }
 
 export function TranslationsTable({
-  translations = []
+  data = [],
+  languages = [],
+  onUpdateCell
 }: TranslationsTableProps) {
   const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
 
@@ -60,8 +68,10 @@ export function TranslationsTable({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = useState({})
 
+  const columns = getColumns(languages)
+
   const table = useReactTable({
-    data: translations,
+    data,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -82,8 +92,7 @@ export function TranslationsTable({
       updateCell: (translationId, columnId, value) => {
         // Skip page index reset until after next rerender
         skipAutoResetPageIndex()
-
-        console.log('upsert translation', translationId, columnId, value)
+        onUpdateCell(translationId, columnId, value as string)
       }
     }
   })
