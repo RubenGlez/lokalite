@@ -15,7 +15,8 @@ export default function PageDetail() {
   const page = useSelectedPage()
   const project = useSelectedProject()
   const { toast } = useToast()
-  const normalizedTranslations = useNormalizedTranslationsByPage(page?.id)
+  const { isLoading: isLoadingTranslations, normalizedTranslations } =
+    useNormalizedTranslationsByPage(page?.id)
 
   const { data: languages, isLoading: isLoadingLanguages } =
     api.languages.getByProject.useQuery(
@@ -154,7 +155,9 @@ export default function PageDetail() {
     console.log('TODO: translate row', translationKeyId)
   }, [])
 
-  if (isLoadingTranslationKeys || isLoadingLanguages) return null
+  if (isLoadingTranslationKeys || isLoadingLanguages || isLoadingTranslations) {
+    return null
+  }
 
   return (
     <div className="px-4">
