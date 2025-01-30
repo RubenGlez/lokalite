@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable
 } from '@tanstack/react-table'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Plus } from 'lucide-react'
 
 import { Button } from '~/components/ui/button'
 import {
@@ -55,13 +55,15 @@ interface TranslationsTableProps {
     columnId: string,
     value: string
   ) => void
+  onAddRow: () => void
 }
 
 export function TranslationsTable({
   data = [],
   languages = [],
   normalizedTranslations,
-  onUpdateCell
+  onUpdateCell,
+  onAddRow
 }: TranslationsTableProps) {
   const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
 
@@ -105,14 +107,28 @@ export function TranslationsTable({
   return (
     <div className="w-full">
       <div className="flex items-center py-4">
-        <Input
-          placeholder="Filter translations..."
-          value={(table.getColumn('key')?.getFilterValue() as string) ?? ''}
-          onChange={(event) =>
-            table.getColumn('key')?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm"
-        />
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="default"
+            onClick={() => {
+              skipAutoResetPageIndex()
+              onAddRow()
+            }}
+          >
+            <Plus /> Add
+            <span className="text-xs bg-primary-foreground/20 rounded-sm px-1">
+              ⌘K
+            </span>
+          </Button>
+          <Input
+            placeholder="Filter by key..."
+            value={(table.getColumn('key')?.getFilterValue() as string) ?? ''}
+            onChange={(event) =>
+              table.getColumn('key')?.setFilterValue(event.target.value)
+            }
+            className="max-w-sm"
+          />
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">

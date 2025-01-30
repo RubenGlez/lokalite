@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, asc } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { createTRPCRouter, publicProcedure } from '~/server/api/trpc'
@@ -13,6 +13,7 @@ export const translationKeysRouter = createTRPCRouter({
         .select()
         .from(translationKeys)
         .where(eq(translationKeys.pageId, input.pageId))
+        .orderBy(asc(translationKeys.updatedAt))
     }),
 
   upsertKey: publicProcedure

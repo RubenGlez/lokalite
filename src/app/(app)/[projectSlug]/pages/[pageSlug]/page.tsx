@@ -8,6 +8,7 @@ import { useSelectedProject } from '~/hooks/use-selected-project'
 import { api } from '~/trpc/react'
 import { useToast } from '~/hooks/use-toast'
 import { ToastAction } from '~/components/ui/toast'
+import { useHotkeys } from 'react-hotkeys-hook'
 
 export default function PageDetail() {
   const utils = api.useUtils()
@@ -42,13 +43,11 @@ export default function PageDetail() {
     onSuccess: () => {
       utils.translationKeys.getAllByPageId.invalidate()
     },
-    onError: (error) => {
-      console.error(error)
+    onError: (_error, variables) => {
       toast({
         variant: 'destructive',
-        title: 'Error updating translation key',
-        description:
-          'You probably tried to update a translation key with a key that already exists',
+        title: 'Error updating a translation key',
+        description: `The key ${variables.key} already exists. We recommend reloading the page.`,
         action: (
           <ToastAction
             altText="Reload"
@@ -115,6 +114,15 @@ export default function PageDetail() {
     [page?.id, handleUpsertTranslation, handleUpsertTranslationKey]
   )
 
+  useHotkeys('meta+k', () => handleAddRow())
+
+  const handleAddRow = useCallback(() => {
+    handleUpsertTranslationKey({
+      key: `new_key_${Date.now()}`,
+      pageId: page?.id ?? ''
+    })
+  }, [page?.id, handleUpsertTranslationKey])
+
   if (isLoadingTranslationKeys || isLoadingLanguages) return null
 
   return (
@@ -124,6 +132,7 @@ export default function PageDetail() {
         languages={languages}
         normalizedTranslations={normalizedTranslations}
         onUpdateCell={handleUpdateCell}
+        onAddRow={handleAddRow}
       />
     </div>
   )
