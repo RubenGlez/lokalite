@@ -12,7 +12,7 @@ import {
   getSortedRowModel,
   useReactTable
 } from '@tanstack/react-table'
-import { ChevronDown, Plus } from 'lucide-react'
+import { ChevronDown, Languages, Plus } from 'lucide-react'
 
 import { Button } from '~/components/ui/button'
 import {
@@ -43,6 +43,7 @@ declare module '@tanstack/react-table' {
       value: TData[keyof TData]
     ) => void
     onRemoveRow: (translationKeyId: string) => void
+    onTranslateRow: (translationKeyId: string) => void
   }
 }
 
@@ -57,6 +58,8 @@ interface TranslationsTableProps {
   ) => void
   onAddRow: () => void
   onRemoveRow: (translationKeyId: string) => void
+  onTranslateAll: (translations: string[]) => void
+  onTranslateRow: (translationKeyId: string) => void
 }
 
 export function TranslationsTable({
@@ -65,7 +68,9 @@ export function TranslationsTable({
   normalizedTranslations,
   onUpdateCell,
   onAddRow,
-  onRemoveRow
+  onRemoveRow,
+  onTranslateAll,
+  onTranslateRow
 }: TranslationsTableProps) {
   const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
 
@@ -105,26 +110,45 @@ export function TranslationsTable({
       },
       onRemoveRow: (translationKeyId: string) => {
         onRemoveRow(translationKeyId)
+      },
+      onTranslateRow: (translationKeyId: string) => {
+        onTranslateRow(translationKeyId)
       }
     }
   })
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-4">
+      <div className="flex items-center justify-between py-4">
         <div className="flex items-center space-x-2">
           <Button
-            variant="default"
+            variant="outline"
             onClick={() => {
               skipAutoResetPageIndex()
               onAddRow()
             }}
           >
             <Plus /> Add
-            <span className="text-xs bg-primary-foreground/20 rounded-sm px-1">
+            <span className="text-xs bg-primary-foreground rounded-sm px-1">
               ⌘K
             </span>
           </Button>
+          <Button
+            disabled={!table.getFilteredSelectedRowModel().rows.length}
+            onClick={() => {
+              skipAutoResetPageIndex()
+              onTranslateAll(
+                table
+                  .getFilteredSelectedRowModel()
+                  .rows.map((row) => row.original.id)
+              )
+            }}
+          >
+            <Languages /> Translate
+          </Button>
+        </div>
+
+        <div className="flex items-center space-x-2">
           <Input
             placeholder="Filter by key..."
             value={(table.getColumn('key')?.getFilterValue() as string) ?? ''}
@@ -133,33 +157,33 @@ export function TranslationsTable({
             }
             className="max-w-sm"
           />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="ml-auto">
+                Columns <ChevronDown />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => {
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) =>
+                        column.toggleVisibility(!!value)
+                      }
+                    >
+                      {column.id}
+                    </DropdownMenuCheckboxItem>
+                  )
+                })}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto">
-              Columns <ChevronDown />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column.toggleVisibility(!!value)
-                    }
-                  >
-                    {column.id}
-                  </DropdownMenuCheckboxItem>
-                )
-              })}
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       <div className="rounded-md border">
@@ -191,7 +215,7 @@ export function TranslationsTable({
                   data-state={row.getIsSelected() && 'selected'}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} className="py-0">
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()

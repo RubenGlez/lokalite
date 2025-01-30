@@ -23,7 +23,14 @@ export function EditableCell({
     setValue(e.target.value)
   }, [])
 
-  return <Input value={value} onChange={onChange} onBlur={onBlur} />
+  return (
+    <Input
+      value={value}
+      onChange={onChange}
+      onBlur={onBlur}
+      className="border-none shadow-none truncate rounded-none focus-visible:ring-1 focus-visible:ring-inset min-h-10"
+    />
+  )
 }
 
 export const MemoizedEditableCell = memo(EditableCell)

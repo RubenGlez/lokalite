@@ -3,7 +3,6 @@ import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
-  DropdownMenuLabel,
   DropdownMenuItem
 } from '~/components/ui/dropdown-menu'
 import { CellContext, ColumnDef } from '@tanstack/react-table'
@@ -80,8 +79,11 @@ const actionColum: ColumnDef<TranslationKey> = {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem>Translate</DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => table.options.meta?.onTranslateRow(row.original.id)}
+          >
+            Translate
+          </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => table.options.meta?.onRemoveRow(row.original.id)}
           >

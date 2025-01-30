@@ -68,6 +68,8 @@ export default function PageDetail() {
     }
   })
 
+  const translateSome = api.translations.translateSome.useMutation()
+
   const getLanguageId = useCallback(
     (languageCode: string) =>
       languages?.find((language) => language.code === languageCode)?.id,
@@ -124,7 +126,7 @@ export default function PageDetail() {
 
   const handleAddRow = useCallback(() => {
     handleUpsertTranslationKey({
-      key: `new_key_${Date.now()}`,
+      key: `NEW_KEY_${Date.now()}`,
       pageId: page?.id ?? ''
     })
   }, [page?.id, handleUpsertTranslationKey])
@@ -138,6 +140,20 @@ export default function PageDetail() {
     [deleteTranslationKey]
   )
 
+  const handleTranslateAll = useCallback(
+    (translationKeyIds: string[]) => {
+      translateSome.mutate({
+        pageId: page?.id ?? '',
+        translationKeyIds
+      })
+    },
+    [translateSome, page?.id]
+  )
+
+  const handleTranslateRow = useCallback((translationKeyId: string) => {
+    console.log('TODO: translate row', translationKeyId)
+  }, [])
+
   if (isLoadingTranslationKeys || isLoadingLanguages) return null
 
   return (
@@ -149,6 +165,8 @@ export default function PageDetail() {
         onUpdateCell={handleUpdateCell}
         onAddRow={handleAddRow}
         onRemoveRow={handleRemoveRow}
+        onTranslateAll={handleTranslateAll}
+        onTranslateRow={handleTranslateRow}
       />
     </div>
   )
