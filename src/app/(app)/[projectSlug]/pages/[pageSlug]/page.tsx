@@ -14,12 +14,13 @@ export default function PageDetail() {
 
   const normalizedTranslations = useNormalizedTranslationsByPage(page?.id)
 
-  const { data: languages } = api.languages.getByProject.useQuery(
-    {
-      projectId: project?.id ?? ''
-    },
-    { enabled: !!project?.id }
-  )
+  const { data: languages, isLoading: isLoadingLanguages } =
+    api.languages.getByProject.useQuery(
+      {
+        projectId: project?.id ?? ''
+      },
+      { enabled: !!project?.id }
+    )
 
   const { data: translationKeys, isLoading: isLoadingTranslationKeys } =
     api.translationKeys.getAllByPageId.useQuery(
@@ -93,7 +94,7 @@ export default function PageDetail() {
     [page?.id, handleUpsertTranslation, handleUpsertTranslationKey]
   )
 
-  if (isLoadingTranslationKeys) return null
+  if (isLoadingTranslationKeys || isLoadingLanguages) return null
 
   return (
     <div className="px-4">

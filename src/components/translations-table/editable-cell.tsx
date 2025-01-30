@@ -14,8 +14,10 @@ export function EditableCell({
   const [value, setValue] = useState(initialValue)
 
   const onBlur = useCallback(() => {
+    if (value === initialValue) return
+
     onUpdateCell(value)
-  }, [onUpdateCell, value])
+  }, [onUpdateCell, value, initialValue])
 
   const onChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setValue(e.target.value)
