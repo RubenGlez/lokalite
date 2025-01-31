@@ -70,12 +70,13 @@ We welcome contributions from the community! Here's how you can help:
 
 ### Current Focus
 
-- [ ] Add default language when the user adds the first language
+- [ ] Set default language when the user adds the first language
 - [ ] Add a way to export the translations to a JSON file (via API and download)
 
 ### Future Plans
 
-- [ ] Improve the translation feature (prompt technique / change model)
+- [ ] Add authentication & authorization (better-auth)
+- [ ] Improve efficiency of the translation feature
 - [ ] Implement translation memory feature
 
 ## Tech Stack
@@ -96,7 +97,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 If you encounter any issues or have questions:
 
-- Open an [issue](https://github.com/yourusername/lokalite/issues)
+- Open an [issue](https://github.com/RubenGlez/lokalite/issues)
 - Join our community (coming soon)
 
 ---
