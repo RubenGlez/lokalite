@@ -1,23 +1,102 @@
-### Notes
+# Lokalite
 
-<!--
-/                               Home
+Lokalite is an open-source localization management platform designed to streamline the translation process for your applications. With an intuitive interface and powerful features, it helps teams efficiently manage and maintain their application translations across multiple languages.
 
-/books                          Listado books
-/books/create                   Creación de libro
-/books/id                       Opciones disponibles
-/books/id/update                Edición de libro
-/books/id/delete                Borrado de libro
+## Features
 
-/books/id/sheets                Listado de sheets de un libro
-/books/id/sheets/id             Lectura de la sheet de un libro
-/books/id/sheets/id/update      Edicion de la sheet de un libro
-/books/id/sheets/id/delete      Borrado de la sheet de un libro
+- 🌐 **Multi-language Support**: Manage translations for multiple languages in one place
+- 🔑 **Translation Key Management**: Organize and structure your translation keys efficiently
+- 🤖 **AI-Powered Translations**: Get translation suggestions using advanced AI technology
+- 📱 **Modern Interface**: Clean and responsive design built with Next.js
+- 🔄 **Real-time Updates**: See changes instantly as you work
+- 🔍 **Search & Filter**: Quickly find the translations you need
+- 📊 **Progress Tracking**: Monitor translation completion status
 
--->
+## Getting Started
 
-## TODO
+### Prerequisites
 
-- [ ] Fix breadcrumbs
-- [ ] Implement /books/id page
-- [ ] Improve ia for translation
+- Node.js 18+
+- pnpm (recommended) or npm
+- PostgreSQL database
+
+### Installation
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/yourusername/lokalite.git
+cd lokalite
+```
+
+2. Install dependencies:
+
+```bash
+pnpm install
+```
+
+3. Set up your environment variables:
+
+```bash
+cp .env.example .env
+```
+
+4. Start the development server:
+
+```bash
+pnpm dev
+```
+
+## Usage
+
+1. Create a new project
+2. Add your translation keys
+3. Start translating using the intuitive interface
+4. Export translations to use in your application
+
+## Contributing
+
+We welcome contributions from the community! Here's how you can help:
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## Roadmap
+
+### Current Focus
+
+- [ ] Add default language when the user adds the first language
+- [ ] Add a way to export the translations to a JSON file (via API and download)
+
+### Future Plans
+
+- [ ] Improve the translation feature (prompt technique / change model)
+- [ ] Implement translation memory feature
+
+## Tech Stack
+
+- Next.js
+- TypeScript
+- tRPC
+- Drizzle
+- TailwindCSS
+- PostgreSQL
+- OpenAI
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+If you encounter any issues or have questions:
+
+- Open an [issue](https://github.com/yourusername/lokalite/issues)
+- Join our community (coming soon)
+
+---
+
+Built with ❤️ by developers, for developers
