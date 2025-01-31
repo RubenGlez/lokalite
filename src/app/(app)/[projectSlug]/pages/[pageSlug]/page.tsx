@@ -9,6 +9,7 @@ import { api } from '~/trpc/react'
 import { useToast } from '~/hooks/use-toast'
 import { ToastAction } from '~/components/ui/toast'
 import { useHotkeys } from 'react-hotkeys-hook'
+import { cn } from '~/lib/utils'
 
 export default function PageDetail() {
   const utils = api.useUtils()
@@ -69,7 +70,11 @@ export default function PageDetail() {
     }
   })
 
-  const translateSome = api.translations.translateSome.useMutation()
+  const translate = api.translations.translate.useMutation({
+    onSuccess: async () => {
+      utils.translations.getAllByPageId.invalidate()
+    }
+  })
 
   const getLanguageId = useCallback(
     (languageCode: string) =>
@@ -143,15 +148,17 @@ export default function PageDetail() {
 
   const handleTranslate = useCallback(
     (translationKeyIds: string[]) => {
-      translateSome.mutate({
+      translate.mutate({
         projectId: project?.id ?? '',
         pageId: page?.id ?? '',
         translationKeyIds,
         defaultLanguageId: project?.defaultLanguageId ?? ''
       })
     },
-    [translateSome, page?.id, project?.id, project?.defaultLanguageId]
+    [translate, page?.id, project?.id, project?.defaultLanguageId]
   )
+
+  const isTranslating = translate.isPending
 
   if (isLoadingTranslationKeys || isLoadingLanguages || isLoadingTranslations) {
     return null
@@ -159,16 +166,24 @@ export default function PageDetail() {
 
   return (
     <div className="px-4">
-      <TranslationsTable
-        data={translationKeys}
-        languages={languages}
-        normalizedTranslations={normalizedTranslations}
-        onUpdateCell={handleUpdateCell}
-        onAddRow={handleAddRow}
-        onRemoveRow={handleRemoveRow}
-        onTranslate={handleTranslate}
-        defaultLanguageId={project?.defaultLanguageId ?? ''}
-      />
+      {isTranslating && (
+        <div className="flex justify-center items-center h-screen absolute top-0 left-0 w-full bg-white/50 z-50">
+          <div className="text-xl font-bold">Translating...</div>
+        </div>
+      )}
+
+      <div className={cn(isTranslating && 'blur-sm')}>
+        <TranslationsTable
+          data={translationKeys}
+          languages={languages}
+          normalizedTranslations={normalizedTranslations}
+          onUpdateCell={handleUpdateCell}
+          onAddRow={handleAddRow}
+          onRemoveRow={handleRemoveRow}
+          onTranslate={handleTranslate}
+          defaultLanguageId={project?.defaultLanguageId ?? ''}
+        />
+      </div>
     </div>
   )
 }

@@ -1,6 +1,9 @@
-import { eq, and } from 'drizzle-orm'
+import { openai } from '@ai-sdk/openai'
+import { generateObject } from 'ai'
+import { eq, and, not } from 'drizzle-orm'
 import { z } from 'zod'
-import { env } from '~/env'
+import { createSystemPrompt, upsertTranslations } from '~/lib/translation-agent'
+import { translationSchema } from '~/lib/translation-agent'
 
 import { createTRPCRouter, publicProcedure } from '~/server/api/trpc'
 import { translations } from '~/server/db/schema'
@@ -68,8 +71,8 @@ export const translationsRouter = createTRPCRouter({
         )
     }),
 
-  // Translate some translations
-  translateSome: publicProcedure
+  // Translate a list of translations
+  translate: publicProcedure
     .input(
       z.object({
         projectId: z.string(),
@@ -78,18 +81,48 @@ export const translationsRouter = createTRPCRouter({
         defaultLanguageId: z.string()
       })
     )
-    .mutation(async ({ input }) => {
-      return fetch(`${env.NEXT_PUBLIC_APP_URL}/api/translate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          projectId: input.projectId,
-          pageId: input.pageId,
-          translationKeyIds: input.translationKeyIds,
-          defaultLanguageId: input.defaultLanguageId
+    .mutation(async ({ input, ctx }) => {
+      const [translations, languages] = await Promise.all([
+        ctx.db.query.translations.findMany({
+          where: (translations, { eq, and, inArray }) =>
+            and(
+              eq(translations.pageId, input.pageId),
+              inArray(translations.translationKeyId, input.translationKeyIds)
+            )
+        }),
+        ctx.db.query.languages.findMany({
+          where: (languages, { eq, and }) =>
+            and(
+              eq(languages.projectId, input.projectId),
+              not(eq(languages.id, input.defaultLanguageId))
+            )
         })
+      ])
+
+      const defaultTranslations = translations.filter(
+        (t) => t.languageId === input.defaultLanguageId
+      )
+
+      const translationInputs = defaultTranslations.flatMap((translation) =>
+        languages.map((language) => ({
+          keyId: translation.translationKeyId,
+          targetLanguageCode: language.code,
+          targetLanguageId: language.id,
+          text: translation.value
+        }))
+      )
+
+      const { object } = await generateObject({
+        model: openai('gpt-4-turbo'),
+        schema: translationSchema,
+        system: createSystemPrompt(input.pageId),
+        prompt: `These is the list of translations to translate: ${JSON.stringify(
+          translationInputs,
+          null,
+          2
+        )}`
       })
+
+      return await upsertTranslations(object.list)
     })
 })
