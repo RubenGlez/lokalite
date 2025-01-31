@@ -27,7 +27,7 @@ Lokalite is an open-source localization management platform designed to streamli
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/lokalite.git
+git clone https://github.com/RubenGlez/lokalite.git
 cd lokalite
 ```
 
