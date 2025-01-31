@@ -1,3 +1,5 @@
+![Lokalite](./public/lokalite.png)
+
 # Lokalite
 
 Lokalite is an open-source localization management platform designed to streamline the translation process for your applications. With an intuitive interface and powerful features, it helps teams efficiently manage and maintain their application translations across multiple languages.
