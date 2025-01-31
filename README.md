@@ -1,61 +1,102 @@
-## Database Schema
+# Lokalite
 
-### 1. Users
+Lokalite is an open-source localization management platform designed to streamline the translation process for your applications. With an intuitive interface and powerful features, it helps teams efficiently manage and maintain their application translations across multiple languages.
 
-Table that stores information about users, including their credentials and roles.
+## Features
 
-- **Table: Users**
-  - `user_id` (PK): Unique identifier for each user.
-  - `name`: User's name.
-  - `email`: User's email address, used for login.
-  - `password_hash`: Hashed password for security.
+- 🌐 **Multi-language Support**: Manage translations for multiple languages in one place
+- 🔑 **Translation Key Management**: Organize and structure your translation keys efficiently
+- 🤖 **AI-Powered Translations**: Get translation suggestions using advanced AI technology
+- 📱 **Modern Interface**: Clean and responsive design built with Next.js
+- 🔄 **Real-time Updates**: See changes instantly as you work
+- 🔍 **Search & Filter**: Quickly find the translations you need
+- 📊 **Progress Tracking**: Monitor translation completion status
 
-### 2. Projects
+## Getting Started
 
-Table that stores projects created by users. Each project can have multiple sheets for different translation needs.
+### Prerequisites
 
-- **Table: Projects**
-  - `project_id` (PK): Unique identifier for each project.
-  - `name`: Name of the project.
-  - `description`: Brief description of the project.
-  - `creation_date`: Date when the project was created.
-  - `user_id` (FK): Identifier of the user who created the project.
+- Node.js 18+
+- pnpm (recommended) or npm
+- PostgreSQL database
 
-### 3. Sheets
+### Installation
 
-Each project can include multiple sheets. Each sheet corresponds to a specific translation need, such as different platforms or functionalities.
+1. Clone the repository:
 
-- **Table: Sheets**
-  - `sheet_id` (PK): Unique identifier for each sheet.
-  - `project_id` (FK): Foreign key that links to the Projects table.
-  - `name`: Name of the sheet (e.g., Mobile, Web).
-  - `source_language`: Source language code (e.g., "EN").
+```bash
+git clone https://github.com/yourusername/lokalite.git
+cd lokalite
+```
 
-### 4. Copy
+2. Install dependencies:
 
-Table that stores the copy to be translated, linked to each sheet. Each piece of copy has an original version.
+```bash
+pnpm install
+```
 
-- **Table: Copy**
-  - `copy_id` (PK): Unique identifier for each piece of copy.
-  - `sheet_id` (FK): Foreign key that links to the Sheets table.
-  - `copy_key`: Key or identifier used to reference the copy (used in the code or application).
-  - `original_text`: Original text of the copy in the source language.
+3. Set up your environment variables:
 
-### 5. Target Languages
+```bash
+cp .env.example .env
+```
 
-Table that stores the relationship between sheets and their target languages. This allows for managing multiple target languages for each sheet.
+4. Start the development server:
 
-- **Table: Target Languages**
-  - `target_language_id` (PK): Unique identifier for each target language relation.
-  - `sheet_id` (FK): Foreign key that links to the Sheets table.
-  - `language_code`: Language code (e.g., "ES", "FR").
+```bash
+pnpm dev
+```
 
-### 6. Translations
+## Usage
 
-Table that stores translations for each copy in various target languages.
+1. Create a new project
+2. Add your translation keys
+3. Start translating using the intuitive interface
+4. Export translations to use in your application
 
-- **Table: Translations**
-  - `translation_id` (PK): Unique identifier for each translation.
-  - `copy_id` (FK): Foreign key that links to the Copy table.
-  - `language_code`: Language code of the translation (corresponding to one of the target languages).
-  - `translated_copy`: The translated copy in the target language.
+## Contributing
+
+We welcome contributions from the community! Here's how you can help:
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## Roadmap
+
+### Current Focus
+
+- [ ] Add default language when the user adds the first language
+- [ ] Add a way to export the translations to a JSON file (via API and download)
+
+### Future Plans
+
+- [ ] Improve the translation feature (prompt technique / change model)
+- [ ] Implement translation memory feature
+
+## Tech Stack
+
+- Next.js
+- TypeScript
+- tRPC
+- Drizzle
+- TailwindCSS
+- PostgreSQL
+- OpenAI
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+If you encounter any issues or have questions:
+
+- Open an [issue](https://github.com/yourusername/lokalite/issues)
+- Join our community (coming soon)
+
+---
+
+Built with ❤️ by developers, for developers

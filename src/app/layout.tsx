@@ -1,39 +1,36 @@
-import type { Metadata } from 'next'
-import { Inter as FontSans } from 'next/font/google'
-import { cn } from '@/lib/utils'
-import '@/styles/globals.css'
-import { TailwindIndicator } from '@/components/tailwind-indicator'
-import { Providers } from '@/components/providers'
+import '~/styles/globals.css'
 
-const fontSans = FontSans({
-  subsets: ['latin'],
-  variable: '--font-sans'
-})
+import { GeistSans } from 'geist/font/sans'
+import { type Metadata } from 'next'
+
+import { TRPCReactProvider } from '~/trpc/react'
+import { Toaster } from '~/components/ui/toaster'
 
 export const metadata: Metadata = {
   title: 'Lokalite',
-  description: 'The Open Sourced Translation Manager'
+  description: 'Lokalite is a tool for creating multilingual websites.',
+  icons: [{ rel: 'icon', url: '/favicon.ico' }]
 }
 
-export default function RootLayout({
-  children
-}: Readonly<{
-  children: React.ReactNode
-}>) {
-  return (
-    <html lang="en">
-      <head />
-      <body
-        className={cn(
-          'min-h-screen bg-background font-sans antialiased',
-          fontSans.variable
-        )}
-      >
-        <Providers>
-          {children}
+const ENABLE_REACT_SCAN = false
 
-          <TailwindIndicator />
-        </Providers>
+export default async function RootLayout({
+  children
+}: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <html lang="en" className={`${GeistSans.variable}`}>
+      {ENABLE_REACT_SCAN && (
+        <head>
+          <script
+            src="https://unpkg.com/react-scan/dist/auto.global.js"
+            async
+          />
+        </head>
+      )}
+
+      <body>
+        <TRPCReactProvider>{children}</TRPCReactProvider>
+        <Toaster />
       </body>
     </html>
   )
