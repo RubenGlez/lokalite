@@ -40,7 +40,8 @@ export const projectsRouter = createTRPCRouter({
       z.object({
         id: z.string(),
         name: z.string().optional(),
-        slug: z.string().optional()
+        slug: z.string().optional(),
+        defaultLanguageId: z.string().optional()
       })
     )
     .mutation(({ ctx, input }) =>

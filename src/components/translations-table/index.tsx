@@ -2,7 +2,6 @@
 
 import {
   ColumnFiltersState,
-  RowData,
   SortingState,
   VisibilityState,
   flexRender,
@@ -30,22 +29,10 @@ import {
   TableHeader,
   TableRow
 } from '~/components/ui/table'
-import { getColumns } from './columns'
+import { getColumns, TranslationsTableMeta } from './columns'
 import { Language, TranslationKey } from '~/server/db/schema'
 import { useSkipper } from './use-skipper'
 import { useMemo, useState } from 'react'
-
-declare module '@tanstack/react-table' {
-  interface TableMeta<TData extends RowData> {
-    updateCell: (
-      translationId: string | null,
-      columnId: string,
-      value: TData[keyof TData]
-    ) => void
-    onRemoveRow: (translationKeyId: string) => void
-    onTranslateRow: (translationKeyId: string) => void
-  }
-}
 
 interface TranslationsTableProps {
   data: TranslationKey[] | undefined
@@ -59,6 +46,7 @@ interface TranslationsTableProps {
   onAddRow: () => void
   onRemoveRow: (translationKeyId: string) => void
   onTranslate: (translations: string[]) => void
+  defaultLanguageId: string
 }
 
 export function TranslationsTable({
@@ -68,7 +56,8 @@ export function TranslationsTable({
   onUpdateCell,
   onAddRow,
   onRemoveRow,
-  onTranslate
+  onTranslate,
+  defaultLanguageId
 }: TranslationsTableProps) {
   const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
 
@@ -78,8 +67,8 @@ export function TranslationsTable({
   const [rowSelection, setRowSelection] = useState({})
 
   const columns = useMemo(
-    () => getColumns(languages, normalizedTranslations),
-    [languages, normalizedTranslations]
+    () => getColumns({ languages, normalizedTranslations, defaultLanguageId }),
+    [languages, normalizedTranslations, defaultLanguageId]
   )
 
   const table = useReactTable({
@@ -102,17 +91,18 @@ export function TranslationsTable({
     autoResetPageIndex,
     meta: {
       updateCell: (translationId, columnId, value) => {
-        // Skip page index reset until after next rerender
         skipAutoResetPageIndex()
-        onUpdateCell(translationId, columnId, value as string)
+        onUpdateCell(translationId, columnId, value)
       },
-      onRemoveRow: (translationKeyId: string) => {
+      onRemoveRow: (translationKeyId) => {
+        skipAutoResetPageIndex()
         onRemoveRow(translationKeyId)
       },
-      onTranslateRow: (translationKeyId: string) => {
+      onTranslateRow: (translationKeyId) => {
+        skipAutoResetPageIndex()
         onTranslate([translationKeyId])
       }
-    }
+    } satisfies TranslationsTableMeta
   })
 
   return (
@@ -213,7 +203,7 @@ export function TranslationsTable({
                   data-state={row.getIsSelected() && 'selected'}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-0">
+                    <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()

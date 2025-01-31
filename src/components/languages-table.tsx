@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 
-import { ArrowUpDown, ChevronDown, MoreHorizontal } from 'lucide-react'
+import { ArrowUpDown, Check, ChevronDown, MoreHorizontal } from 'lucide-react'
 
 import { Button } from '~/components/ui/button'
 import { Checkbox } from '~/components/ui/checkbox'
@@ -36,6 +36,19 @@ import {
   flexRender
 } from '@tanstack/react-table'
 import { LanguageCreator } from './language-creator'
+import { api } from '~/trpc/react'
+
+interface LanguagesTableProps {
+  projectId: string
+  languages: Language[]
+  defaultLanguageId: string
+}
+
+interface LanguagesTableMeta {
+  setDefaultLanguage: (languageId: string) => void
+  deleteLanguage: (languageId: string) => void
+  defaultLanguageId: string
+}
 
 export const columns: ColumnDef<Language>[] = [
   {
@@ -61,25 +74,11 @@ export const columns: ColumnDef<Language>[] = [
     enableHiding: false
   },
   {
-    accessorKey: 'name',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Name
-          <ArrowUpDown />
-        </Button>
-      )
-    },
-    cell: ({ row }) => <div>{row.getValue('name')}</div>
-  },
-  {
     accessorKey: 'code',
     header: ({ column }) => {
       return (
         <Button
+          className="-ml-4"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
@@ -91,9 +90,43 @@ export const columns: ColumnDef<Language>[] = [
     cell: ({ row }) => <div>{row.getValue('code')}</div>
   },
   {
+    accessorKey: 'name',
+    header: ({ column }) => {
+      return (
+        <Button
+          className="-ml-4"
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Name
+          <ArrowUpDown />
+        </Button>
+      )
+    },
+    cell: ({ row, table }) => {
+      const meta = table.options.meta as LanguagesTableMeta
+
+      const isDefault = meta.defaultLanguageId === row.original.id
+
+      return (
+        <div className="flex items-center gap-4">
+          <span>{row.getValue('name')}</span>
+          {isDefault && (
+            <div className="text-green-500 bg-green-500/10 rounded-full px-2 py-1 inline-flex items-center gap-1 text-xs pr-3">
+              <Check className="w-4 h-4" />
+              DEFAULT
+            </div>
+          )}
+        </div>
+      )
+    }
+  },
+  {
     id: 'actions',
     enableHiding: false,
-    cell: () => {
+    cell: ({ row, table }) => {
+      const languageId = row.original.id
+
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -103,18 +136,35 @@ export const columns: ColumnDef<Language>[] = [
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>Delete</DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                const meta = table.options.meta as LanguagesTableMeta
+                meta.deleteLanguage(languageId)
+              }}
+            >
+              Delete
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                const meta = table.options.meta as LanguagesTableMeta
+                meta.setDefaultLanguage(languageId)
+              }}
+            >
+              Set as default
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )
     }
   }
 ]
-interface LanguagesTableProps {
-  projectId: string
-  languages: Language[]
-}
-export function LanguagesTable({ projectId, languages }: LanguagesTableProps) {
+
+export function LanguagesTable({
+  projectId,
+  languages,
+  defaultLanguageId
+}: LanguagesTableProps) {
+  const utils = api.useUtils()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -122,6 +172,13 @@ export function LanguagesTable({ projectId, languages }: LanguagesTableProps) {
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
+
+  const updateProject = api.projects.update.useMutation({
+    onSuccess: () => {
+      utils.projects.invalidate()
+    }
+  })
+  const deleteLanguage = api.languages.delete.useMutation()
 
   const table = useReactTable({
     data: languages,
@@ -139,7 +196,21 @@ export function LanguagesTable({ projectId, languages }: LanguagesTableProps) {
       columnFilters,
       columnVisibility,
       rowSelection
-    }
+    },
+    meta: {
+      setDefaultLanguage: (languageId) => {
+        updateProject.mutate({
+          id: projectId,
+          defaultLanguageId: languageId
+        })
+      },
+      deleteLanguage: (languageId) => {
+        deleteLanguage.mutate({
+          id: languageId
+        })
+      },
+      defaultLanguageId
+    } satisfies LanguagesTableMeta
   })
 
   return (

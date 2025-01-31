@@ -144,11 +144,13 @@ export default function PageDetail() {
   const handleTranslate = useCallback(
     (translationKeyIds: string[]) => {
       translateSome.mutate({
+        projectId: project?.id ?? '',
         pageId: page?.id ?? '',
-        translationKeyIds
+        translationKeyIds,
+        defaultLanguageId: project?.defaultLanguageId ?? ''
       })
     },
-    [translateSome, page?.id]
+    [translateSome, page?.id, project?.id, project?.defaultLanguageId]
   )
 
   if (isLoadingTranslationKeys || isLoadingLanguages || isLoadingTranslations) {
@@ -165,6 +167,7 @@ export default function PageDetail() {
         onAddRow={handleAddRow}
         onRemoveRow={handleRemoveRow}
         onTranslate={handleTranslate}
+        defaultLanguageId={project?.defaultLanguageId ?? ''}
       />
     </div>
   )

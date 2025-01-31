@@ -70,7 +70,11 @@ export default function ProjectOverview() {
         </Card>
       </div>
 
-      <LanguagesTable languages={languages ?? []} projectId={project.id} />
+      <LanguagesTable
+        languages={languages ?? []}
+        projectId={project.id}
+        defaultLanguageId={project.defaultLanguageId ?? ''}
+      />
     </div>
   )
 }

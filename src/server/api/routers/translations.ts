@@ -33,7 +33,8 @@ export const translationsRouter = createTRPCRouter({
           pageId: input.pageId,
           translationKeyId: input.translationKeyId,
           languageId: input.languageId,
-          value: input.value
+          value: input.value,
+          updatedAt: new Date()
         })
         .onConflictDoUpdate({
           target: [
@@ -67,57 +68,28 @@ export const translationsRouter = createTRPCRouter({
         )
     }),
 
+  // Translate some translations
   translateSome: publicProcedure
     .input(
       z.object({
+        projectId: z.string(),
         pageId: z.string(),
-        translationKeyIds: z.array(z.string())
+        translationKeyIds: z.array(z.string()),
+        defaultLanguageId: z.string()
       })
     )
-    .mutation(async ({ ctx, input }) => {
-      // Similar logic as translateRow but for multiple keys
-      const keys = await ctx.db.query.translationKeys.findMany({
-        where: (keys, { eq, and, inArray }) =>
-          and(
-            eq(keys.pageId, input.pageId),
-            inArray(keys.id, input.translationKeyIds)
-          ),
-        with: {
-          translations: {
-            with: {
-              language: true
-            }
-          }
-        }
-      })
-
-      const translationList = keys.flatMap((key) =>
-        key.translations.map((t) => ({
-          id: t.id,
-          keyId: key.id,
-          languageCode: t.language.code,
-          text: t.value
-        }))
-      )
-
-      const response = await fetch(`${env.NEXT_PUBLIC_APP_URL}/api/translate`, {
+    .mutation(async ({ input }) => {
+      return fetch(`${env.NEXT_PUBLIC_APP_URL}/api/translate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ data: translationList })
+        body: JSON.stringify({
+          projectId: input.projectId,
+          pageId: input.pageId,
+          translationKeyIds: input.translationKeyIds,
+          defaultLanguageId: input.defaultLanguageId
+        })
       })
-
-      const { list } = await response.json()
-
-      for (const item of list) {
-        await ctx.db
-          .update(translations)
-          .set({
-            value: item.translation,
-            updatedAt: new Date()
-          })
-          .where(eq(translations.id, item.id))
-      }
     })
 })

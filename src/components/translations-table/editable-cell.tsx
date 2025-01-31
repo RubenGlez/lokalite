@@ -28,7 +28,7 @@ export function EditableCell({
       value={value}
       onChange={onChange}
       onBlur={onBlur}
-      className="border-none shadow-none truncate rounded-none focus-visible:ring-1 focus-visible:ring-inset min-h-10"
+      className="truncate border-transparent shadow-transparent focus-visible:border-input focus-visible:shadow-sm"
     />
   )
 }

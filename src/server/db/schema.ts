@@ -13,6 +13,10 @@ export const projects = pgTable('projects', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: varchar('name', { length: 255 }).notNull(),
   slug: varchar('slug', { length: 255 }).notNull().unique(),
+  defaultLanguageId: uuid('default_language_id').references(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (): any => languages.id
+  ),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at')
 })
@@ -33,7 +37,6 @@ export const pages = pgTable(
     projectSlugIdx: unique().on(table.projectId, table.slug)
   })
 )
-
 export const languages = pgTable(
   'languages',
   {
@@ -94,9 +97,13 @@ export const translations = pgTable(
 )
 
 // RELATIONS
-export const projectRelations = relations(projects, ({ many }) => ({
+export const projectRelations = relations(projects, ({ many, one }) => ({
   pages: many(pages),
-  languages: many(languages)
+  languages: many(languages),
+  defaultLanguage: one(languages, {
+    fields: [projects.defaultLanguageId],
+    references: [languages.id]
+  })
 }))
 
 export const pageRelations = relations(pages, ({ one, many }) => ({
