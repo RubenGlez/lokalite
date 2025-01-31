@@ -13,7 +13,7 @@ export const translationKeysRouter = createTRPCRouter({
         .select()
         .from(translationKeys)
         .where(eq(translationKeys.pageId, input.pageId))
-        .orderBy(asc(translationKeys.updatedAt))
+        .orderBy(asc(translationKeys.createdAt))
     }),
 
   upsertKey: publicProcedure

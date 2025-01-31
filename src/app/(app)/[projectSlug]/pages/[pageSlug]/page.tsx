@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { TranslationsTable } from '~/components/translations-table'
 import { useNormalizedTranslationsByPage } from '~/hooks/use-normalized-translations-by-page'
 import { useSelectedPage } from '~/hooks/use-selected-page'
@@ -9,9 +9,9 @@ import { api } from '~/trpc/react'
 import { useToast } from '~/hooks/use-toast'
 import { ToastAction } from '~/components/ui/toast'
 import { useHotkeys } from 'react-hotkeys-hook'
-import { cn } from '~/lib/utils'
 
 export default function PageDetail() {
+  const [tableKey, setTableKey] = useState(0)
   const utils = api.useUtils()
   const page = useSelectedPage()
   const project = useSelectedProject()
@@ -72,7 +72,8 @@ export default function PageDetail() {
 
   const translate = api.translations.translate.useMutation({
     onSuccess: async () => {
-      utils.translations.getAllByPageId.invalidate()
+      await utils.translations.getAllByPageId.invalidate()
+      setTableKey((prev) => prev + 1)
     }
   })
 
@@ -158,32 +159,24 @@ export default function PageDetail() {
     [translate, page?.id, project?.id, project?.defaultLanguageId]
   )
 
-  const isTranslating = translate.isPending
-
   if (isLoadingTranslationKeys || isLoadingLanguages || isLoadingTranslations) {
     return null
   }
 
   return (
     <div className="px-4">
-      {isTranslating && (
-        <div className="flex justify-center items-center h-screen absolute top-0 left-0 w-full bg-white/50 z-50">
-          <div className="text-xl font-bold">Translating...</div>
-        </div>
-      )}
-
-      <div className={cn(isTranslating && 'blur-sm')}>
-        <TranslationsTable
-          data={translationKeys}
-          languages={languages}
-          normalizedTranslations={normalizedTranslations}
-          onUpdateCell={handleUpdateCell}
-          onAddRow={handleAddRow}
-          onRemoveRow={handleRemoveRow}
-          onTranslate={handleTranslate}
-          defaultLanguageId={project?.defaultLanguageId ?? ''}
-        />
-      </div>
+      <TranslationsTable
+        key={tableKey} // This is a hack to force the table to re-render
+        isTranslating={translate.isPending}
+        data={translationKeys}
+        languages={languages}
+        normalizedTranslations={normalizedTranslations}
+        onUpdateCell={handleUpdateCell}
+        onAddRow={handleAddRow}
+        onRemoveRow={handleRemoveRow}
+        onTranslate={handleTranslate}
+        defaultLanguageId={project?.defaultLanguageId ?? ''}
+      />
     </div>
   )
 }

@@ -33,6 +33,7 @@ import { getColumns, TranslationsTableMeta } from './columns'
 import { Language, TranslationKey } from '~/server/db/schema'
 import { useSkipper } from './use-skipper'
 import { useMemo, useState } from 'react'
+import { LoaderIcon } from 'lucide-react'
 
 interface TranslationsTableProps {
   data: TranslationKey[] | undefined
@@ -47,6 +48,7 @@ interface TranslationsTableProps {
   onRemoveRow: (translationKeyId: string) => void
   onTranslate: (translations: string[]) => void
   defaultLanguageId: string
+  isTranslating: boolean
 }
 
 export function TranslationsTable({
@@ -57,7 +59,8 @@ export function TranslationsTable({
   onAddRow,
   onRemoveRow,
   onTranslate,
-  defaultLanguageId
+  defaultLanguageId,
+  isTranslating
 }: TranslationsTableProps) {
   const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
 
@@ -122,7 +125,9 @@ export function TranslationsTable({
             </span>
           </Button>
           <Button
-            disabled={!table.getFilteredSelectedRowModel().rows.length}
+            disabled={
+              !table.getFilteredSelectedRowModel().rows.length || isTranslating
+            }
             onClick={() => {
               skipAutoResetPageIndex()
               onTranslate(
@@ -132,7 +137,17 @@ export function TranslationsTable({
               )
             }}
           >
-            <Languages /> Translate
+            {isTranslating ? (
+              <>
+                <LoaderIcon className="animate-spin" />
+                <span>Translating...</span>
+              </>
+            ) : (
+              <>
+                <Languages />
+                <span>Translate</span>
+              </>
+            )}
           </Button>
         </div>
 
