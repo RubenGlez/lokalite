@@ -12,7 +12,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -174,7 +173,7 @@ export function LanguageCreator({ children, projectId }: LanguageCreatorProps) {
               name="code"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Languages</FormLabel>
+                  <FormLabel className="sr-only">Languages</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
@@ -228,9 +227,6 @@ export function LanguageCreator({ children, projectId }: LanguageCreatorProps) {
                       </Command>
                     </PopoverContent>
                   </Popover>
-                  <FormDescription>
-                    Add languages to translate your project.
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

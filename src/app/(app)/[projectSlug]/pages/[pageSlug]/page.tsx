@@ -41,7 +41,7 @@ export default function PageDetail() {
     }
   })
 
-  const deleteTranslationKey = api.translationKeys.deleteKey.useMutation({
+  const deleteKeysAndTranslations = api.translationKeys.deleteKeys.useMutation({
     onSuccess: () => {
       utils.translationKeys.getAllByPageId.invalidate()
     }
@@ -138,13 +138,13 @@ export default function PageDetail() {
     })
   }, [page?.id, handleUpsertTranslationKey])
 
-  const handleRemoveRow = useCallback(
-    (translationKeyId: string) => {
-      deleteTranslationKey.mutate({
-        id: translationKeyId
+  const handleDelete = useCallback(
+    (translationKeyIds: string[]) => {
+      deleteKeysAndTranslations.mutate({
+        ids: translationKeyIds
       })
     },
-    [deleteTranslationKey]
+    [deleteKeysAndTranslations]
   )
 
   const handleTranslate = useCallback(
@@ -173,9 +173,10 @@ export default function PageDetail() {
         normalizedTranslations={normalizedTranslations}
         onUpdateCell={handleUpdateCell}
         onAddRow={handleAddRow}
-        onRemoveRow={handleRemoveRow}
+        onDelete={handleDelete}
         onTranslate={handleTranslate}
         defaultLanguageId={project?.defaultLanguageId ?? ''}
+        isDeleting={deleteKeysAndTranslations.isPending}
       />
     </div>
   )

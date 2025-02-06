@@ -17,8 +17,8 @@ export interface TranslationsTableMeta {
     columnId: string,
     value: string
   ) => void
-  onRemoveRow: (translationKeyId: string) => void
-  onTranslateRow: (translationKeyId: string) => void
+  onDelete: (translationKeyIds: string[]) => void
+  onTranslate: (translationKeyIds: string[]) => void
 }
 
 const basicColumns: ColumnDef<TranslationKey>[] = [
@@ -91,7 +91,7 @@ const actionColum: ColumnDef<TranslationKey> = {
           <DropdownMenuItem
             onClick={() => {
               const meta = table.options.meta as TranslationsTableMeta
-              meta.onTranslateRow(row.original.id)
+              meta.onTranslate([row.original.id])
             }}
           >
             Translate
@@ -99,7 +99,7 @@ const actionColum: ColumnDef<TranslationKey> = {
           <DropdownMenuItem
             onClick={() => {
               const meta = table.options.meta as TranslationsTableMeta
-              meta.onRemoveRow(row.original.id)
+              meta.onDelete([row.original.id])
             }}
           >
             Delete

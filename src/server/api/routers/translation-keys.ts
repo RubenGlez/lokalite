@@ -1,4 +1,4 @@
-import { eq, asc } from 'drizzle-orm'
+import { eq, asc, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { createTRPCRouter, publicProcedure } from '~/server/api/trpc'
@@ -44,7 +44,7 @@ export const translationKeysRouter = createTRPCRouter({
       })
     }),
 
-  // Delete a translation key (and its associated translations)
+  // Delete a single translation key (and its associated translations)
   deleteKey: publicProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -57,5 +57,20 @@ export const translationKeysRouter = createTRPCRouter({
       return ctx.db
         .delete(translationKeys)
         .where(eq(translationKeys.id, input.id))
+    }),
+
+  // Delete multiple translation keys (and their associated translations)
+  deleteKeys: publicProcedure
+    .input(z.object({ ids: z.array(z.string()) }))
+    .mutation(async ({ ctx, input }) => {
+      // Delete all associated translations first
+      await ctx.db
+        .delete(translations)
+        .where(inArray(translations.translationKeyId, input.ids))
+
+      // Delete all translation keys
+      return ctx.db
+        .delete(translationKeys)
+        .where(inArray(translationKeys.id, input.ids))
     })
 })

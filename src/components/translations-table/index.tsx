@@ -11,7 +11,7 @@ import {
   getSortedRowModel,
   useReactTable
 } from '@tanstack/react-table'
-import { ChevronDown, Languages, Plus } from 'lucide-react'
+import { ChevronDown, Languages, Plus, Trash } from 'lucide-react'
 
 import { Button } from '~/components/ui/button'
 import {
@@ -45,10 +45,11 @@ interface TranslationsTableProps {
     value: string
   ) => void
   onAddRow: () => void
-  onRemoveRow: (translationKeyId: string) => void
+  onDelete: (translationKeyIds: string[]) => void
   onTranslate: (translations: string[]) => void
   defaultLanguageId: string
   isTranslating: boolean
+  isDeleting: boolean
 }
 
 export function TranslationsTable({
@@ -57,10 +58,11 @@ export function TranslationsTable({
   normalizedTranslations,
   onUpdateCell,
   onAddRow,
-  onRemoveRow,
+  onDelete,
   onTranslate,
   defaultLanguageId,
-  isTranslating
+  isTranslating,
+  isDeleting
 }: TranslationsTableProps) {
   const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
 
@@ -97,13 +99,13 @@ export function TranslationsTable({
         skipAutoResetPageIndex()
         onUpdateCell(translationId, columnId, value)
       },
-      onRemoveRow: (translationKeyId) => {
+      onDelete: (translationKeyIds) => {
         skipAutoResetPageIndex()
-        onRemoveRow(translationKeyId)
+        onDelete(translationKeyIds)
       },
-      onTranslateRow: (translationKeyId) => {
+      onTranslate: (translationKeyIds) => {
         skipAutoResetPageIndex()
-        onTranslate([translationKeyId])
+        onTranslate(translationKeyIds)
       }
     } satisfies TranslationsTableMeta
   })
@@ -124,31 +126,53 @@ export function TranslationsTable({
               ⌘K
             </span>
           </Button>
-          <Button
-            disabled={
-              !table.getFilteredSelectedRowModel().rows.length || isTranslating
-            }
-            onClick={() => {
-              skipAutoResetPageIndex()
-              onTranslate(
-                table
-                  .getFilteredSelectedRowModel()
-                  .rows.map((row) => row.original.id)
-              )
-            }}
-          >
-            {isTranslating ? (
-              <>
-                <LoaderIcon className="animate-spin" />
-                <span>Translating...</span>
-              </>
-            ) : (
-              <>
-                <Languages />
-                <span>Translate</span>
-              </>
-            )}
-          </Button>
+          {table.getFilteredSelectedRowModel().rows.length > 0 && (
+            <>
+              <Button
+                disabled={isTranslating}
+                onClick={() => {
+                  skipAutoResetPageIndex()
+                  onTranslate(
+                    table
+                      .getFilteredSelectedRowModel()
+                      .rows.map((row) => row.original.id)
+                  )
+                }}
+              >
+                {isTranslating ? (
+                  <>
+                    <LoaderIcon className="animate-spin" />
+                    <span>Translating...</span>
+                  </>
+                ) : (
+                  <>
+                    <Languages />
+                    <span>Translate</span>
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={isDeleting}
+                onClick={() => {
+                  skipAutoResetPageIndex()
+                  // todo
+                }}
+              >
+                {isDeleting ? (
+                  <>
+                    <LoaderIcon className="animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash />
+                    <span>Delete</span>
+                  </>
+                )}
+              </Button>
+            </>
+          )}
         </div>
 
         <div className="flex items-center space-x-2">
