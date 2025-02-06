@@ -8,7 +8,6 @@ import { useSelectedProject } from '~/hooks/use-selected-project'
 import { api } from '~/trpc/react'
 import { useToast } from '~/hooks/use-toast'
 import { ToastAction } from '~/components/ui/toast'
-import { useHotkeys } from 'react-hotkeys-hook'
 
 export default function PageDetail() {
   const [tableKey, setTableKey] = useState(0)
@@ -129,14 +128,17 @@ export default function PageDetail() {
     [page?.id, handleUpsertTranslation, handleUpsertTranslationKey]
   )
 
-  useHotkeys('meta+k', () => handleAddRow())
-
-  const handleAddRow = useCallback(() => {
-    handleUpsertTranslationKey({
-      key: `NEW_KEY_${Date.now()}`,
-      pageId: page?.id ?? ''
-    })
-  }, [page?.id, handleUpsertTranslationKey])
+  const handleAddRow = useCallback(
+    (numberOfRows: number) => {
+      for (let i = 0; i < numberOfRows; i++) {
+        handleUpsertTranslationKey({
+          key: `NEW_KEY_${crypto.randomUUID()}`,
+          pageId: page?.id ?? ''
+        })
+      }
+    },
+    [page?.id, handleUpsertTranslationKey]
+  )
 
   const handleDelete = useCallback(
     (translationKeyIds: string[]) => {

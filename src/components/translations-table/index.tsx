@@ -2,6 +2,8 @@
 
 import {
   ColumnFiltersState,
+  PaginationState,
+  RowSelectionState,
   SortingState,
   VisibilityState,
   flexRender,
@@ -11,16 +13,7 @@ import {
   getSortedRowModel,
   useReactTable
 } from '@tanstack/react-table'
-import { ChevronDown, Languages, Plus, Trash } from 'lucide-react'
 
-import { Button } from '~/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger
-} from '~/components/ui/dropdown-menu'
-import { Input } from '~/components/ui/input'
 import {
   Table,
   TableBody,
@@ -33,7 +26,9 @@ import { getColumns, TranslationsTableMeta } from './columns'
 import { Language, TranslationKey } from '~/server/db/schema'
 import { useSkipper } from './use-skipper'
 import { useMemo, useState } from 'react'
-import { LoaderIcon } from 'lucide-react'
+import { RightActions } from './right-actions'
+import { LeftActions } from './left-actions'
+import { Footer } from './footer'
 
 interface TranslationsTableProps {
   data: TranslationKey[] | undefined
@@ -44,7 +39,7 @@ interface TranslationsTableProps {
     columnId: string,
     value: string
   ) => void
-  onAddRow: () => void
+  onAddRow: (numberOfRows: number) => void
   onDelete: (translationKeyIds: string[]) => void
   onTranslate: (translations: string[]) => void
   defaultLanguageId: string
@@ -69,7 +64,11 @@ export function TranslationsTable({
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = useState({})
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10
+  })
 
   const columns = useMemo(
     () => getColumns({ languages, normalizedTranslations, defaultLanguageId }),
@@ -87,11 +86,13 @@ export function TranslationsTable({
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    onPaginationChange: setPagination,
     state: {
       sorting,
       columnFilters,
       columnVisibility,
-      rowSelection
+      rowSelection,
+      pagination
     },
     autoResetPageIndex,
     meta: {
@@ -111,109 +112,23 @@ export function TranslationsTable({
   })
 
   return (
-    <div className="w-full">
+    <div className="w-full flex flex-col">
       <div className="flex items-center justify-between py-4">
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            onClick={() => {
-              skipAutoResetPageIndex()
-              onAddRow()
-            }}
-          >
-            <Plus /> Add
-            <span className="text-xs bg-primary-foreground rounded-sm px-1">
-              ⌘K
-            </span>
-          </Button>
-          {table.getFilteredSelectedRowModel().rows.length > 0 && (
-            <>
-              <Button
-                disabled={isTranslating}
-                onClick={() => {
-                  skipAutoResetPageIndex()
-                  onTranslate(
-                    table
-                      .getFilteredSelectedRowModel()
-                      .rows.map((row) => row.original.id)
-                  )
-                }}
-              >
-                {isTranslating ? (
-                  <>
-                    <LoaderIcon className="animate-spin" />
-                    <span>Translating...</span>
-                  </>
-                ) : (
-                  <>
-                    <Languages />
-                    <span>Translate</span>
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="destructive"
-                disabled={isDeleting}
-                onClick={() => {
-                  skipAutoResetPageIndex()
-                  // todo
-                }}
-              >
-                {isDeleting ? (
-                  <>
-                    <LoaderIcon className="animate-spin" />
-                    <span>Deleting...</span>
-                  </>
-                ) : (
-                  <>
-                    <Trash />
-                    <span>Delete</span>
-                  </>
-                )}
-              </Button>
-            </>
-          )}
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Input
-            placeholder="Filter by key..."
-            value={(table.getColumn('key')?.getFilterValue() as string) ?? ''}
-            onChange={(event) =>
-              table.getColumn('key')?.setFilterValue(event.target.value)
-            }
-            className="max-w-sm"
-          />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="ml-auto">
-                Columns <ChevronDown />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
-                    >
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  )
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <LeftActions
+          skipAutoResetPageIndex={skipAutoResetPageIndex}
+          onAddRow={onAddRow}
+          isTranslating={isTranslating}
+          isDeleting={isDeleting}
+          onTranslate={onTranslate}
+          getFilteredSelectedRowModel={table.getFilteredSelectedRowModel}
+        />
+        <RightActions
+          getColumn={table.getColumn}
+          getAllColumns={table.getAllColumns}
+        />
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-md border flex flex-col max-h-[calc(100svh-theme(spacing.52))]">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -265,30 +180,14 @@ export function TranslationsTable({
         </Table>
       </div>
 
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{' '}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
-        </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      <Footer
+        getFilteredSelectedRowModel={table.getFilteredSelectedRowModel}
+        getFilteredRowModel={table.getFilteredRowModel}
+        getCanPreviousPage={table.getCanPreviousPage}
+        getCanNextPage={table.getCanNextPage}
+        previousPage={table.previousPage}
+        nextPage={table.nextPage}
+      />
     </div>
   )
 }
