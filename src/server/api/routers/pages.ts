@@ -65,7 +65,8 @@ export const pagesRouter = createTRPCRouter({
         .update(pages)
         .set({
           name: input.name,
-          slug: input.slug
+          slug: input.slug,
+          updatedAt: new Date()
         })
         .where(eq(pages.id, input.id))
     }),

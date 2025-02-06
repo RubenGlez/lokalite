@@ -1,9 +1,6 @@
-import { openai } from '@ai-sdk/openai'
-import { generateObject } from 'ai'
 import { eq, and, not } from 'drizzle-orm'
 import { z } from 'zod'
-import { createSystemPrompt, upsertTranslations } from '~/lib/translation-agent'
-import { translationSchema } from '~/lib/translation-agent'
+import { translate } from '~/lib/translation-agent'
 
 import { createTRPCRouter, publicProcedure } from '~/server/api/trpc'
 import { translations } from '~/server/db/schema'
@@ -82,7 +79,7 @@ export const translationsRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const [translations, languages] = await Promise.all([
+      const [trans, languages] = await Promise.all([
         ctx.db.query.translations.findMany({
           where: (translations, { eq, and, inArray }) =>
             and(
@@ -99,30 +96,38 @@ export const translationsRouter = createTRPCRouter({
         })
       ])
 
-      const defaultTranslations = translations.filter(
+      const defaultTranslations = trans.filter(
         (t) => t.languageId === input.defaultLanguageId
       )
 
-      const translationInputs = defaultTranslations.flatMap((translation) =>
+      const itemsToTranslate = defaultTranslations.flatMap((item) =>
         languages.map((language) => ({
-          keyId: translation.translationKeyId,
+          keyId: item.translationKeyId,
           targetLanguageCode: language.code,
           targetLanguageId: language.id,
-          text: translation.value
+          text: item.value
         }))
       )
 
-      const { object } = await generateObject({
-        model: openai('gpt-4-turbo'),
-        schema: translationSchema,
-        system: createSystemPrompt(input.pageId),
-        prompt: `These is the list of translations to translate: ${JSON.stringify(
-          translationInputs,
-          null,
-          2
-        )}`
-      })
+      const translatedItems = await translate(input.pageId, itemsToTranslate)
 
-      return await upsertTranslations(object.list)
+      return Promise.all(
+        translatedItems.map((item) =>
+          ctx.db
+            .insert(translations)
+            .values(item)
+            .onConflictDoUpdate({
+              target: [
+                translations.pageId,
+                translations.translationKeyId,
+                translations.languageId
+              ],
+              set: {
+                value: item.value,
+                updatedAt: new Date()
+              }
+            })
+        )
+      )
     })
 })

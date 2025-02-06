@@ -37,6 +37,7 @@ import {
 } from '@tanstack/react-table'
 import { LanguageCreator } from './language-creator'
 import { api } from '~/trpc/react'
+import { toast } from '~/hooks/use-toast'
 
 interface LanguagesTableProps {
   projectId: string
@@ -50,7 +51,7 @@ interface LanguagesTableMeta {
   defaultLanguageId: string
 }
 
-export const columns: ColumnDef<Language>[] = [
+const columns: ColumnDef<Language>[] = [
   {
     id: 'select',
     header: ({ table }) => (
@@ -178,7 +179,19 @@ export function LanguagesTable({
       utils.projects.invalidate()
     }
   })
-  const deleteLanguage = api.languages.delete.useMutation()
+  const deleteLanguage = api.languages.delete.useMutation({
+    onSuccess: () => {
+      utils.languages.invalidate()
+    },
+    onError: () => {
+      toast({
+        variant: 'destructive',
+        title: 'Unable to delete language',
+        description:
+          'You have translations in this language. Please delete them first.'
+      })
+    }
+  })
 
   const table = useReactTable({
     data: languages,

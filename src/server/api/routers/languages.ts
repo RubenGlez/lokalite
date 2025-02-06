@@ -31,35 +31,20 @@ export const languagesRouter = createTRPCRouter({
     .input(
       z.object({
         projectId: z.string(),
-        code: z.string().length(2), // ISO 639-1 code (e.g., 'en', 'es')
+        code: z.string().min(2), // BCP 47 standard (e.g., 'en-US', 'es-ES')
         name: z.string()
       })
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.insert(languages).values({
-        projectId: input.projectId,
-        code: input.code,
-        name: input.name
-      })
-    }),
-
-  // Update a language
-  update: publicProcedure
-    .input(
-      z.object({
-        id: z.string(),
-        code: z.string().length(2).optional(),
-        name: z.string().optional()
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
       return ctx.db
-        .update(languages)
-        .set({
+        .insert(languages)
+        .values({
+          projectId: input.projectId,
           code: input.code,
           name: input.name
         })
-        .where(eq(languages.id, input.id))
+        .returning()
+        .then((rows) => rows[0])
     }),
 
   // Delete a language

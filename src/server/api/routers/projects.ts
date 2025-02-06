@@ -45,7 +45,15 @@ export const projectsRouter = createTRPCRouter({
       })
     )
     .mutation(({ ctx, input }) =>
-      ctx.db.update(projects).set(input).where(eq(projects.id, input.id))
+      ctx.db
+        .update(projects)
+        .set({
+          name: input.name,
+          slug: input.slug,
+          defaultLanguageId: input.defaultLanguageId,
+          updatedAt: new Date()
+        })
+        .where(eq(projects.id, input.id))
     ),
 
   // Delete a project

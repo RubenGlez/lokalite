@@ -44,7 +44,7 @@ export const languages = pgTable(
     projectId: uuid('project_id')
       .notNull()
       .references(() => projects.id),
-    code: varchar('code', { length: 10 }).notNull().unique(),
+    code: varchar('code', { length: 10 }).notNull().unique(), // BCP 47 standard
     name: varchar('name', { length: 255 }).notNull(),
     createdAt: timestamp('created_at').defaultNow()
   },

@@ -12,6 +12,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -22,17 +23,26 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { api } from '~/trpc/react'
 import { useState } from 'react'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '~/components/ui/select'
 import { useRouter } from 'next/navigation'
 
+import { ChevronsUpDown, Check } from 'lucide-react'
+import { cn } from '~/lib/utils'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from '~/components/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList
+} from '~/components/ui/command'
+
 const formSchema = z.object({
-  code: z.string().length(2, 'Language code must be exactly 2 characters')
+  code: z.string().min(2, 'Language code must be at least 2 characters')
 })
 
 interface LanguageCreatorProps {
@@ -41,32 +51,53 @@ interface LanguageCreatorProps {
 }
 
 const commonLanguages = [
-  { code: 'en', name: 'English' },
-  { code: 'es', name: 'Spanish' },
-  { code: 'zh', name: 'Chinese' },
-  { code: 'hi', name: 'Hindi' },
-  { code: 'ar', name: 'Arabic' },
-  { code: 'fr', name: 'French' },
-  { code: 'bn', name: 'Bengali' },
-  { code: 'ru', name: 'Russian' },
-  { code: 'pt', name: 'Portuguese' },
-  { code: 'ur', name: 'Urdu' },
-  { code: 'id', name: 'Indonesian' },
-  { code: 'de', name: 'German' },
-  { code: 'ja', name: 'Japanese' },
-  { code: 'sw', name: 'Swahili' },
-  { code: 'tr', name: 'Turkish' },
-  { code: 'ta', name: 'Tamil' },
-  { code: 'ko', name: 'Korean' },
-  { code: 'vi', name: 'Vietnamese' },
-  { code: 'it', name: 'Italian' },
-  { code: 'th', name: 'Thai' }
-] as const
+  { name: 'Mandarin Chinese', code: 'zh-CN' },
+  { name: 'Spanish', code: 'es-ES' },
+  { name: 'English', code: 'en-US' },
+  { name: 'Hindi', code: 'hi-IN' },
+  { name: 'Bengali', code: 'bn-BD' },
+  { name: 'Portuguese', code: 'pt-BR' },
+  { name: 'Russian', code: 'ru-RU' },
+  { name: 'Japanese', code: 'ja-JP' },
+  { name: 'Western Punjabi', code: 'pa-PK' },
+  { name: 'Marathi', code: 'mr-IN' },
+  { name: 'Telugu', code: 'te-IN' },
+  { name: 'Wu Chinese (Shanghainese)', code: 'zh-CN-shanghainese' },
+  { name: 'Turkish', code: 'tr-TR' },
+  { name: 'Korean', code: 'ko-KR' },
+  { name: 'French', code: 'fr-FR' },
+  { name: 'German', code: 'de-DE' },
+  { name: 'Vietnamese', code: 'vi-VN' },
+  { name: 'Tamil', code: 'ta-IN' },
+  { name: 'Urdu', code: 'ur-PK' },
+  { name: 'Italian', code: 'it-IT' },
+  { name: 'Yue Chinese (Cantonese)', code: 'zh-HK' },
+  { name: 'Thai', code: 'th-TH' },
+  { name: 'Gujarati', code: 'gu-IN' },
+  { name: 'Javanese', code: 'jv-ID' },
+  { name: 'Persian (Farsi)', code: 'fa-IR' },
+  { name: 'Polish', code: 'pl-PL' },
+  { name: 'Pashto', code: 'ps-AF' },
+  { name: 'Kannada', code: 'kn-IN' },
+  { name: 'Malayalam', code: 'ml-IN' },
+  { name: 'Sundanese', code: 'su-ID' },
+  { name: 'Hausa', code: 'ha-NG' },
+  { name: 'Burmese', code: 'my-MM' },
+  { name: 'Ukrainian', code: 'uk-UA' },
+  { name: 'Hebrew', code: 'he-IL' },
+  { name: 'Dutch', code: 'nl-NL' },
+  { name: 'Romanian', code: 'ro-RO' },
+  { name: 'Hakka Chinese', code: 'zh-TW-hakka' },
+  { name: 'Tagalog (Filipino)', code: 'tl-PH' },
+  { name: 'Hungarian', code: 'hu-HU' },
+  { name: 'Greek', code: 'el-GR' }
+]
 
 export function LanguageCreator({ children, projectId }: LanguageCreatorProps) {
   const utils = api.useUtils()
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [isFirstLanguage, setIsFirstLanguage] = useState(false)
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -78,23 +109,42 @@ export function LanguageCreator({ children, projectId }: LanguageCreatorProps) {
       projectId
     })
 
-  const createLanguage = api.languages.create.useMutation({
+  const updateProject = api.projects.update.useMutation({
     onSuccess: () => {
-      setOpen(false)
-      form.reset()
+      utils.projects.invalidate()
       utils.languages.getByProject.invalidate()
       router.refresh()
     }
   })
 
+  const createLanguage = api.languages.create.useMutation({
+    onMutate: () => {
+      setIsFirstLanguage(existingLanguages?.length === 0)
+    },
+    onSuccess: (data) => {
+      setOpen(false)
+      form.reset()
+
+      if (isFirstLanguage) {
+        updateProject.mutate({
+          id: projectId,
+          defaultLanguageId: data?.id
+        })
+      } else {
+        utils.languages.getByProject.invalidate()
+        router.refresh()
+      }
+    }
+  })
+
   function onSubmit(values: z.infer<typeof formSchema>) {
     const selectedLanguage = commonLanguages.find(
-      (lang) => lang.code === values.code.toLowerCase()
+      (lang) => lang.code === values.code
     )
     if (!selectedLanguage) return
 
     createLanguage.mutate({
-      code: values.code.toLowerCase(),
+      code: values.code,
       name: selectedLanguage.name,
       projectId
     })
@@ -111,7 +161,7 @@ export function LanguageCreator({ children, projectId }: LanguageCreatorProps) {
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Language</DialogTitle>
+          <DialogTitle>Add Languages</DialogTitle>
           <DialogDescription>
             Add a new language to your project for translation.
           </DialogDescription>
@@ -123,25 +173,64 @@ export function LanguageCreator({ children, projectId }: LanguageCreatorProps) {
               control={form.control}
               name="code"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Language</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a language" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {filteredCommonLanguages.map((lang) => (
-                        <SelectItem key={lang.code} value={lang.code}>
-                          {lang.name} ({lang.code})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <FormItem className="flex flex-col">
+                  <FormLabel>Languages</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className={cn(
+                            'justify-between',
+                            !field.value && 'text-muted-foreground'
+                          )}
+                        >
+                          {field.value
+                            ? filteredCommonLanguages.find(
+                                (language) => language.code === field.value
+                              )?.name
+                            : 'Select language'}
+                          <ChevronsUpDown className="opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0" align="start">
+                      <Command>
+                        <CommandInput
+                          placeholder="Search language..."
+                          className="h-9"
+                        />
+                        <CommandList>
+                          <CommandEmpty>No languages found.</CommandEmpty>
+                          <CommandGroup>
+                            {filteredCommonLanguages.map((language) => (
+                              <CommandItem
+                                value={language.code}
+                                key={language.code}
+                                onSelect={() => {
+                                  form.setValue('code', language.code)
+                                }}
+                              >
+                                {language.name}
+                                <Check
+                                  className={cn(
+                                    'ml-auto',
+                                    language.code === field.value
+                                      ? 'opacity-100'
+                                      : 'opacity-0'
+                                  )}
+                                />
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <FormDescription>
+                    Add languages to translate your project.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
