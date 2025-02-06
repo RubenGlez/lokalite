@@ -128,9 +128,14 @@ export function TranslationsTable({
         />
       </div>
 
-      <div className="rounded-md border flex flex-col max-h-[calc(100svh-theme(spacing.52))]">
+      <div className="rounded-md border flex flex-col max-h-[calc(100svh-theme(spacing.52))] overflow-hidden">
         <Table>
-          <TableHeader>
+          <TableHeader
+            className="sticky top-0 z-10 bg-background"
+            style={{
+              boxShadow: '0px 1px 0px hsl(var(--border))'
+            }}
+          >
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {

@@ -5,6 +5,7 @@ import { type Metadata } from 'next'
 
 import { TRPCReactProvider } from '~/trpc/react'
 import { Toaster } from '~/components/ui/toaster'
+import { ThemeProvider } from '~/lib/theme'
 
 export const metadata: Metadata = {
   title: 'Lokalite',
@@ -29,7 +30,16 @@ export default async function RootLayout({
       )}
 
       <body>
-        <TRPCReactProvider>{children}</TRPCReactProvider>
+        <TRPCReactProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+          </ThemeProvider>
+        </TRPCReactProvider>
         <Toaster />
       </body>
     </html>
