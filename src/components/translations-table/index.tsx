@@ -41,7 +41,6 @@ interface TranslationsTableProps {
   ) => void
   onDelete: (translationKeyIds: string[]) => void
   onTranslate: (translations: string[]) => void
-  defaultLanguageId: string
   isTranslating: boolean
   isDeleting: boolean
   onCreated: () => void
@@ -58,7 +57,6 @@ export function TranslationsTable({
   onUpdateCell,
   onDelete,
   onTranslate,
-  defaultLanguageId,
   isTranslating,
   isDeleting,
   onCreated
@@ -75,8 +73,8 @@ export function TranslationsTable({
   })
 
   const columns = useMemo(
-    () => getColumns({ languages, normalizedTranslations, defaultLanguageId }),
-    [languages, normalizedTranslations, defaultLanguageId]
+    () => getColumns({ languages, normalizedTranslations }),
+    [languages, normalizedTranslations]
   )
 
   const table = useReactTable({

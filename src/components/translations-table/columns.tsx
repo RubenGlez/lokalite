@@ -69,6 +69,7 @@ const basicColumns: ColumnDef<TranslationKey>[] = [
         <MemoizedEditableCell
           onUpdateCell={onUpdateCell}
           initialValue={props.getValue() as string}
+          isKeyCell={true}
         />
       )
     }
@@ -113,29 +114,19 @@ const actionColum: ColumnDef<TranslationKey> = {
 interface GetColumnsProps {
   languages: Language[]
   normalizedTranslations: Record<string, string>
-  defaultLanguageId: string
 }
 
 export const getColumns = ({
   languages,
-  normalizedTranslations,
-  defaultLanguageId
+  normalizedTranslations
 }: GetColumnsProps) => {
   const languageColumns = languages
-    .sort((a, b) => {
-      if (a.id === defaultLanguageId) {
-        return -1
-      }
-      if (b.id === defaultLanguageId) {
-        return 1
-      }
-      return 0
-    })
+    .sort((a, b) => (a.isSource ? -1 : b.isSource ? 1 : 0))
     .map((language) => {
       return {
         accessorKey: language.code,
         accessorFn: (row) =>
-          normalizedTranslations[`${row.id}_${language.id}`] ?? '',
+          normalizedTranslations[`${row.id}_${language.code}`] ?? '',
         header: ({ column }) => {
           return (
             <Button
@@ -157,7 +148,7 @@ export const getColumns = ({
           }
 
           // This represents the translationKey.id and language.id
-          const translationIndexKey = `${props.row.original.id}_${language.id}`
+          const translationIndexKey = `${props.row.original.id}_${language.code}`
           const initialValue = normalizedTranslations[translationIndexKey] ?? ''
 
           return (

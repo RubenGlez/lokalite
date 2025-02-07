@@ -1,15 +1,17 @@
-import { memo, useCallback, useState } from 'react'
+import { ChangeEvent, memo, useCallback, useState } from 'react'
 
 import { Input } from '../ui/input'
 
 interface EditableCellProps {
   onUpdateCell: (value: string) => void
   initialValue: string
+  isKeyCell?: boolean
 }
 
 export function EditableCell({
   onUpdateCell,
-  initialValue
+  initialValue,
+  isKeyCell = false
 }: EditableCellProps) {
   const [value, setValue] = useState(initialValue)
 
@@ -19,9 +21,19 @@ export function EditableCell({
     onUpdateCell(value)
   }, [onUpdateCell, value, initialValue])
 
-  const onChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setValue(e.target.value)
-  }, [])
+  const onChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      if (isKeyCell) {
+        const sanitizedValue = e.target.value
+          .replace(/ /g, '_')
+          .replace(/[^a-zA-Z0-9_]/g, '')
+        setValue(sanitizedValue)
+      } else {
+        setValue(e.target.value)
+      }
+    },
+    [isKeyCell]
+  )
 
   return (
     <Input

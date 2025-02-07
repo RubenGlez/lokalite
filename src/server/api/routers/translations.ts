@@ -1,9 +1,11 @@
-import { eq, and, not } from 'drizzle-orm'
+import { eq, not, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { translate } from '~/lib/translation-agent'
 
 import { createTRPCRouter, publicProcedure } from '~/server/api/trpc'
 import { translationKeys, translations } from '~/server/db/schema'
+
+const BATCH_SIZE = 150 // This is hardcoded but can be adjusted based on the token limit requirements
 
 export const translationsRouter = createTRPCRouter({
   // Get all translations for a specific page
@@ -16,13 +18,14 @@ export const translationsRouter = createTRPCRouter({
         .where(eq(translations.pageId, input.pageId))
     }),
 
-  // Create multiple translations
-  createMultiple: publicProcedure
+  // Create a full translation
+  createFullTranslation: publicProcedure
     .input(
       z.object({
         pageId: z.string().uuid(),
         key: z.string().min(1),
-        translations: z.record(z.string().min(2), z.string().min(1))
+        translations: z.record(z.string().min(2), z.string().min(1)),
+        projectId: z.string().uuid()
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -41,14 +44,13 @@ export const translationsRouter = createTRPCRouter({
           throw new Error('Failed to create translation key')
         }
 
-        console.log('keyCreated', keyCreated)
-
         return tx.insert(translations).values(
-          Object.entries(input.translations).map(([languageId, value]) => ({
-            languageId,
+          Object.entries(input.translations).map(([languageCode, value]) => ({
+            languageCode,
             value,
+            pageId: input.pageId,
             translationKeyId: keyCreated.id,
-            pageId: input.pageId
+            projectId: input.projectId
           }))
         )
       })
@@ -60,8 +62,9 @@ export const translationsRouter = createTRPCRouter({
       z.object({
         pageId: z.string().uuid(),
         translationKeyId: z.string().uuid(),
-        languageId: z.string().uuid(),
-        value: z.string()
+        languageCode: z.string(),
+        value: z.string(),
+        projectId: z.string().uuid()
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -70,40 +73,22 @@ export const translationsRouter = createTRPCRouter({
         .values({
           pageId: input.pageId,
           translationKeyId: input.translationKeyId,
-          languageId: input.languageId,
+          languageCode: input.languageCode,
           value: input.value,
+          projectId: input.projectId,
           updatedAt: new Date()
         })
         .onConflictDoUpdate({
           target: [
             translations.pageId,
             translations.translationKeyId,
-            translations.languageId
+            translations.languageCode
           ],
           set: {
             value: input.value,
             updatedAt: new Date()
           }
         })
-    }),
-
-  // Delete a translation
-  deleteTranslation: publicProcedure
-    .input(
-      z.object({
-        translationKeyId: z.string(),
-        languageId: z.string()
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      return ctx.db
-        .delete(translations)
-        .where(
-          and(
-            eq(translations.translationKeyId, input.translationKeyId),
-            eq(translations.languageId, input.languageId)
-          )
-        )
     }),
 
   // Translate a list of translations
@@ -113,11 +98,11 @@ export const translationsRouter = createTRPCRouter({
         projectId: z.string(),
         pageId: z.string(),
         translationKeyIds: z.array(z.string()),
-        defaultLanguageId: z.string()
+        defaultLanguageCode: z.string()
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const [trans, languages] = await Promise.all([
+      const [currentTranslations, languages] = await Promise.all([
         ctx.db.query.translations.findMany({
           where: (translations, { eq, and, inArray }) =>
             and(
@@ -129,16 +114,16 @@ export const translationsRouter = createTRPCRouter({
           where: (languages, { eq, and }) =>
             and(
               eq(languages.projectId, input.projectId),
-              not(eq(languages.id, input.defaultLanguageId))
+              not(eq(languages.code, input.defaultLanguageCode))
             )
         })
       ])
 
-      const defaultTranslations = trans.filter(
-        (t) => t.languageId === input.defaultLanguageId
+      const sourceTranslations = currentTranslations.filter(
+        (t) => t.languageCode === input.defaultLanguageCode
       )
 
-      const itemsToTranslate = defaultTranslations.flatMap((item) =>
+      const itemsToTranslate = sourceTranslations.flatMap((item) =>
         languages.map((language) => ({
           keyId: item.translationKeyId,
           targetLanguageCode: language.code,
@@ -147,25 +132,32 @@ export const translationsRouter = createTRPCRouter({
         }))
       )
 
-      const translatedItems = await translate(input.pageId, itemsToTranslate)
-
-      return Promise.all(
-        translatedItems.map((item) =>
-          ctx.db
-            .insert(translations)
-            .values(item)
-            .onConflictDoUpdate({
-              target: [
-                translations.pageId,
-                translations.translationKeyId,
-                translations.languageId
-              ],
-              set: {
-                value: item.value,
-                updatedAt: new Date()
-              }
-            })
+      // Process translations in batches
+      const allTranslatedItems = []
+      for (let i = 0; i < itemsToTranslate.length; i += BATCH_SIZE) {
+        const batch = itemsToTranslate.slice(i, i + BATCH_SIZE)
+        const translatedBatch = await translate(
+          input.projectId,
+          input.pageId,
+          input.defaultLanguageCode,
+          batch
         )
-      )
+        allTranslatedItems.push(...translatedBatch)
+      }
+
+      return ctx.db
+        .insert(translations)
+        .values(allTranslatedItems)
+        .onConflictDoUpdate({
+          target: [
+            translations.pageId,
+            translations.translationKeyId,
+            translations.languageCode
+          ],
+          set: {
+            value: sql`excluded.value`,
+            updatedAt: new Date()
+          }
+        })
     })
 })

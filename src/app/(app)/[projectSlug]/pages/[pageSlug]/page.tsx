@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { TranslationsTable } from '~/components/translations-table'
 import { useNormalizedTranslationsByPage } from '~/hooks/use-normalized-translations-by-page'
 import { useSelectedPage } from '~/hooks/use-selected-page'
@@ -25,6 +25,11 @@ export default function PageDetail() {
       },
       { enabled: !!project?.id }
     )
+
+  const sourceLanguage = useMemo(
+    () => languages?.find((language) => language.isSource),
+    [languages]
+  )
 
   const { data: translationKeys, isLoading: isLoadingTranslationKeys } =
     api.translationKeys.getAllByPageId.useQuery(
@@ -76,48 +81,19 @@ export default function PageDetail() {
     }
   })
 
-  const getLanguageId = useCallback(
-    (languageCode: string) =>
-      languages?.find((language) => language.code === languageCode)?.id,
-    [languages]
-  )
-
-  const handleUpsertTranslation = useCallback(
-    (params: {
-      pageId: string
-      languageCode: string
-      translationKeyId: string
-      value: string
-    }) => {
-      const languageId = getLanguageId(params.languageCode)
-      if (!languageId) return
-      upsertTranslation.mutate({
-        ...params,
-        languageId
-      })
-    },
-    [upsertTranslation, getLanguageId]
-  )
-
-  const handleUpsertTranslationKey = useCallback(
-    (params: { id?: string; key: string; pageId: string }) => {
-      upsertTranslationKey.mutate(params)
-    },
-    [upsertTranslationKey]
-  )
-
   const handleUpdateCell = useCallback(
     (translationKeyId: string | null, columnId: string, value: string) => {
       if (!translationKeyId || !page?.id) return
 
       if (columnId === 'key') {
-        handleUpsertTranslationKey({
+        upsertTranslationKey.mutate({
           id: translationKeyId,
           key: value,
           pageId: page.id
         })
       } else {
-        handleUpsertTranslation({
+        upsertTranslation.mutate({
+          projectId: project?.id ?? '',
           pageId: page.id,
           languageCode: columnId,
           translationKeyId,
@@ -125,7 +101,7 @@ export default function PageDetail() {
         })
       }
     },
-    [page?.id, handleUpsertTranslation, handleUpsertTranslationKey]
+    [page?.id, upsertTranslationKey, upsertTranslation, project?.id]
   )
 
   const handleDelete = useCallback(
@@ -143,10 +119,10 @@ export default function PageDetail() {
         projectId: project?.id ?? '',
         pageId: page?.id ?? '',
         translationKeyIds,
-        defaultLanguageId: project?.defaultLanguageId ?? ''
+        defaultLanguageCode: sourceLanguage?.code ?? ''
       })
     },
-    [translate, page?.id, project?.id, project?.defaultLanguageId]
+    [translate, page?.id, project?.id, sourceLanguage?.code]
   )
 
   const handleCreated = useCallback(() => {
@@ -169,7 +145,6 @@ export default function PageDetail() {
         onUpdateCell={handleUpdateCell}
         onDelete={handleDelete}
         onTranslate={handleTranslate}
-        defaultLanguageId={project?.defaultLanguageId ?? ''}
         isDeleting={deleteKeysAndTranslations.isPending}
       />
     </div>

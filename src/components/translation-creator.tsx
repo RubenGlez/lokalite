@@ -26,9 +26,10 @@ import {
 import { z } from 'zod'
 import { useSelectedPage } from '~/hooks/use-selected-page'
 import { useRouter } from 'next/navigation'
+import { ReactNode, useMemo } from 'react'
 
 interface TranslationCreatorProps {
-  children: React.ReactNode
+  children: ReactNode
   onCreated: () => void
 }
 
@@ -38,7 +39,12 @@ interface FormValues {
 }
 
 const formSchema = z.object({
-  key: z.string().min(1),
+  key: z
+    .string()
+    .min(1)
+    .regex(/^[a-zA-Z0-9_]+$/, {
+      message: 'Key can only contain letters, numbers, and underscores'
+    }),
   translations: z.record(z.string(), z.string().optional())
 })
 
@@ -59,22 +65,28 @@ export function TranslationCreator({
     }
   )
 
-  const createMultiple = api.translations.createMultiple.useMutation({
-    onSuccess: async () => {
-      form.reset()
-      await utils.translationKeys.invalidate()
-      await utils.translations.invalidate()
-      router.refresh()
-      onCreated()
-    },
-    onError: (error) => {
-      if (error.message.includes('unique')) {
-        form.setError('key', {
-          message: 'Translation key already exists'
-        })
+  const sourceLanguage = useMemo(
+    () => languages?.find((language) => language.isSource),
+    [languages]
+  )
+
+  const createFullTranslation =
+    api.translations.createFullTranslation.useMutation({
+      onSuccess: async () => {
+        form.reset()
+        await utils.translationKeys.invalidate()
+        await utils.translations.invalidate()
+        router.refresh()
+        onCreated()
+      },
+      onError: (error) => {
+        if (error.message.includes('unique')) {
+          form.setError('key', {
+            message: 'Translation key already exists'
+          })
+        }
       }
-    }
-  })
+    })
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -85,10 +97,13 @@ export function TranslationCreator({
   })
 
   const handleSubmit = (values: FormValues) => {
-    const pageId = selectedPage?.id ?? ''
+    if (!selectedProject?.id || !selectedPage?.id) {
+      return
+    }
 
-    createMultiple.mutate({
-      pageId,
+    createFullTranslation.mutate({
+      projectId: selectedProject.id,
+      pageId: selectedPage.id,
       key: values.key,
       translations: values.translations
     })
@@ -128,11 +143,11 @@ export function TranslationCreator({
               <FormField
                 key={language.id}
                 control={form.control}
-                name={`translations.${language.id}`}
+                name={`translations.${language.code}`}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {language.id === selectedProject?.defaultLanguageId
+                      {language.code === sourceLanguage?.code
                         ? `${language.name} (Default)`
                         : language.name}
                     </FormLabel>
@@ -155,7 +170,7 @@ export function TranslationCreator({
             <Button variant="secondary">Cancel</Button>
           </SheetClose>
           <Button
-            disabled={createMultiple.isPending}
+            disabled={createFullTranslation.isPending}
             onClick={form.handleSubmit(handleSubmit)}
           >
             Save

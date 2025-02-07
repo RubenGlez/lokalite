@@ -22,7 +22,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { api } from '~/trpc/react'
-import { useState } from 'react'
+import { ReactNode, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 const formSchema = z.object({
@@ -37,7 +37,7 @@ const formSchema = z.object({
 
 interface PageCreatorProps {
   projectId: string
-  children: React.ReactNode
+  children: ReactNode
 }
 
 export function PageCreator({ projectId, children }: PageCreatorProps) {

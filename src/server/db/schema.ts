@@ -4,7 +4,10 @@ import {
   timestamp,
   varchar,
   text,
-  unique
+  unique,
+  boolean,
+  index,
+  foreignKey
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
@@ -13,13 +16,28 @@ export const projects = pgTable('projects', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: varchar('name', { length: 255 }).notNull(),
   slug: varchar('slug', { length: 255 }).notNull().unique(),
-  defaultLanguageId: uuid('default_language_id').references(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (): any => languages.id
-  ),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at')
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow()
 })
+
+export const languages = pgTable(
+  'languages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    code: varchar('code', { length: 10 }).notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    isSource: boolean('is_source').notNull().default(false),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow()
+  },
+  (table) => ({
+    projectLanguageIdx: unique().on(table.projectId, table.code),
+    nameIdx: index('name_idx').on(table.name)
+  })
+)
 
 export const pages = pgTable(
   'pages',
@@ -27,29 +45,15 @@ export const pages = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     projectId: uuid('project_id')
       .notNull()
-      .references(() => projects.id),
+      .references(() => projects.id, { onDelete: 'cascade' }),
     name: varchar('name', { length: 255 }).notNull(),
-    slug: varchar('slug', { length: 255 }).notNull().unique(),
-    createdAt: timestamp('created_at').defaultNow(),
-    updatedAt: timestamp('updated_at')
+    slug: varchar('slug', { length: 255 }).notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow()
   },
   (table) => ({
-    projectSlugIdx: unique().on(table.projectId, table.slug)
-  })
-)
-export const languages = pgTable(
-  'languages',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    projectId: uuid('project_id')
-      .notNull()
-      .references(() => projects.id),
-    code: varchar('code', { length: 10 }).notNull().unique(), // BCP 47 standard
-    name: varchar('name', { length: 255 }).notNull(),
-    createdAt: timestamp('created_at').defaultNow()
-  },
-  (table) => ({
-    projectCodeIdx: unique().on(table.projectId, table.code)
+    projectSlugIdx: unique().on(table.projectId, table.slug),
+    projectIdIdx: index('project_id_idx').on(table.projectId)
   })
 )
 
@@ -61,12 +65,14 @@ export const translationKeys = pgTable(
     description: text('description'),
     pageId: uuid('page_id')
       .notNull()
-      .references(() => pages.id),
-    createdAt: timestamp('created_at').defaultNow(),
-    updatedAt: timestamp('updated_at')
+      .references(() => pages.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow()
   },
   (table) => ({
-    pageKeyIdx: unique().on(table.pageId, table.key)
+    pageKeyIdx: unique().on(table.pageId, table.key),
+    pageIdIdx: index('page_id_idx').on(table.pageId),
+    keyIdx: index('key_idx').on(table.key)
   })
 )
 
@@ -76,34 +82,55 @@ export const translations = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     translationKeyId: uuid('translation_key_id')
       .notNull()
-      .references(() => translationKeys.id),
+      .references(() => translationKeys.id, { onDelete: 'cascade' }),
     pageId: uuid('page_id')
       .notNull()
-      .references(() => pages.id),
-    languageId: uuid('language_id')
+      .references(() => pages.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id')
       .notNull()
-      .references(() => languages.id),
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    languageCode: varchar('language_code', { length: 10 }).notNull(),
     value: text('value').notNull(),
-    createdAt: timestamp('created_at').defaultNow(),
-    updatedAt: timestamp('updated_at')
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow()
   },
   (table) => ({
     translationKeyLanguageIdx: unique().on(
       table.pageId,
       table.translationKeyId,
-      table.languageId
-    )
+      table.languageCode
+    ),
+    translationKeyIdIdx: index('translation_key_id_idx').on(
+      table.translationKeyId
+    ),
+    pageLanguageIdx: index('page_language_idx').on(
+      table.pageId,
+      table.languageCode
+    ),
+    languageCodeIdx: index('language_code_idx').on(table.languageCode),
+    projectLanguageIdx: index('project_language_idx').on(
+      table.projectId,
+      table.languageCode
+    ),
+    languageCodeProjectIdFk: foreignKey({
+      columns: [table.projectId, table.languageCode],
+      foreignColumns: [languages.projectId, languages.code]
+    }).onDelete('cascade')
   })
 )
 
 // RELATIONS
-export const projectRelations = relations(projects, ({ many, one }) => ({
+export const projectRelations = relations(projects, ({ many }) => ({
   pages: many(pages),
-  languages: many(languages),
-  defaultLanguage: one(languages, {
-    fields: [projects.defaultLanguageId],
-    references: [languages.id]
-  })
+  languages: many(languages)
+}))
+
+export const languageRelations = relations(languages, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [languages.projectId],
+    references: [projects.id]
+  }),
+  translations: many(translations)
 }))
 
 export const pageRelations = relations(pages, ({ one, many }) => ({
@@ -112,14 +139,6 @@ export const pageRelations = relations(pages, ({ one, many }) => ({
     references: [projects.id]
   }),
   translationKeys: many(translationKeys),
-  translations: many(translations)
-}))
-
-export const languageRelations = relations(languages, ({ one, many }) => ({
-  project: one(projects, {
-    fields: [languages.projectId],
-    references: [projects.id]
-  }),
   translations: many(translations)
 }))
 
@@ -144,8 +163,12 @@ export const translationRelations = relations(translations, ({ one }) => ({
     references: [pages.id]
   }),
   language: one(languages, {
-    fields: [translations.languageId],
-    references: [languages.id]
+    fields: [translations.projectId, translations.languageCode],
+    references: [languages.projectId, languages.code]
+  }),
+  project: one(projects, {
+    fields: [translations.projectId],
+    references: [projects.id]
   })
 }))
 

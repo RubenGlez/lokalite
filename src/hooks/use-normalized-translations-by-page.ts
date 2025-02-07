@@ -10,7 +10,7 @@ export const useNormalizedTranslationsByPage = (pageId: string | undefined) => {
         enabled: !!pageId,
         select: (data) => {
           return data.reduce((acc: Record<string, string>, translation) => {
-            const id = `${translation.translationKeyId}_${translation.languageId}`
+            const id = `${translation.translationKeyId}_${translation.languageCode}`
             acc[id] = translation.value ?? ''
             return acc
           }, emptyRecord)

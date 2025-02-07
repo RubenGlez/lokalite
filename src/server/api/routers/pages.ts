@@ -12,17 +12,6 @@ export const pagesRouter = createTRPCRouter({
       ctx.db.select().from(pages).where(eq(pages.projectId, input.projectId))
     ),
 
-  // Get a single page by ID
-  getById: publicProcedure
-    .input(z.object({ id: z.string() }))
-    .query(async ({ ctx, input }) => {
-      return ctx.db
-        .select()
-        .from(pages)
-        .where(eq(pages.id, input.id))
-        .then((rows) => rows[0]) // Return the first (and only) matching row
-    }),
-
   // Get a single page by slug
   getBySlug: publicProcedure
     .input(z.object({ slug: z.string() }))
@@ -49,32 +38,5 @@ export const pagesRouter = createTRPCRouter({
         slug: input.slug,
         projectId: input.projectId
       })
-    }),
-
-  // Update a page
-  update: publicProcedure
-    .input(
-      z.object({
-        id: z.string(),
-        name: z.string().optional(),
-        slug: z.string().optional()
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      return ctx.db
-        .update(pages)
-        .set({
-          name: input.name,
-          slug: input.slug,
-          updatedAt: new Date()
-        })
-        .where(eq(pages.id, input.id))
-    }),
-
-  // Delete a page
-  delete: publicProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      return ctx.db.delete(pages).where(eq(pages.id, input.id))
     })
 })

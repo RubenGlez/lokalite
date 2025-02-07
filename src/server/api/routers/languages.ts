@@ -15,24 +15,14 @@ export const languagesRouter = createTRPCRouter({
         .where(eq(languages.projectId, input.projectId))
     ),
 
-  // Get a single language by ID
-  getById: publicProcedure
-    .input(z.object({ id: z.string() }))
-    .query(async ({ ctx, input }) => {
-      return ctx.db
-        .select()
-        .from(languages)
-        .where(eq(languages.id, input.id))
-        .then((rows) => rows[0]) // Return the first (and only) matching row
-    }),
-
   // Create a new language
   create: publicProcedure
     .input(
       z.object({
         projectId: z.string(),
         code: z.string().min(2), // BCP 47 standard (e.g., 'en-US', 'es-ES')
-        name: z.string()
+        name: z.string(),
+        isSource: z.boolean().optional()
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -41,10 +31,28 @@ export const languagesRouter = createTRPCRouter({
         .values({
           projectId: input.projectId,
           code: input.code,
-          name: input.name
+          name: input.name,
+          isSource: input.isSource ?? false
         })
         .returning()
         .then((rows) => rows[0])
+    }),
+
+  // Set a language as source
+  setAsSource: publicProcedure
+    .input(z.object({ id: z.string(), projectId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.transaction(async (tx) => {
+        await tx
+          .update(languages)
+          .set({ isSource: false })
+          .where(eq(languages.projectId, input.projectId))
+
+        return await tx
+          .update(languages)
+          .set({ isSource: true })
+          .where(eq(languages.id, input.id))
+      })
     }),
 
   // Delete a language

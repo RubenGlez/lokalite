@@ -1,3 +1,4 @@
+import { ReactNode } from 'react'
 import { AppSidebar } from '~/components/app-sidebar'
 import { Breadcrumbs } from '~/components/breadcrumbs'
 import { Separator } from '~/components/ui/separator'
@@ -8,11 +9,7 @@ import {
 } from '~/components/ui/sidebar'
 import { HydrateClient } from '~/trpc/server'
 
-export default async function AppLayout({
-  children
-}: {
-  children: React.ReactNode
-}) {
+export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <HydrateClient>
       <SidebarProvider>
