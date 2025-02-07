@@ -1,14 +1,20 @@
-'use client'
-
 import { Button } from '~/components/ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from '~/components/ui/dialog'
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger
+} from '~/components/ui/sheet'
+import { Textarea } from './ui/textarea'
+import { Input } from './ui/input'
+import { api } from '~/trpc/react'
+import { useSelectedProject } from '~/hooks/use-selected-project'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Form,
   FormControl,
@@ -16,110 +22,146 @@ import {
   FormItem,
   FormLabel,
   FormMessage
-} from '~/components/ui/form'
-import { Input } from '~/components/ui/input'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
+} from './ui/form'
 import { z } from 'zod'
-import { api } from '~/trpc/react'
-import { useState } from 'react'
+import { useSelectedPage } from '~/hooks/use-selected-page'
 import { useRouter } from 'next/navigation'
 
-const formSchema = z.object({
-  name: z.string().min(1, 'Page name is required'),
-  slug: z
-    .string()
-    .min(1, 'Slug is required')
-    .regex(/^[a-z0-9-]+$/, {
-      message: 'Slug can only contain lowercase letters, numbers, and hyphens'
-    })
-})
-
-interface PageCreatorProps {
-  projectId: string
+interface TranslationCreatorProps {
   children: React.ReactNode
+  onCreated: () => void
 }
 
-export function PageCreator({ projectId, children }: PageCreatorProps) {
-  const utils = api.useUtils()
-  const [open, setOpen] = useState(false)
-  const router = useRouter()
+interface FormValues {
+  key: string
+  translations: Record<string, string>
+}
 
-  const form = useForm<z.infer<typeof formSchema>>({
+const formSchema = z.object({
+  key: z.string().min(1),
+  translations: z.record(z.string(), z.string().optional())
+})
+
+export function TranslationCreator({
+  children,
+  onCreated
+}: TranslationCreatorProps) {
+  const utils = api.useUtils()
+  const router = useRouter()
+  const selectedProject = useSelectedProject()
+  const selectedPage = useSelectedPage()
+  const { data: languages } = api.languages.getByProject.useQuery(
+    {
+      projectId: selectedProject?.id ?? ''
+    },
+    {
+      enabled: !!selectedProject?.id
+    }
+  )
+
+  const createMultiple = api.translations.createMultiple.useMutation({
+    onSuccess: async () => {
+      form.reset()
+      await utils.translationKeys.invalidate()
+      await utils.translations.invalidate()
+      router.refresh()
+      onCreated()
+    },
+    onError: (error) => {
+      if (error.message.includes('unique')) {
+        form.setError('key', {
+          message: 'Translation key already exists'
+        })
+      }
+    }
+  })
+
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
-      slug: ''
+      key: '',
+      translations: {}
     }
   })
 
-  const createPage = api.pages.create.useMutation({
-    onSuccess: () => {
-      setOpen(false)
-      form.reset()
-      utils.pages.getByProject.invalidate()
-      router.refresh()
-    }
-  })
+  const handleSubmit = (values: FormValues) => {
+    const pageId = selectedPage?.id ?? ''
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    createPage.mutate({
-      ...values,
-      projectId
+    createMultiple.mutate({
+      pageId,
+      key: values.key,
+      translations: values.translations
     })
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create Page</DialogTitle>
-          <DialogDescription>
-            Create a new page to organize your translations.
-          </DialogDescription>
-        </DialogHeader>
+    <Sheet>
+      <SheetTrigger asChild>{children}</SheetTrigger>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Create Translation</SheetTitle>
+          <SheetDescription>
+            Create a new translation for the current page.
+          </SheetDescription>
+        </SheetHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="flex flex-col gap-6 py-8"
+          >
             <FormField
               control={form.control}
-              name="name"
+              name="key"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Page Name</FormLabel>
+                  <FormLabel>Key</FormLabel>
                   <FormControl>
-                    <Input placeholder="Home Page" {...field} />
+                    <Input placeholder="The translation key" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="slug"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Page Slug</FormLabel>
-                  <FormControl>
-                    <Input placeholder="home" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={createPage.isPending}
-            >
-              {createPage.isPending ? 'Creating...' : 'Create Page'}
-            </Button>
+            {languages?.map((language) => (
+              <FormField
+                key={language.id}
+                control={form.control}
+                name={`translations.${language.id}`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {language.id === selectedProject?.defaultLanguageId
+                        ? `${language.name} (Default)`
+                        : language.name}
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="The translation value"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ))}
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+
+        <SheetFooter className="flex justify-between mt-6">
+          <SheetClose asChild>
+            <Button variant="secondary">Cancel</Button>
+          </SheetClose>
+          <Button
+            disabled={createMultiple.isPending}
+            onClick={form.handleSubmit(handleSubmit)}
+          >
+            Save
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   )
 }

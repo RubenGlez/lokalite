@@ -57,7 +57,7 @@ export function PageCreator({ projectId, children }: PageCreatorProps) {
     onSuccess: () => {
       setOpen(false)
       form.reset()
-      utils.pages.getByProject.invalidate()
+      utils.pages.invalidate()
       router.refresh()
     }
   })

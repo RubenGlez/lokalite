@@ -1,41 +1,39 @@
-import { ChevronDown } from 'lucide-react'
+import { Settings2 } from 'lucide-react'
 import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '~/components/ui/dropdown-menu'
 
 import { DropdownMenu } from '~/components/ui/dropdown-menu'
 import { Button } from '~/components/ui/button'
-import { Input } from '~/components/ui/input'
 import { Column } from '@tanstack/react-table'
 import { TranslationKey } from '~/server/db/schema'
 
 interface RightActionsProps {
-  getColumn: (columnId: string) => Column<TranslationKey, unknown> | undefined
   getAllColumns: () => Column<TranslationKey, unknown>[]
 }
 
-export function RightActions({ getColumn, getAllColumns }: RightActionsProps) {
+export function RightActions({ getAllColumns }: RightActionsProps) {
   return (
     <div className="flex items-center space-x-2">
-      <Input
-        placeholder="Filter by key..."
-        value={(getColumn('key')?.getFilterValue() as string) ?? ''}
-        onChange={(event) =>
-          getColumn('key')?.setFilterValue(event.target.value)
-        }
-        className="max-w-sm"
-      />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="ml-auto">
-            Columns <ChevronDown />
+          <Button variant="outline" size="sm">
+            <Settings2 />
+            View
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="w-[150px]">
+          <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+          <DropdownMenuSeparator />
           {getAllColumns()
-            .filter((column) => column.getCanHide())
+            .filter(
+              (column) =>
+                typeof column.accessorFn !== 'undefined' && column.getCanHide()
+            )
             .map((column) => {
               return (
                 <DropdownMenuCheckboxItem

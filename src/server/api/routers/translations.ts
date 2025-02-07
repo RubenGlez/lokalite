@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { translate } from '~/lib/translation-agent'
 
 import { createTRPCRouter, publicProcedure } from '~/server/api/trpc'
-import { translations } from '~/server/db/schema'
+import { translationKeys, translations } from '~/server/db/schema'
 
 export const translationsRouter = createTRPCRouter({
   // Get all translations for a specific page
@@ -14,6 +14,44 @@ export const translationsRouter = createTRPCRouter({
         .select()
         .from(translations)
         .where(eq(translations.pageId, input.pageId))
+    }),
+
+  // Create multiple translations
+  createMultiple: publicProcedure
+    .input(
+      z.object({
+        pageId: z.string().uuid(),
+        key: z.string().min(1),
+        translations: z.record(z.string().min(2), z.string().min(1))
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.transaction(async (tx) => {
+        const keyCreated = await tx
+          .insert(translationKeys)
+          .values({
+            key: input.key,
+            pageId: input.pageId
+          })
+          .returning({ id: translationKeys.id })
+          .then((res) => res[0])
+
+        if (!keyCreated) {
+          tx.rollback()
+          throw new Error('Failed to create translation key')
+        }
+
+        console.log('keyCreated', keyCreated)
+
+        return tx.insert(translations).values(
+          Object.entries(input.translations).map(([languageId, value]) => ({
+            languageId,
+            value,
+            translationKeyId: keyCreated.id,
+            pageId: input.pageId
+          }))
+        )
+      })
     }),
 
   // Create or update a translation

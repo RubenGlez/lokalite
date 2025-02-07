@@ -55,7 +55,7 @@ export function ProjectCreator({ children }: ProjectCreatorProps) {
     onSuccess: () => {
       setOpen(false)
       form.reset()
-      utils.projects.getAll.invalidate()
+      utils.projects.invalidate()
       router.refresh()
     }
   })

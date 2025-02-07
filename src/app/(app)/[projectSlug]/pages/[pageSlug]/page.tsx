@@ -36,19 +36,19 @@ export default function PageDetail() {
 
   const upsertTranslation = api.translations.upsertTranslation.useMutation({
     onSuccess: () => {
-      utils.translations.getAllByPageId.invalidate()
+      utils.translations.invalidate()
     }
   })
 
   const deleteKeysAndTranslations = api.translationKeys.deleteKeys.useMutation({
     onSuccess: () => {
-      utils.translationKeys.getAllByPageId.invalidate()
+      utils.translationKeys.invalidate()
     }
   })
 
   const upsertTranslationKey = api.translationKeys.upsertKey.useMutation({
     onSuccess: () => {
-      utils.translationKeys.getAllByPageId.invalidate()
+      utils.translationKeys.invalidate()
     },
     onError: (_error, variables) => {
       toast({
@@ -71,7 +71,7 @@ export default function PageDetail() {
 
   const translate = api.translations.translate.useMutation({
     onSuccess: async () => {
-      await utils.translations.getAllByPageId.invalidate()
+      await utils.translations.invalidate()
       setTableKey((prev) => prev + 1)
     }
   })
@@ -128,18 +128,6 @@ export default function PageDetail() {
     [page?.id, handleUpsertTranslation, handleUpsertTranslationKey]
   )
 
-  const handleAddRow = useCallback(
-    (numberOfRows: number) => {
-      for (let i = 0; i < numberOfRows; i++) {
-        handleUpsertTranslationKey({
-          key: `NEW_KEY_${crypto.randomUUID()}`,
-          pageId: page?.id ?? ''
-        })
-      }
-    },
-    [page?.id, handleUpsertTranslationKey]
-  )
-
   const handleDelete = useCallback(
     (translationKeyIds: string[]) => {
       deleteKeysAndTranslations.mutate({
@@ -161,6 +149,10 @@ export default function PageDetail() {
     [translate, page?.id, project?.id, project?.defaultLanguageId]
   )
 
+  const handleCreated = useCallback(() => {
+    setTableKey((prev) => prev + 1)
+  }, [])
+
   if (isLoadingTranslationKeys || isLoadingLanguages || isLoadingTranslations) {
     return null
   }
@@ -169,12 +161,12 @@ export default function PageDetail() {
     <div className="px-4">
       <TranslationsTable
         key={tableKey} // This is a hack to force the table to re-render
+        onCreated={handleCreated}
         isTranslating={translate.isPending}
         data={translationKeys}
         languages={languages}
         normalizedTranslations={normalizedTranslations}
         onUpdateCell={handleUpdateCell}
-        onAddRow={handleAddRow}
         onDelete={handleDelete}
         onTranslate={handleTranslate}
         defaultLanguageId={project?.defaultLanguageId ?? ''}

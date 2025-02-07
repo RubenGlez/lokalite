@@ -39,12 +39,16 @@ interface TranslationsTableProps {
     columnId: string,
     value: string
   ) => void
-  onAddRow: (numberOfRows: number) => void
   onDelete: (translationKeyIds: string[]) => void
   onTranslate: (translations: string[]) => void
   defaultLanguageId: string
   isTranslating: boolean
   isDeleting: boolean
+  onCreated: () => void
+}
+
+const tableHeaderStyles = {
+  boxShadow: '0px 1px 0px hsl(var(--border))'
 }
 
 export function TranslationsTable({
@@ -52,12 +56,12 @@ export function TranslationsTable({
   languages = [],
   normalizedTranslations,
   onUpdateCell,
-  onAddRow,
   onDelete,
   onTranslate,
   defaultLanguageId,
   isTranslating,
-  isDeleting
+  isDeleting,
+  onCreated
 }: TranslationsTableProps) {
   const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
 
@@ -111,30 +115,28 @@ export function TranslationsTable({
     } satisfies TranslationsTableMeta
   })
 
+  const meta = table.options.meta as TranslationsTableMeta
+
   return (
     <div className="w-full flex flex-col">
       <div className="flex items-center justify-between py-4">
         <LeftActions
-          skipAutoResetPageIndex={skipAutoResetPageIndex}
-          onAddRow={onAddRow}
+          onCreated={onCreated}
+          onDelete={meta.onDelete}
           isTranslating={isTranslating}
           isDeleting={isDeleting}
-          onTranslate={onTranslate}
+          onTranslate={meta.onTranslate}
           getFilteredSelectedRowModel={table.getFilteredSelectedRowModel}
-        />
-        <RightActions
           getColumn={table.getColumn}
-          getAllColumns={table.getAllColumns}
         />
+        <RightActions getAllColumns={table.getAllColumns} />
       </div>
 
       <div className="rounded-md border flex flex-col max-h-[calc(100svh-theme(spacing.52))] overflow-hidden">
         <Table>
           <TableHeader
             className="sticky top-0 z-10 bg-background"
-            style={{
-              boxShadow: '0px 1px 0px hsl(var(--border))'
-            }}
+            style={tableHeaderStyles}
           >
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>

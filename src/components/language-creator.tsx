@@ -111,7 +111,7 @@ export function LanguageCreator({ children, projectId }: LanguageCreatorProps) {
   const updateProject = api.projects.update.useMutation({
     onSuccess: () => {
       utils.projects.invalidate()
-      utils.languages.getByProject.invalidate()
+      utils.languages.invalidate()
       router.refresh()
     }
   })
@@ -130,7 +130,7 @@ export function LanguageCreator({ children, projectId }: LanguageCreatorProps) {
           defaultLanguageId: data?.id
         })
       } else {
-        utils.languages.getByProject.invalidate()
+        utils.languages.invalidate()
         router.refresh()
       }
     }

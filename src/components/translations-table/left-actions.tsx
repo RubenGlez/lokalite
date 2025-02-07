@@ -1,93 +1,78 @@
-import {
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel
-} from '~/components/ui/dropdown-menu'
-
-import { DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
-
-import {
-  ChevronDown,
-  Languages,
-  LoaderIcon,
-  PlusCircle,
-  Trash
-} from 'lucide-react'
+import { Languages, LoaderIcon, PlusCircle, Trash } from 'lucide-react'
 import { Button } from '~/components/ui/button'
-import { DropdownMenu } from '~/components/ui/dropdown-menu'
-import { RowModel } from '@tanstack/react-table'
+import { Column, RowModel } from '@tanstack/react-table'
 import { TranslationKey } from '~/server/db/schema'
+import { Input } from '../ui/input'
+import { TranslationCreator } from '../translation-creator'
 
 interface LeftActionsProps {
-  skipAutoResetPageIndex: () => void
-  onAddRow: (numberOfRows: number) => void
   isTranslating: boolean
   isDeleting: boolean
   onTranslate: (translationKeyIds: string[]) => void
+  onDelete: (translationKeyIds: string[]) => void
   getFilteredSelectedRowModel: () => RowModel<TranslationKey>
+  getColumn: (columnId: string) => Column<TranslationKey, unknown> | undefined
+  onCreated: () => void
 }
 
 export function LeftActions({
-  skipAutoResetPageIndex,
-  onAddRow,
-  isTranslating,
-  isDeleting,
   onTranslate,
-  getFilteredSelectedRowModel
+  isTranslating,
+  onDelete,
+  isDeleting,
+  getFilteredSelectedRowModel,
+  getColumn,
+  onCreated
 }: LeftActionsProps) {
   return (
     <div className="flex items-center space-x-2">
+      <Input
+        placeholder="Filter by key..."
+        value={(getColumn('key')?.getFilterValue() as string) ?? ''}
+        onChange={(event) =>
+          getColumn('key')?.setFilterValue(event.target.value)
+        }
+        className="h-8"
+      />
+
       <div className="flex items-center">
-        <Button
-          variant="outline"
-          className="rounded-r-none"
-          onClick={() => {
-            skipAutoResetPageIndex()
-            onAddRow(1)
-          }}
-        >
-          <PlusCircle /> Add
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              className="px-2 rounded-l-none border-l-transparent"
-            >
-              <ChevronDown />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuGroup>
-              <DropdownMenuItem
-                onClick={() => {
-                  skipAutoResetPageIndex()
-                  onAddRow(5)
-                }}
-              >
-                Add 5 keys
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  skipAutoResetPageIndex()
-                  onAddRow(10)
-                }}
-              >
-                Add 10 keys
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <TranslationCreator onCreated={onCreated}>
+          <Button size="sm">
+            <PlusCircle /> New
+          </Button>
+        </TranslationCreator>
       </div>
 
       {getFilteredSelectedRowModel().rows.length > 0 && (
         <>
+          <div className="border-r h-4 w-0" />
           <Button
+            variant="secondary"
+            size="sm"
+            disabled={isDeleting}
+            onClick={() => {
+              onDelete(
+                getFilteredSelectedRowModel().rows.map((row) => row.original.id)
+              )
+            }}
+          >
+            {isDeleting ? (
+              <>
+                <LoaderIcon className="animate-spin" />
+                <span>Deleting...</span>
+              </>
+            ) : (
+              <>
+                <Trash />
+                <span>Delete</span>
+              </>
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
             disabled={isTranslating}
             onClick={() => {
-              skipAutoResetPageIndex()
               onTranslate(
                 getFilteredSelectedRowModel().rows.map((row) => row.original.id)
               )
@@ -102,26 +87,6 @@ export function LeftActions({
               <>
                 <Languages />
                 <span>Translate</span>
-              </>
-            )}
-          </Button>
-          <Button
-            variant="destructive"
-            disabled={isDeleting}
-            onClick={() => {
-              skipAutoResetPageIndex()
-              // todo
-            }}
-          >
-            {isDeleting ? (
-              <>
-                <LoaderIcon className="animate-spin" />
-                <span>Deleting...</span>
-              </>
-            ) : (
-              <>
-                <Trash />
-                <span>Delete</span>
               </>
             )}
           </Button>
