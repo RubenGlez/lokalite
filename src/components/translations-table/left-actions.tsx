@@ -1,18 +1,20 @@
-import { Languages, LoaderIcon, PlusCircle, Trash } from 'lucide-react'
+import { Languages, LoaderIcon, Pen, PlusCircle, Trash } from 'lucide-react'
 import { Button } from '~/components/ui/button'
 import { Column, RowModel } from '@tanstack/react-table'
-import { TranslationKey } from '~/server/db/schema'
 import { Input } from '../ui/input'
 import { TranslationCreator } from '../translation-creator'
+import { TranslationsTableRow } from '~/hooks/use-translations'
 
 interface LeftActionsProps {
   isTranslating: boolean
   isDeleting: boolean
+  onEdit: (translationKeyIds: string[]) => void
   onTranslate: (translationKeyIds: string[]) => void
   onDelete: (translationKeyIds: string[]) => void
-  getFilteredSelectedRowModel: () => RowModel<TranslationKey>
-  getColumn: (columnId: string) => Column<TranslationKey, unknown> | undefined
-  onCreated: () => void
+  getFilteredSelectedRowModel: () => RowModel<TranslationsTableRow>
+  getColumn: (
+    columnId: string
+  ) => Column<TranslationsTableRow, unknown> | undefined
 }
 
 export function LeftActions({
@@ -22,7 +24,7 @@ export function LeftActions({
   isDeleting,
   getFilteredSelectedRowModel,
   getColumn,
-  onCreated
+  onEdit
 }: LeftActionsProps) {
   return (
     <div className="flex items-center space-x-2">
@@ -36,7 +38,7 @@ export function LeftActions({
       />
 
       <div className="flex items-center">
-        <TranslationCreator onCreated={onCreated}>
+        <TranslationCreator>
           <Button size="sm">
             <PlusCircle /> New
           </Button>
@@ -47,26 +49,19 @@ export function LeftActions({
         <>
           <div className="border-r h-4 w-0" />
           <Button
-            variant="secondary"
             size="sm"
-            disabled={isDeleting}
+            variant="secondary"
+            disabled={false}
             onClick={() => {
-              onDelete(
-                getFilteredSelectedRowModel().rows.map((row) => row.original.id)
+              onEdit(
+                getFilteredSelectedRowModel().rows.map(
+                  (row) => row.original.keyId
+                )
               )
             }}
           >
-            {isDeleting ? (
-              <>
-                <LoaderIcon className="animate-spin" />
-                <span>Deleting...</span>
-              </>
-            ) : (
-              <>
-                <Trash />
-                <span>Delete</span>
-              </>
-            )}
+            <Pen />
+            <span>Edit</span>
           </Button>
           <Button
             size="sm"
@@ -74,7 +69,9 @@ export function LeftActions({
             disabled={isTranslating}
             onClick={() => {
               onTranslate(
-                getFilteredSelectedRowModel().rows.map((row) => row.original.id)
+                getFilteredSelectedRowModel().rows.map(
+                  (row) => row.original.keyId
+                )
               )
             }}
           >
@@ -87,6 +84,30 @@ export function LeftActions({
               <>
                 <Languages />
                 <span>Translate</span>
+              </>
+            )}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={isDeleting}
+            onClick={() => {
+              onDelete(
+                getFilteredSelectedRowModel().rows.map(
+                  (row) => row.original.keyId
+                )
+              )
+            }}
+          >
+            {isDeleting ? (
+              <>
+                <LoaderIcon className="animate-spin" />
+                <span>Deleting...</span>
+              </>
+            ) : (
+              <>
+                <Trash />
+                <span>Delete</span>
               </>
             )}
           </Button>

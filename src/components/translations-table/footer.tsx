@@ -1,10 +1,10 @@
+import { TranslationsTableRow } from '~/hooks/use-translations'
 import { Button } from '../ui/button'
 import { RowModel } from '@tanstack/react-table'
-import { TranslationKey } from '~/server/db/schema'
 
 interface FooterProps {
-  getFilteredSelectedRowModel: () => RowModel<TranslationKey>
-  getFilteredRowModel: () => RowModel<TranslationKey>
+  getFilteredSelectedRowModel: () => RowModel<TranslationsTableRow>
+  getFilteredRowModel: () => RowModel<TranslationsTableRow>
   getCanPreviousPage: () => boolean
   getCanNextPage: () => boolean
   previousPage: () => void

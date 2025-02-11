@@ -11,12 +11,12 @@ import JSZip from 'jszip'
 import { DropdownMenu } from '~/components/ui/dropdown-menu'
 import { Button } from '~/components/ui/button'
 import { Column } from '@tanstack/react-table'
-import { TranslationKey } from '~/server/db/schema'
 import { useSelectedProject } from '~/hooks/use-selected-project'
 import { useSelectedPage } from '~/hooks/use-selected-page'
+import { TranslationsTableRow } from '~/hooks/use-translations'
 
 interface RightActionsProps {
-  getAllColumns: () => Column<TranslationKey, unknown>[]
+  getAllColumns: () => Column<TranslationsTableRow, unknown>[]
 }
 
 async function downloadTranslationsZip(pageId: string, projectId: string) {

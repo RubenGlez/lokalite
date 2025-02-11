@@ -1,6 +1,6 @@
-import { eq, not, sql } from 'drizzle-orm'
+import { and, eq, not, sql } from 'drizzle-orm'
 import { z } from 'zod'
-import { batchTranslate } from '~/lib/translation-agent'
+import { batchTranslate, translate } from '~/lib/translation-agent'
 
 import { createTRPCRouter, publicProcedure } from '~/server/api/trpc'
 import { translationKeys, translations } from '~/server/db/schema'
@@ -16,13 +16,27 @@ export const translationsRouter = createTRPCRouter({
         .where(eq(translations.pageId, input.pageId))
     }),
 
+  getByKeyId: publicProcedure
+    .input(z.object({ keyId: z.string(), pageId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db
+        .select()
+        .from(translations)
+        .where(
+          and(
+            eq(translations.pageId, input.pageId),
+            eq(translations.translationKeyId, input.keyId)
+          )
+        )
+    }),
+
   // Create a full translation
   createFullTranslation: publicProcedure
     .input(
       z.object({
         pageId: z.string().uuid(),
         key: z.string().min(1),
-        translations: z.record(z.string().min(2), z.string().min(1)),
+        translations: z.record(z.string().min(2), z.string()),
         projectId: z.string().uuid()
       })
     )
@@ -150,5 +164,29 @@ export const translationsRouter = createTRPCRouter({
             updatedAt: new Date()
           }
         })
+    }),
+
+  translateRow: publicProcedure
+    .input(
+      z.object({
+        projectId: z.string(),
+        pageId: z.string(),
+        sourceLanguageCode: z.string(),
+        itemsToTranslate: z.array(
+          z.object({
+            keyId: z.string(),
+            targetLanguageCode: z.string(),
+            text: z.string()
+          })
+        )
+      })
+    )
+    .mutation(async ({ input }) => {
+      return translate(
+        input.projectId,
+        input.pageId,
+        input.sourceLanguageCode,
+        input.itemsToTranslate
+      )
     })
 })

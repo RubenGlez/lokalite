@@ -23,43 +23,32 @@ import {
   TableRow
 } from '~/components/ui/table'
 import { getColumns, TranslationsTableMeta } from './columns'
-import { Language, TranslationKey } from '~/server/db/schema'
-import { useSkipper } from './use-skipper'
+import { Language } from '~/server/db/schema'
+import { useSkipper } from '../../hooks/use-skipper'
 import { useMemo, useState } from 'react'
 import { RightActions } from './right-actions'
 import { LeftActions } from './left-actions'
 import { Footer } from './footer'
+import { TranslationsTableRow } from '~/hooks/use-translations'
 
 interface TranslationsTableProps {
-  data: TranslationKey[] | undefined
-  languages: Language[] | undefined
-  normalizedTranslations: Record<string, string>
-  onUpdateCell: (
-    translationId: string | null,
-    columnId: string,
-    value: string
-  ) => void
+  data: TranslationsTableRow[] | undefined
+  onEdit: (translationKeyIds: string[]) => void
   onDelete: (translationKeyIds: string[]) => void
-  onTranslate: (translations: string[]) => void
+  onTranslate: (translationKeyIds: string[]) => void
   isTranslating: boolean
   isDeleting: boolean
-  onCreated: () => void
-}
-
-const tableHeaderStyles = {
-  boxShadow: '0px 1px 0px hsl(var(--border))'
+  languages: Language[]
 }
 
 export function TranslationsTable({
   data = [],
-  languages = [],
-  normalizedTranslations,
-  onUpdateCell,
+  onEdit,
   onDelete,
   onTranslate,
   isTranslating,
   isDeleting,
-  onCreated
+  languages
 }: TranslationsTableProps) {
   const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
 
@@ -72,10 +61,7 @@ export function TranslationsTable({
     pageSize: 10
   })
 
-  const columns = useMemo(
-    () => getColumns({ languages, normalizedTranslations }),
-    [languages, normalizedTranslations]
-  )
+  const columns = useMemo(() => getColumns(languages), [languages])
 
   const table = useReactTable({
     data,
@@ -98,9 +84,9 @@ export function TranslationsTable({
     },
     autoResetPageIndex,
     meta: {
-      updateCell: (translationId, columnId, value) => {
+      onEdit: (translationKeyIds) => {
         skipAutoResetPageIndex()
-        onUpdateCell(translationId, columnId, value)
+        onEdit(translationKeyIds)
       },
       onDelete: (translationKeyIds) => {
         skipAutoResetPageIndex()
@@ -116,26 +102,23 @@ export function TranslationsTable({
   const meta = table.options.meta as TranslationsTableMeta
 
   return (
-    <div className="w-full flex flex-col">
+    <div className="w-full h-full flex flex-col">
       <div className="flex items-center justify-between py-4">
         <LeftActions
-          onCreated={onCreated}
           onDelete={meta.onDelete}
           isTranslating={isTranslating}
           isDeleting={isDeleting}
           onTranslate={meta.onTranslate}
           getFilteredSelectedRowModel={table.getFilteredSelectedRowModel}
           getColumn={table.getColumn}
+          onEdit={meta.onEdit}
         />
         <RightActions getAllColumns={table.getAllColumns} />
       </div>
 
-      <div className="rounded-md border flex flex-col max-h-[calc(100svh-theme(spacing.52))] overflow-hidden">
+      <div className="rounded-md border flex-1 min-h-0 overflow-y-auto">
         <Table>
-          <TableHeader
-            className="sticky top-0 z-10 bg-background"
-            style={tableHeaderStyles}
-          >
+          <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {

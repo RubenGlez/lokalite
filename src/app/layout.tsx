@@ -7,6 +7,7 @@ import { TRPCReactProvider } from '~/trpc/react'
 import { Toaster } from '~/components/ui/toaster'
 import { ThemeProvider } from '~/lib/theme'
 import { ReactNode } from 'react'
+import { TooltipProvider } from '@radix-ui/react-tooltip'
 
 export const metadata: Metadata = {
   title: 'Lokalite',
@@ -38,7 +39,7 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {children}
+            <TooltipProvider>{children}</TooltipProvider>
           </ThemeProvider>
         </TRPCReactProvider>
         <Toaster />
