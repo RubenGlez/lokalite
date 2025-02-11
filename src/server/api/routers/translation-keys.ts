@@ -19,29 +19,28 @@ export const translationKeysRouter = createTRPCRouter({
   upsertKey: publicProcedure
     .input(
       z.object({
-        id: z.string().optional(),
         key: z.string(),
         pageId: z.string(),
         description: z.string().optional()
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (input.id) {
-        return ctx.db
-          .update(translationKeys)
-          .set({
+      return ctx.db
+        .insert(translationKeys)
+        .values({
+          key: input.key,
+          pageId: input.pageId,
+          description: input.description,
+          updatedAt: new Date()
+        })
+        .onConflictDoUpdate({
+          target: [translationKeys.id],
+          set: {
             key: input.key,
             description: input.description,
             updatedAt: new Date()
-          })
-          .where(eq(translationKeys.id, input.id))
-      }
-
-      return ctx.db.insert(translationKeys).values({
-        key: input.key,
-        pageId: input.pageId,
-        description: input.description
-      })
+          }
+        })
     }),
 
   // Delete a single translation key (and its associated translations)

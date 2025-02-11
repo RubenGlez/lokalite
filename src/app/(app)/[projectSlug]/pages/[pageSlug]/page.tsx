@@ -119,7 +119,7 @@ export default function PageDetail() {
         projectId: project?.id ?? '',
         pageId: page?.id ?? '',
         translationKeyIds,
-        defaultLanguageCode: sourceLanguage?.code ?? ''
+        sourceLanguageCode: sourceLanguage?.code ?? ''
       })
     },
     [translate, page?.id, project?.id, sourceLanguage?.code]

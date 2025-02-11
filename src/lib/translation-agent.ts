@@ -2,6 +2,25 @@ import { generateObject } from 'ai'
 import { openai } from '@ai-sdk/openai'
 import { z } from 'zod'
 
+interface ItemToTranslate {
+  keyId: string
+  targetLanguageCode: string
+  text: string
+}
+
+interface BatchTranslateProps {
+  projectId: string
+  pageId: string
+  sourceLanguageCode: string
+  items: {
+    keyId: string
+    targetLanguageCode: string
+    text: string
+  }[]
+}
+
+const BATCH_SIZE = 150
+
 const translationSchema = z.object({
   list: z.array(
     z.object({
@@ -13,12 +32,6 @@ const translationSchema = z.object({
     })
   )
 })
-
-interface ItemToTranslate {
-  keyId: string
-  targetLanguageCode: string
-  text: string
-}
 
 export async function translate(
   projectId: string,
@@ -53,4 +66,24 @@ export async function translate(
     )}`
   })
   return object.list
+}
+
+export async function batchTranslate({
+  items,
+  projectId,
+  pageId,
+  sourceLanguageCode
+}: BatchTranslateProps) {
+  const allTranslatedItems = []
+  for (let i = 0; i < items.length; i += BATCH_SIZE) {
+    const batch = items.slice(i, i + BATCH_SIZE)
+    const translatedBatch = await translate(
+      projectId,
+      pageId,
+      sourceLanguageCode,
+      batch
+    )
+    allTranslatedItems.push(...translatedBatch)
+  }
+  return allTranslatedItems
 }

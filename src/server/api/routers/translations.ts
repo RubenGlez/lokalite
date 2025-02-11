@@ -1,11 +1,9 @@
 import { eq, not, sql } from 'drizzle-orm'
 import { z } from 'zod'
-import { translate } from '~/lib/translation-agent'
+import { batchTranslate } from '~/lib/translation-agent'
 
 import { createTRPCRouter, publicProcedure } from '~/server/api/trpc'
 import { translationKeys, translations } from '~/server/db/schema'
-
-const BATCH_SIZE = 150 // This is hardcoded but can be adjusted based on the token limit requirements
 
 export const translationsRouter = createTRPCRouter({
   // Get all translations for a specific page
@@ -98,7 +96,7 @@ export const translationsRouter = createTRPCRouter({
         projectId: z.string(),
         pageId: z.string(),
         translationKeyIds: z.array(z.string()),
-        defaultLanguageCode: z.string()
+        sourceLanguageCode: z.string()
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -114,36 +112,29 @@ export const translationsRouter = createTRPCRouter({
           where: (languages, { eq, and }) =>
             and(
               eq(languages.projectId, input.projectId),
-              not(eq(languages.code, input.defaultLanguageCode))
+              not(eq(languages.code, input.sourceLanguageCode))
             )
         })
       ])
 
       const sourceTranslations = currentTranslations.filter(
-        (t) => t.languageCode === input.defaultLanguageCode
+        (t) => t.languageCode === input.sourceLanguageCode
       )
 
       const itemsToTranslate = sourceTranslations.flatMap((item) =>
         languages.map((language) => ({
           keyId: item.translationKeyId,
           targetLanguageCode: language.code,
-          targetLanguageId: language.id,
           text: item.value
         }))
       )
 
-      // Process translations in batches
-      const allTranslatedItems = []
-      for (let i = 0; i < itemsToTranslate.length; i += BATCH_SIZE) {
-        const batch = itemsToTranslate.slice(i, i + BATCH_SIZE)
-        const translatedBatch = await translate(
-          input.projectId,
-          input.pageId,
-          input.defaultLanguageCode,
-          batch
-        )
-        allTranslatedItems.push(...translatedBatch)
-      }
+      const allTranslatedItems = await batchTranslate({
+        items: itemsToTranslate,
+        projectId: input.projectId,
+        pageId: input.pageId,
+        sourceLanguageCode: input.sourceLanguageCode
+      })
 
       return ctx.db
         .insert(translations)
