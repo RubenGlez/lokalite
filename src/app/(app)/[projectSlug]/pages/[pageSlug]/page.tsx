@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import { TranslationEditor } from '~/components/translations-editor'
+import { TranslationsEditor } from '~/components/translations-editor'
 import { TranslationsTable } from '~/components/translations-table'
 import { useSelectedPage } from '~/hooks/use-selected-page'
 import { useSelectedProject } from '~/hooks/use-selected-project'
@@ -82,7 +82,7 @@ export default function PageDetail() {
         languages={languages}
       />
 
-      <TranslationEditor translationKeyIds={keysToEdit} />
+      <TranslationsEditor translationKeyIds={keysToEdit} />
     </div>
   )
 }

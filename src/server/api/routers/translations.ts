@@ -188,5 +188,46 @@ export const translationsRouter = createTRPCRouter({
         input.sourceLanguageCode,
         input.itemsToTranslate
       )
+    }),
+
+  updateTranslationRow: publicProcedure
+    .input(
+      z.object({
+        translationKeyId: z.string().uuid(),
+        translationKeyValue: z.string().min(1),
+        translations: z.array(
+          z.object({
+            pageId: z.string().uuid(),
+            translationKeyId: z.string().uuid(),
+            languageCode: z.string(),
+            value: z.string(),
+            projectId: z.string().uuid()
+          })
+        )
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      await ctx.db
+        .update(translationKeys)
+        .set({
+          key: input.translationKeyValue,
+          updatedAt: new Date()
+        })
+        .where(eq(translationKeys.id, input.translationKeyId))
+
+      return ctx.db
+        .insert(translations)
+        .values(input.translations)
+        .onConflictDoUpdate({
+          target: [
+            translations.pageId,
+            translations.translationKeyId,
+            translations.languageCode
+          ],
+          set: {
+            value: sql`excluded.value`,
+            updatedAt: new Date()
+          }
+        })
     })
 })
