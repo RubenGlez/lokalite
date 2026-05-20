@@ -22,7 +22,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { api } from '~/trpc/react'
-import { useState } from 'react'
+import { ReactNode, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 const formSchema = z.object({
@@ -36,7 +36,7 @@ const formSchema = z.object({
 })
 
 interface ProjectCreatorProps {
-  children: React.ReactNode
+  children: ReactNode
 }
 
 export function ProjectCreator({ children }: ProjectCreatorProps) {
@@ -55,7 +55,7 @@ export function ProjectCreator({ children }: ProjectCreatorProps) {
     onSuccess: () => {
       setOpen(false)
       form.reset()
-      utils.projects.getAll.invalidate()
+      utils.projects.invalidate()
       router.refresh()
     }
   })
