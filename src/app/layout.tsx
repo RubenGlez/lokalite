@@ -5,6 +5,9 @@ import { type Metadata } from 'next'
 
 import { TRPCReactProvider } from '~/trpc/react'
 import { Toaster } from '~/components/ui/toaster'
+import { ThemeProvider } from '~/lib/theme'
+import { ReactNode } from 'react'
+import { TooltipProvider } from '@radix-ui/react-tooltip'
 
 export const metadata: Metadata = {
   title: 'Lokalite',
@@ -16,7 +19,7 @@ const ENABLE_REACT_SCAN = false
 
 export default async function RootLayout({
   children
-}: Readonly<{ children: React.ReactNode }>) {
+}: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en" className={`${GeistSans.variable}`}>
       {ENABLE_REACT_SCAN && (
@@ -29,7 +32,16 @@ export default async function RootLayout({
       )}
 
       <body>
-        <TRPCReactProvider>{children}</TRPCReactProvider>
+        <TRPCReactProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <TooltipProvider>{children}</TooltipProvider>
+          </ThemeProvider>
+        </TRPCReactProvider>
         <Toaster />
       </body>
     </html>

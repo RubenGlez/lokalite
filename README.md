@@ -68,16 +68,7 @@ We welcome contributions from the community! Here's how you can help:
 
 ## Roadmap
 
-### Current Focus
-
-- [ ] Set default language when the user adds the first language
-- [ ] Add a way to export the translations to a JSON file (via API and download)
-
-### Future Plans
-
-- [ ] Add authentication & authorization (better-auth)
-- [ ] Improve efficiency of the translation feature
-- [ ] Implement translation memory feature
+[Lokalite Roadmap](https://github.com/users/RubenGlez/projects/1)
 
 ## Tech Stack
 

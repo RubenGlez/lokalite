@@ -1,5 +1,3 @@
-import * as React from 'react'
-
 import { NavUser } from '~/components/nav-user'
 import {
   Sidebar,
@@ -11,10 +9,9 @@ import {
 import { ProjectSwitcher } from './project-switcher'
 import { api } from '~/trpc/server'
 import { NavPages } from './nav-pages'
+import { ComponentProps } from 'react'
 
-export async function AppSidebar({
-  ...props
-}: React.ComponentProps<typeof Sidebar>) {
+export async function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
   const projects = await api.projects.getAll()
 
   return (
