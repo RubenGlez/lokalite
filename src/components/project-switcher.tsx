@@ -32,7 +32,7 @@ export function ProjectSwitcher({ projects }: { projects: Project[] }) {
   const activeProject = projects.find((project) => project.slug === projectSlug)
 
   const handleChangeActiveProject = (project: Project) => {
-    router.push(project.slug)
+    router.push(`/${project.slug}`)
   }
 
   return (
