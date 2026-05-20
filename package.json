@@ -78,8 +78,5 @@
   "ct3aMetadata": {
     "initVersion": "7.38.1"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "sharp"]
-  },
   "packageManager": "pnpm@11.1.3"
 }
