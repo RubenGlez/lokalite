@@ -70,7 +70,7 @@ export function TranslationCreator({ children }: TranslationCreatorProps) {
   const translateRow = api.translations.translateRow.useMutation({
     onSuccess(data) {
       form.reset({
-        translations: data.reduce((acc, curr) => {
+        translations: data.reduce<Record<string, string>>((acc, curr) => {
           return {
             ...acc,
             [curr.languageCode]: curr.value
@@ -86,7 +86,7 @@ export function TranslationCreator({ children }: TranslationCreatorProps) {
         form.reset({
           key: '',
           translations: languages?.reduce(
-            (acc, language) => ({
+            (acc: Record<string, string>, language) => ({
               ...acc,
               [language.code]: ''
             }),
