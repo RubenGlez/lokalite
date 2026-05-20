@@ -2,6 +2,8 @@
 
 import {
   ColumnFiltersState,
+  PaginationState,
+  RowSelectionState,
   SortingState,
   VisibilityState,
   flexRender,
@@ -11,16 +13,7 @@ import {
   getSortedRowModel,
   useReactTable
 } from '@tanstack/react-table'
-import { ChevronDown, Languages, Plus } from 'lucide-react'
 
-import { Button } from '~/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger
-} from '~/components/ui/dropdown-menu'
-import { Input } from '~/components/ui/input'
 import {
   Table,
   TableBody,
@@ -30,49 +23,45 @@ import {
   TableRow
 } from '~/components/ui/table'
 import { getColumns, TranslationsTableMeta } from './columns'
-import { Language, TranslationKey } from '~/server/db/schema'
-import { useSkipper } from './use-skipper'
+import { Language } from '~/server/db/schema'
+import { useSkipper } from '../../hooks/use-skipper'
 import { useMemo, useState } from 'react'
-import { LoaderIcon } from 'lucide-react'
+import { RightActions } from './right-actions'
+import { LeftActions } from './left-actions'
+import { Footer } from './footer'
+import { TranslationsTableRow } from '~/hooks/use-translations'
 
 interface TranslationsTableProps {
-  data: TranslationKey[] | undefined
-  languages: Language[] | undefined
-  normalizedTranslations: Record<string, string>
-  onUpdateCell: (
-    translationId: string | null,
-    columnId: string,
-    value: string
-  ) => void
-  onAddRow: () => void
-  onRemoveRow: (translationKeyId: string) => void
-  onTranslate: (translations: string[]) => void
-  defaultLanguageId: string
+  data: TranslationsTableRow[] | undefined
+  onEdit: (translationKeyIds: string[]) => void
+  onDelete: (translationKeyIds: string[]) => void
+  onTranslate: (translationKeyIds: string[]) => void
   isTranslating: boolean
+  isDeleting: boolean
+  languages: Language[]
 }
 
 export function TranslationsTable({
   data = [],
-  languages = [],
-  normalizedTranslations,
-  onUpdateCell,
-  onAddRow,
-  onRemoveRow,
+  onEdit,
+  onDelete,
   onTranslate,
-  defaultLanguageId,
-  isTranslating
+  isTranslating,
+  isDeleting,
+  languages
 }: TranslationsTableProps) {
   const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
 
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = useState({})
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10
+  })
 
-  const columns = useMemo(
-    () => getColumns({ languages, normalizedTranslations, defaultLanguageId }),
-    [languages, normalizedTranslations, defaultLanguageId]
-  )
+  const columns = useMemo(() => getColumns(languages), [languages])
 
   const table = useReactTable({
     data,
@@ -85,111 +74,49 @@ export function TranslationsTable({
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    onPaginationChange: setPagination,
     state: {
       sorting,
       columnFilters,
       columnVisibility,
-      rowSelection
+      rowSelection,
+      pagination
     },
     autoResetPageIndex,
     meta: {
-      updateCell: (translationId, columnId, value) => {
+      onEdit: (translationKeyIds) => {
         skipAutoResetPageIndex()
-        onUpdateCell(translationId, columnId, value)
+        onEdit(translationKeyIds)
       },
-      onRemoveRow: (translationKeyId) => {
+      onDelete: (translationKeyIds) => {
         skipAutoResetPageIndex()
-        onRemoveRow(translationKeyId)
+        onDelete(translationKeyIds)
       },
-      onTranslateRow: (translationKeyId) => {
+      onTranslate: (translationKeyIds) => {
         skipAutoResetPageIndex()
-        onTranslate([translationKeyId])
+        onTranslate(translationKeyIds)
       }
     } satisfies TranslationsTableMeta
   })
 
-  return (
-    <div className="w-full">
-      <div className="flex items-center justify-between py-4">
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            onClick={() => {
-              skipAutoResetPageIndex()
-              onAddRow()
-            }}
-          >
-            <Plus /> Add
-            <span className="text-xs bg-primary-foreground rounded-sm px-1">
-              ⌘K
-            </span>
-          </Button>
-          <Button
-            disabled={
-              !table.getFilteredSelectedRowModel().rows.length || isTranslating
-            }
-            onClick={() => {
-              skipAutoResetPageIndex()
-              onTranslate(
-                table
-                  .getFilteredSelectedRowModel()
-                  .rows.map((row) => row.original.id)
-              )
-            }}
-          >
-            {isTranslating ? (
-              <>
-                <LoaderIcon className="animate-spin" />
-                <span>Translating...</span>
-              </>
-            ) : (
-              <>
-                <Languages />
-                <span>Translate</span>
-              </>
-            )}
-          </Button>
-        </div>
+  const meta = table.options.meta as TranslationsTableMeta
 
-        <div className="flex items-center space-x-2">
-          <Input
-            placeholder="Filter by key..."
-            value={(table.getColumn('key')?.getFilterValue() as string) ?? ''}
-            onChange={(event) =>
-              table.getColumn('key')?.setFilterValue(event.target.value)
-            }
-            className="max-w-sm"
-          />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="ml-auto">
-                Columns <ChevronDown />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
-                    >
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  )
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+  return (
+    <div className="w-full h-full flex flex-col">
+      <div className="flex items-center justify-between py-4">
+        <LeftActions
+          onDelete={meta.onDelete}
+          isTranslating={isTranslating}
+          isDeleting={isDeleting}
+          onTranslate={meta.onTranslate}
+          getFilteredSelectedRowModel={table.getFilteredSelectedRowModel}
+          getColumn={table.getColumn}
+          onEdit={meta.onEdit}
+        />
+        <RightActions getAllColumns={table.getAllColumns} />
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-md border flex-1 min-h-0 overflow-y-auto">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -241,30 +168,14 @@ export function TranslationsTable({
         </Table>
       </div>
 
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{' '}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
-        </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      <Footer
+        getFilteredSelectedRowModel={table.getFilteredSelectedRowModel}
+        getFilteredRowModel={table.getFilteredRowModel}
+        getCanPreviousPage={table.getCanPreviousPage}
+        getCanNextPage={table.getCanNextPage}
+        previousPage={table.previousPage}
+        nextPage={table.nextPage}
+      />
     </div>
   )
 }
