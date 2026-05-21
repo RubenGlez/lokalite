@@ -1,8 +1,7 @@
-node_modules/
-.env
-.env.*
-*.log
-.DS_Store
-dist/
-coverage/
-examples/deepseek-support-agent/benchmark-results.md
+.build/
+.swiftpm/
+*.o
+*.d
+DerivedData/
+*.xcuserstate
+xcuserdata/
