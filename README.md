@@ -50,19 +50,18 @@ That is the kind of failure Lokalite should make visible.
 
 ## Repository Status
 
-This repository currently contains planning documents only. The previous app
-implementation has been removed from this branch so the project can restart from
-the research-backed direction.
+The previous app implementation has been removed from this branch so the project
+can restart from the research-backed direction.
 
-## Next Build Slice
+## Current Build Slice
 
 The first implementation target is intentionally narrow:
 
 ```bash
-lokalite run ./examples/scenarios/refund-request.yaml --target http://localhost:3000/api/agent
+npm run lokalite -- run ./examples/scenarios/refund-request.yaml --target http://127.0.0.1:3000/api/agent
 ```
 
-That v0 should:
+That v0:
 
 - load one explicit YAML scenario
 - call one strict HTTP agent target across at least three locales
@@ -70,6 +69,39 @@ That v0 should:
 - report pass/fail by locale in plain terminal output
 - exit non-zero on failure
 - include a tiny demo support agent with an intentional localized failure
+
+## Try The Demo
+
+Start the example support agent:
+
+```bash
+npm run example:agent
+```
+
+In another terminal, run the scenario:
+
+```bash
+npm run lokalite -- run ./examples/scenarios/refund-request.yaml --target http://127.0.0.1:3000/api/agent
+```
+
+Expected result:
+
+```text
+Lokalite run
+
+Scenario: refund_request
+Target: http://127.0.0.1:3000/api/agent
+
+Locale  Status  Detail
+en      pass    create_refund_ticket
+es      pass    create_refund_ticket
+fr      fail    expected create_refund_ticket, got no tool calls
+
+Result: failed, 1 of 3 locales failed
+```
+
+The French failure is intentional. It demonstrates the first product promise:
+same intent, different locale, different behavior.
 
 ## Documents
 

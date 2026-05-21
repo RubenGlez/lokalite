@@ -20,7 +20,9 @@ As a developer building an AI support agent, I want to run the same scenario in 
 
 ## First Build Slice
 
-The first implementation should prove the smallest useful loop before adding
+Status: implemented.
+
+The first implementation proves the smallest useful loop before adding
 configuration, reports, or a wider assertion language.
 
 ### 1. Direct CLI Run
@@ -30,7 +32,7 @@ Run one explicit scenario file against one HTTP target passed through the CLI.
 Example:
 
 ```bash
-lokalite run ./examples/scenarios/refund-request.yaml --target http://localhost:3000/api/agent
+npm run lokalite -- run ./examples/scenarios/refund-request.yaml --target http://127.0.0.1:3000/api/agent
 ```
 
 Do not require a config file in the first slice. A later
@@ -145,7 +147,7 @@ Example:
 Lokalite run
 
 Scenario: refund_request
-Target: http://localhost:3000/api/agent
+Target: http://127.0.0.1:3000/api/agent
 
 Locale  Status  Detail
 en      pass    create_refund_ticket
@@ -196,11 +198,11 @@ Fields may be omitted by the target, but Lokalite should normalize missing
 This keeps Lokalite independent from any one agent framework while giving the
 first runner a strict, predictable contract.
 
-## Implementation Sketch
+## Current Implementation
 
-Use Node and TypeScript for the first implementation.
+The first implementation uses Node and TypeScript with no runtime dependencies.
 
-Possible first files:
+Current files:
 
 - `src/cli.ts`
 - `src/scenario.ts`
@@ -210,6 +212,7 @@ Possible first files:
 - `src/reportTerminal.ts`
 - `examples/support-agent/server.ts`
 - `examples/scenarios/refund-request.yaml`
+- `tests/scenario.test.ts`
 
 Avoid a monorepo, database, web framework, or config loader in the first slice.
 
@@ -245,11 +248,11 @@ If the web app stores results later:
 
 ## Demo Project
 
-Create a tiny fake support agent with one behavior:
+The current demo project contains a tiny fake support agent with one behavior:
 
 - refund requests should call `create_refund_ticket`
 
-Then intentionally make one locale fail to show the value:
+One locale intentionally fails to show the value:
 
 - English and Spanish refund paths call `create_refund_ticket`.
 - French refund path answers directly without a tool call.
@@ -258,6 +261,15 @@ Later demo scenarios can add password reset, malformed JSON, placeholder
 corruption, and structured output validation.
 
 The demo should make the product obvious in under one minute.
+
+Run it with:
+
+```bash
+npm run example:agent
+npm run lokalite -- run ./examples/scenarios/refund-request.yaml --target http://127.0.0.1:3000/api/agent
+```
+
+The command exits non-zero because the French locale fails by design.
 
 ## Success Criteria
 

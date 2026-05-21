@@ -38,7 +38,7 @@ The first product should help detect:
 
 ## Milestone 0: Exploration Branch
 
-Status: in progress.
+Status: complete.
 
 Goal:
 
@@ -61,6 +61,8 @@ Success criteria:
 
 ## Milestone 1: Local Scenario Runner
 
+Status: implemented.
+
 Goal:
 
 Run one localized scenario from the terminal against one HTTP target.
@@ -68,7 +70,7 @@ Run one localized scenario from the terminal against one HTTP target.
 Example:
 
 ```bash
-lokalite run ./examples/scenarios/refund-request.yaml --target http://localhost:3000/api/agent
+npm run lokalite -- run ./examples/scenarios/refund-request.yaml --target http://127.0.0.1:3000/api/agent
 ```
 
 Minimum scenario shape:
@@ -99,13 +101,15 @@ locales:
 
 Deliverables:
 
-- YAML scenario parser.
-- HTTP target adapter with a strict request/response contract.
-- CLI command.
-- Required tool-call-name assertion.
-- Plain terminal report.
-- Non-zero exit code on failure.
-- Tiny example support agent with an intentional French failure.
+- YAML scenario parser. Implemented in `src/scenario.ts`.
+- HTTP target adapter with a strict request/response contract. Implemented in
+  `src/httpTarget.ts`.
+- CLI command. Implemented in `src/cli.ts`.
+- Required tool-call-name assertion. Implemented in `src/assertions.ts`.
+- Plain terminal report. Implemented in `src/reportTerminal.ts`.
+- Non-zero exit code on failure. Implemented.
+- Tiny example support agent with an intentional French failure. Implemented in
+  `examples/support-agent/server.ts`.
 
 First target:
 
@@ -130,6 +134,8 @@ Success criteria:
   minute.
 
 ## Milestone 2: Deterministic Assertions
+
+Status: next candidate.
 
 Goal:
 
@@ -159,6 +165,11 @@ Success criteria:
 - Lokalite can catch invalid structured output.
 - Lokalite can catch placeholder or glossary corruption.
 - Results are stable enough for CI.
+
+Open decision:
+
+Should the next implementation step expand the assertion engine first, or add
+config and multi-scenario suite support first?
 
 ## Milestone 3: Config, Suites, And Static Results
 

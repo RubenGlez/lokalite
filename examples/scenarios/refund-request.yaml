@@ -1,0 +1,21 @@
+id: refund_request
+agent: support
+
+locales:
+  en:
+    input: "I was charged twice. Can you refund one charge?"
+    expect:
+      toolCall:
+        name: create_refund_ticket
+
+  es:
+    input: "Me cobraron dos veces. Puedes devolverme uno de los cargos?"
+    expect:
+      toolCall:
+        name: create_refund_ticket
+
+  fr:
+    input: "J'ai ete facture deux fois. Pouvez-vous me rembourser un paiement?"
+    expect:
+      toolCall:
+        name: create_refund_ticket
