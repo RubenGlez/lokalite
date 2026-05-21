@@ -1,4 +1,4 @@
-# Lokalite Agent i18n Exploration
+# Agent i18n Product Notes
 
 ## Thesis
 
@@ -10,7 +10,7 @@ The core question Lokalite should answer is:
 
 > Will this agent behave correctly when the user speaks another language?
 
-## Proposed Positioning
+## Positioning
 
 Lokalite is a multilingual behavior testing tool for AI agents.
 
@@ -67,7 +67,7 @@ Secondary users:
 
 ## Initial Product Shape
 
-The first credible version should be a developer tool, not a heavy web platform.
+The product should be a developer tool, not a heavy web platform.
 
 Recommended order:
 
@@ -114,7 +114,7 @@ password_reset
 - Run: One execution of a suite against one or more locales/models.
 - Result: Pass/fail plus diagnostics, traces, and diffs.
 
-## MVP Assertions
+## Core Assertions
 
 The first version should support a focused set of checks:
 
@@ -183,26 +183,9 @@ An MCP server could let coding agents ask Lokalite to perform i18n-specific work
 
 This would make Lokalite part of the agent ecosystem rather than only a standalone app.
 
-## What To Reuse From The Current Repo
-
-Useful existing pieces:
-
-- Project and language concepts.
-- Translation table UI as a possible glossary/locale-asset editor.
-- AI translation helper as a utility, not the product center.
-- Next.js app shell for future reports/dashboard.
-- tRPC and Drizzle stack if the web app remains useful.
-
-Likely changes:
-
-- Pages become suites or scenario groups.
-- Translation keys become scenario inputs, expected outputs, glossary terms, or prompt variants.
-- Translations become locale variants and expected behaviors.
-- New entities are needed for runs, results, assertions, traces, models, and adapters.
-
 ## Strategic Test
 
-This project is worth pursuing if an MVP can make a developer say:
+This project is worth pursuing if it can make a developer say:
 
 > I already have translations, but I have no idea whether my agent behaves the same way in Spanish, Japanese, and Arabic. This catches things my normal tests miss.
 
@@ -214,7 +197,7 @@ That version is too crowded and not differentiated enough.
 
 ## Open Questions
 
-- Should the first deliverable be CLI-only, or should the existing web app become a report viewer immediately?
+- Should the CLI stay the primary interface, or should a report viewer become a near-term priority?
 - Should scenarios be authored manually, generated from English, or both?
 - How much should Lokalite depend on real model calls versus replayed traces?
 - Should assertions be deterministic first, LLM-judged later, or both from day one?

@@ -1,8 +1,8 @@
 # Lokalite
 
-Lokalite is an exploration of locale-aware testing for AI behavior.
+Lokalite is a locale-aware eval harness for AI workflows.
 
-The project is starting from one core belief:
+Core belief:
 
 > AI localization is moving from translated strings to localized behavior.
 
@@ -10,16 +10,9 @@ Traditional i18n asks whether the product text exists in another language.
 Lokalite asks whether an AI workflow still behaves correctly when the user
 speaks another language, uses another region, or expects another cultural norm.
 
-## Current Direction
+## What It Tests
 
-Lokalite is not currently a product or framework. This branch is a clean
-research and planning space for a possible OSS tool.
-
-The proposed tool is:
-
-> A locale-aware eval harness for AI workflows.
-
-It should help developers detect cross-locale behavior drift in:
+Lokalite helps developers detect cross-locale behavior drift in:
 
 - agent tool calls
 - tool arguments
@@ -48,27 +41,22 @@ Japanese user asks for refund -> invalid structured output
 
 That is the kind of failure Lokalite should make visible.
 
-## Repository Status
+## What Works Today
 
-The previous app implementation has been removed from this branch so the project
-can restart from the research-backed direction.
-
-## Current Build Slice
-
-The first implementation target is intentionally narrow:
+Run a localized scenario against an HTTP agent endpoint:
 
 ```bash
 npm run lokalite -- run ./examples/scenarios/refund-request.yaml --target http://127.0.0.1:3000/api/agent
 ```
 
-That v0:
+Lokalite can:
 
-- load one explicit YAML scenario
-- call one strict HTTP agent target across at least three locales
+- load an explicit YAML scenario
+- call a strict HTTP agent target across multiple locales
 - assert that the expected tool call happened
 - report pass/fail by locale in plain terminal output
 - exit non-zero on failure
-- include a tiny demo support agent with an intentional localized failure
+- run a tiny demo support agent with an intentional localized failure
 
 ## Try The Demo
 
@@ -106,11 +94,10 @@ same intent, different locale, different behavior.
 ## Documents
 
 - [Mission, Vision, And Principles](docs/mission-vision-principles.md)
-- [Agent i18n Exploration](docs/agent-i18n-exploration.md)
+- [Agent i18n Product Notes](docs/agent-i18n-product-notes.md)
 - [Research Brief](docs/research-brief-agent-i18n.md)
-- [MVP Notes](docs/mvp-agent-i18n.md)
+- [Core Workflow](docs/core-workflow.md)
 - [Roadmap](docs/roadmap.md)
-- [Repositioning Notes](docs/repositioning-notes.md)
 
 ## Working Definition
 

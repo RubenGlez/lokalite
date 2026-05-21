@@ -16,7 +16,7 @@ strings.
 
 Build an investigation tool first, not a platform.
 
-The first version should be useful for research, demos, and local developer
+Lokalite should be useful for research, demos, and local developer
 workflows. A dashboard, hosted service, prompt editor, trace ingestion, MCP
 server, or translation management system can come later only if the core signal
 is proven.
@@ -25,7 +25,7 @@ is proven.
 
 AI workflows can drift across languages in ways developers do not currently see.
 
-The first product should help detect:
+Lokalite should help detect:
 
 - tool-call drift
 - missing or wrong tool arguments
@@ -36,32 +36,7 @@ The first product should help detect:
 - policy or safety differences
 - locale-specific formatting mistakes
 
-## Milestone 0: Exploration Branch
-
-Status: complete.
-
-Goal:
-
-Keep the repository as a clean research and planning space while the new product
-shape is explored.
-
-Deliverables:
-
-- Product thesis.
-- MVP notes.
-- Repositioning notes.
-- Research brief.
-- Roadmap.
-
-Success criteria:
-
-- The repo explains why Lokalite should exist.
-- The docs separate research evidence from product bets.
-- The next implementation step is obvious.
-
 ## Milestone 1: Local Scenario Runner
-
-Status: implemented.
 
 Goal:
 
@@ -101,21 +76,19 @@ locales:
 
 Deliverables:
 
-- YAML scenario parser. Implemented in `src/scenario.ts`.
-- HTTP target adapter with a strict request/response contract. Implemented in
-  `src/httpTarget.ts`.
-- CLI command. Implemented in `src/cli.ts`.
-- Required tool-call-name assertion. Implemented in `src/assertions.ts`.
-- Plain terminal report. Implemented in `src/reportTerminal.ts`.
-- Non-zero exit code on failure. Implemented.
-- Tiny example support agent with an intentional French failure. Implemented in
-  `examples/support-agent/server.ts`.
+- YAML scenario parser.
+- HTTP target adapter with a strict request/response contract.
+- CLI command.
+- Required tool-call-name assertion.
+- Plain terminal report.
+- Non-zero exit code on failure.
+- Tiny example support agent with an intentional French failure.
 
-First target:
+Target:
 
 - HTTP endpoint target.
 
-Deferred from this milestone:
+Outside this milestone:
 
 - Config loader.
 - Multiple suites.
@@ -135,12 +108,9 @@ Success criteria:
 
 ## Milestone 2: Deterministic Assertions
 
-Status: next candidate.
-
 Goal:
 
-Make Lokalite trustworthy in CI by expanding the deterministic assertion set
-after the first runner loop works.
+Make Lokalite trustworthy in CI by expanding the deterministic assertion set.
 
 Initial assertions:
 
@@ -165,11 +135,6 @@ Success criteria:
 - Lokalite can catch invalid structured output.
 - Lokalite can catch placeholder or glossary corruption.
 - Results are stable enough for CI.
-
-Open decision:
-
-Should the next implementation step expand the assertion engine first, or add
-config and multi-scenario suite support first?
 
 ## Milestone 3: Config, Suites, And Static Results
 

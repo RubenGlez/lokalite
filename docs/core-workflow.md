@@ -1,8 +1,8 @@
-# MVP: Multilingual Agent Behavior Testing
+# Multilingual Agent Behavior Testing
 
 ## Goal
 
-Build the smallest version of Lokalite that proves the new direction:
+Keep Lokalite focused on the smallest useful workflow:
 
 > A developer can define multilingual scenarios for an AI agent, run them locally or in CI, and see whether behavior changes across locales.
 
@@ -14,16 +14,14 @@ Build the smallest version of Lokalite that proves the new direction:
 - Do not support every agent framework at first.
 - Do not rely only on LLM-as-judge checks when deterministic validation is possible.
 
-## MVP User Story
+## User Story
 
 As a developer building an AI support agent, I want to run the same scenario in multiple languages, so that I can catch cases where the agent fails to call the right tool, returns invalid JSON, ignores glossary rules, or responds in the wrong language.
 
-## First Build Slice
+## Core Workflow
 
-Status: implemented.
-
-The first implementation proves the smallest useful loop before adding
-configuration, reports, or a wider assertion language.
+Lokalite runs explicit locale variants against an agent target, applies
+deterministic assertions, and reports behavior drift by locale.
 
 ### 1. Direct CLI Run
 
@@ -35,9 +33,9 @@ Example:
 npm run lokalite -- run ./examples/scenarios/refund-request.yaml --target http://127.0.0.1:3000/api/agent
 ```
 
-Do not require a config file in the first slice. A later
+The direct CLI workflow does not require a config file. A future
 `lokalite.config.ts` or `lokalite.config.json` can add default locales, agents,
-suites, and glossary settings after the runner loop is proven.
+suites, and glossary settings.
 
 ### 2. Scenario Format
 
@@ -77,9 +75,8 @@ locales:
         name: create_refund_ticket
 ```
 
-The format should optimize for explicitness over compactness. Avoid shared
-expectations, inheritance, generated translations, and shorthand syntax in the
-first pass.
+The format optimizes for explicitness over compactness. Shared expectations,
+inheritance, generated translations, and shorthand syntax are future additions.
 
 ### 3. Runner
 
@@ -105,7 +102,7 @@ Invalid scenario files should fail the run early.
 
 ### 4. Assertions
 
-Start with one deterministic assertion:
+The core assertion is deterministic:
 
 - `toolCall.name`: required tool call name.
 
@@ -117,7 +114,7 @@ expect:
     name: create_refund_ticket
 ```
 
-Later deterministic assertions:
+Additional deterministic assertions:
 
 - `noToolCall.name`: forbidden tool call name.
 - required tool arguments
@@ -129,7 +126,7 @@ Later deterministic assertions:
 - `preserves`: required placeholders or exact terms.
 - glossary preservation
 
-Later assertions:
+Additional assertions:
 
 - tone match
 - semantic equivalence
@@ -157,9 +154,10 @@ fr      fail    expected create_refund_ticket, got no tool calls
 Result: failed, 1 of 3 locales failed
 ```
 
-Do not build colors, spinners, rich diffs, or HTML reports in the first slice.
+Colors, spinners, rich diffs, and HTML reports are intentionally outside this
+core workflow.
 
-## First Adapter
+## HTTP Adapter
 
 Use an HTTP adapter first.
 
@@ -198,11 +196,11 @@ Fields may be omitted by the target, but Lokalite should normalize missing
 This keeps Lokalite independent from any one agent framework while giving the
 first runner a strict, predictable contract.
 
-## Current Implementation
+## Implementation
 
-The first implementation uses Node and TypeScript with no runtime dependencies.
+Lokalite uses Node and TypeScript with no runtime dependencies.
 
-Current files:
+Key files:
 
 - `src/cli.ts`
 - `src/scenario.ts`
@@ -214,11 +212,12 @@ Current files:
 - `examples/scenarios/refund-request.yaml`
 - `tests/scenario.test.ts`
 
-Avoid a monorepo, database, web framework, or config loader in the first slice.
+Avoid a monorepo, database, web framework, or config loader until the CLI
+workflow needs that complexity.
 
 ## Follow-On Scope
 
-After the first loop works, expand into:
+Planned expansions:
 
 - `lokalite.config.ts` or `lokalite.config.json`
 - multiple scenarios and suites
@@ -248,7 +247,7 @@ If the web app stores results later:
 
 ## Demo Project
 
-The current demo project contains a tiny fake support agent with one behavior:
+The demo project contains a tiny fake support agent with one behavior:
 
 - refund requests should call `create_refund_ticket`
 
@@ -257,7 +256,7 @@ One locale intentionally fails to show the value:
 - English and Spanish refund paths call `create_refund_ticket`.
 - French refund path answers directly without a tool call.
 
-Later demo scenarios can add password reset, malformed JSON, placeholder
+Additional demo scenarios can add password reset, malformed JSON, placeholder
 corruption, and structured output validation.
 
 The demo should make the product obvious in under one minute.
@@ -273,7 +272,7 @@ The command exits non-zero because the French locale fails by design.
 
 ## Success Criteria
 
-The MVP is successful when:
+Lokalite is successful when:
 
 - It can be run from the terminal.
 - It tests at least three locales.

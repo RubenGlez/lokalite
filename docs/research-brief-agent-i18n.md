@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This brief collects research signals that support Lokalite's proposed pivot:
+This brief collects research signals that support Lokalite's product thesis:
 
 > From translated strings to localized AI behavior.
 
@@ -57,7 +57,7 @@ function names, arguments, missing parameters, and unnecessary calls matter.
 Product implication:
 
 Lokalite should test localized behavior at the action boundary, not just the
-response-text boundary. A useful MVP should inspect tool calls and structured
+response-text boundary. A useful product should inspect tool calls and structured
 outputs directly.
 
 ### 3. Multilingual Agent Benchmarks Remain Incomplete
@@ -93,7 +93,7 @@ behavior.
 
 Product implication:
 
-Lokalite should eventually support safety parity checks across locales. The MVP
+Lokalite should eventually support safety parity checks across locales. The core workflow
 can begin with deterministic guardrails, then later add review workflows or
 judge-based checks.
 
@@ -128,7 +128,7 @@ The practical value is not "translate this string." The value is:
 - surface safety and policy differences
 - make multilingual agent testing runnable in CI
 
-## Strongest MVP Hypothesis
+## Strongest Product Hypothesis
 
 Developers will understand the value fastest if Lokalite catches a concrete
 localized action failure:
