@@ -30,9 +30,19 @@ final class VaultViewModel: ObservableObject {
     // MARK: - Lock / Unlock
 
     func unlock() {
-        // Authentication is handled by the Keychain access control (userPresence).
-        // KeychainStore.load() will trigger Touch ID / passcode as needed.
-        performUnlock()
+        Task.detached { [weak self] in
+            do {
+                try Vault.shared.unlock()
+                await MainActor.run {
+                    self?.isLocked = false
+                    self?.refresh()
+                    self?.startLockTimer()
+                }
+            } catch {
+                let msg = error.localizedDescription
+                await MainActor.run { self?.errorMessage = msg }
+            }
+        }
     }
 
     func lock() {
@@ -41,17 +51,6 @@ final class VaultViewModel: ObservableObject {
         Vault.shared.lock()
         secrets = []
         isLocked = true
-    }
-
-    private func performUnlock() {
-        do {
-            try Vault.shared.unlock()
-            isLocked = false
-            refresh()
-            startLockTimer()
-        } catch {
-            errorMessage = error.localizedDescription
-        }
     }
 
     private func startLockTimer() {
