@@ -9,18 +9,18 @@
 
 ---
 
-Lokalite is a macOS menu bar app and CLI for managing developer secrets locally. API keys, tokens, certificates, database passwords — stored in an encrypted vault on your machine, protected by Apple Keychain.
+Lokalite is a macOS menu bar app and CLI for managing developer secrets locally. API keys, tokens, certificates, database passwords, all stored in an encrypted vault on your machine, protected by Apple Keychain.
 
 ## Features
 
-- **Encrypted vault** — AES-256-GCM encryption via CryptoKit, vault key stored in Apple Keychain
-- **Touch ID unlock** — biometric authentication before accessing secrets
-- **Menu bar app** — search, copy, and reveal secrets without leaving your workflow
-- **Full CLI** — read, write, and inject secrets from the terminal
-- **Clipboard auto-clear** — copied values are wiped after 30 seconds
-- **Session timeout** — vault auto-locks after inactivity
-- **Tag filtering** — organize secrets by category
-- **Zero dependencies at runtime** — no cloud, no telemetry, no vendor lock-in
+- **Encrypted vault**: AES-256-GCM via CryptoKit, vault key stored in Apple Keychain
+- **Touch ID unlock**: biometric authentication before accessing secrets
+- **Menu bar app**: search, copy, and reveal secrets without leaving your workflow
+- **Full CLI**: read, write, and inject secrets from the terminal
+- **Clipboard auto-clear**: copied values are wiped after 30 seconds
+- **Session timeout**: vault auto-locks after inactivity
+- **Tag filtering**: organize secrets by category
+- **Zero dependencies at runtime**: no cloud, no telemetry, no vendor lock-in
 
 ## Requirements
 
@@ -94,7 +94,7 @@ See [docs/security-model.md](docs/security-model.md) for full details.
 
 ```
 Sources/
-  LokaliteCore/    # vault logic, crypto, storage — shared library
+  LokaliteCore/    # vault logic, crypto, storage (shared library)
   lokalite/        # CLI (swift-argument-parser)
   LokaliteApp/     # menu bar app (SwiftUI)
 docs/              # architecture, decisions, roadmap

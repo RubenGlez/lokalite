@@ -7,7 +7,7 @@ Lokalite is a Swift-only project. A shared `LokaliteCore` library owns all vault
 ```
 lokalite/
   Sources/
-    LokaliteCore/        # vault logic, crypto, storage — shared
+    LokaliteCore/        # vault logic, crypto, storage (shared)
     lokalite/            # CLI target
     LokaliteApp/         # menu bar app target
   Tests/
@@ -37,8 +37,8 @@ Swift executable. Parses arguments, calls `LokaliteCore`, writes output to stdou
 ### `LokaliteApp` (menu bar app)
 
 SwiftUI app. `LSUIElement = true` (no dock icon). Two surfaces:
-- `VaultPopover` — search, copy, reveal; anchored to `NSStatusItem`
-- `SettingsWindow` — add, edit, delete secrets; triggered from popover footer
+- `VaultPopover`: search, copy, reveal; anchored to `NSStatusItem`
+- `SettingsWindow`: add, edit, delete secrets; triggered from popover footer
 
 ---
 
@@ -181,8 +181,8 @@ Then spawns the subprocess with those secrets in its environment. They never app
 ### Settings Window (`SettingsWindow`)
 
 Full CRUD. Two panels:
-- **Secrets list** — add, edit, delete, tag
-- **Settings** — clipboard clear timeout, session timeout, export / import
+- **Secrets list**: add, edit, delete, tag
+- **Settings**: clipboard clear timeout, session timeout, export / import
 
 ---
 
