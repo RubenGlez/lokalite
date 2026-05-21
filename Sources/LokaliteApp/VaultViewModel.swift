@@ -1,4 +1,5 @@
 import AppKit
+import LocalAuthentication
 import SwiftUI
 import LokaliteCore
 
@@ -31,16 +32,22 @@ final class VaultViewModel: ObservableObject {
 
     func unlock() {
         Task.detached { [weak self] in
+            let context = LAContext()
+            var authError: NSError?
+            guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &authError) else {
+                // No biometrics — unlock directly.
+                await self?.performUnlock()
+                return
+            }
             do {
-                try Vault.shared.unlock()
-                await MainActor.run {
-                    self?.isLocked = false
-                    self?.refresh()
-                    self?.startLockTimer()
-                }
+                try await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "Unlock Lokalite vault")
+                await self?.performUnlock()
             } catch {
-                let msg = error.localizedDescription
-                await MainActor.run { self?.errorMessage = msg }
+                let code = (error as NSError).code
+                if code != LAError.userCancel.rawValue && code != LAError.systemCancel.rawValue {
+                    let msg = error.localizedDescription
+                    await MainActor.run { self?.errorMessage = msg }
+                }
             }
         }
     }
@@ -51,6 +58,18 @@ final class VaultViewModel: ObservableObject {
         Vault.shared.lock()
         secrets = []
         isLocked = true
+    }
+
+    @MainActor
+    private func performUnlock() {
+        do {
+            try Vault.shared.unlock()
+            isLocked = false
+            refresh()
+            startLockTimer()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private func startLockTimer() {

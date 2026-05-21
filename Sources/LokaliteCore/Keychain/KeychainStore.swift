@@ -1,5 +1,4 @@
 import Foundation
-import LocalAuthentication
 import Security
 
 enum KeychainStore {
@@ -7,22 +6,12 @@ enum KeychainStore {
     private static let account = "vault-key"
 
     static func save(_ data: Data) throws {
-        var accessError: Unmanaged<CFError>?
-        // Require biometric or device passcode; falls back to passcode if Touch ID unavailable.
-        guard let access = SecAccessControlCreateWithFlags(
-            nil,
-            kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-            .userPresence,
-            &accessError
-        ) else {
-            throw VaultError.keychainWriteFailed(errSecParam)
-        }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
             kSecValueData as String: data,
-            kSecAttrAccessControl as String: access,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
         ]
         SecItemDelete(query as CFDictionary)
         let status = SecItemAdd(query as CFDictionary, nil)
@@ -31,16 +20,13 @@ enum KeychainStore {
         }
     }
 
-    static func load(reason: String = "Unlock Lokalite vault") throws -> Data {
-        let context = LAContext()
-        context.localizedReason = reason
+    static func load() throws -> Data {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
-            kSecUseAuthenticationContext as String: context,
         ]
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
@@ -51,17 +37,12 @@ enum KeychainStore {
     }
 
     static func exists() -> Bool {
-        // interactionNotAllowed prevents triggering a biometric prompt just to check existence.
-        let context = LAContext()
-        context.interactionNotAllowed = true
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
-            kSecUseAuthenticationContext as String: context,
         ]
-        let status = SecItemCopyMatching(query as CFDictionary, nil)
-        return status == errSecSuccess || status == errSecInteractionNotAllowed
+        return SecItemCopyMatching(query as CFDictionary, nil) == errSecSuccess
     }
 
     static func delete() {
