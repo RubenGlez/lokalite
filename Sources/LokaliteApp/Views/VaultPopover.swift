@@ -6,20 +6,35 @@ struct VaultPopover: View {
     @EnvironmentObject private var vault: VaultViewModel
     @Environment(\.openWindow) private var openWindow
     @State private var searchText = ""
+    @State private var selectedTag: String?
+
+    private var allTags: [String] {
+        Array(Set(vault.secrets.flatMap(\.tags))).sorted()
+    }
 
     private var filtered: [Secret] {
-        guard !searchText.isEmpty else { return vault.secrets }
-        let q = searchText.lowercased()
-        return vault.secrets.filter {
-            $0.name.lowercased().contains(q) ||
-            $0.tags.contains { $0.lowercased().contains(q) } ||
-            ($0.description?.lowercased().contains(q) ?? false)
+        var results = vault.secrets
+        if let tag = selectedTag {
+            results = results.filter { $0.tags.contains(tag) }
         }
+        if !searchText.isEmpty {
+            let q = searchText.lowercased()
+            results = results.filter {
+                $0.name.lowercased().contains(q) ||
+                $0.tags.contains { $0.lowercased().contains(q) } ||
+                ($0.description?.lowercased().contains(q) ?? false)
+            }
+        }
+        return results
     }
 
     var body: some View {
         VStack(spacing: 0) {
             searchBar
+            if !allTags.isEmpty {
+                Divider()
+                tagFilter
+            }
             Divider()
             content
             Divider()
@@ -36,9 +51,42 @@ struct VaultPopover: View {
             TextField("Search secrets…", text: $searchText)
                 .textFieldStyle(.plain)
                 .font(.body)
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
+    }
+
+    private var tagFilter: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(allTags, id: \.self) { tag in
+                    let active = selectedTag == tag
+                    Button {
+                        selectedTag = active ? nil : tag
+                    } label: {
+                        Text(tag)
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(active ? Color.accentColor : Color.accentColor.opacity(0.12))
+                            .foregroundStyle(active ? .white : Color.accentColor)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+        }
     }
 
     @ViewBuilder
@@ -98,15 +146,10 @@ struct VaultPopover: View {
     }
 
     private var noResultsView: some View {
-        Text("No results for \"\(searchText)\"")
+        Text("No results")
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity)
             .padding(24)
-    }
-
-    private func openManageWindow() {
-        NSApp.activate(ignoringOtherApps: true)
-        openWindow(id: "settings")
     }
 
     private var footer: some View {
@@ -134,5 +177,10 @@ struct VaultPopover: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    private func openManageWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+        openWindow(id: "settings")
     }
 }

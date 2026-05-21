@@ -1,3 +1,5 @@
+import AppKit
+import LocalAuthentication
 import SwiftUI
 import LokaliteCore
 
@@ -7,21 +9,79 @@ final class VaultViewModel: ObservableObject {
     @Published var isLocked = true
     @Published var errorMessage: String?
 
+    // Configurable timeouts stored in UserDefaults.
+    var sessionTimeoutSeconds: Double {
+        get {
+            let v = UserDefaults.standard.double(forKey: "sessionTimeoutSeconds")
+            return v > 0 ? v : 300
+        }
+        set { UserDefaults.standard.set(newValue, forKey: "sessionTimeoutSeconds") }
+    }
+
+    var clipboardClearSeconds: Double {
+        get {
+            let v = UserDefaults.standard.double(forKey: "clipboardClearSeconds")
+            return v > 0 ? v : 30
+        }
+        set { UserDefaults.standard.set(newValue, forKey: "clipboardClearSeconds") }
+    }
+
+    private var lockTimer: Timer?
+
+    // MARK: - Lock / Unlock
+
     func unlock() {
+        let context = LAContext()
+        var authError: NSError?
+
+        if context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &authError) {
+            context.localizedReason = "Unlock Lokalite vault"
+            context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "Unlock Lokalite vault") { success, error in
+                DispatchQueue.main.async {
+                    if success {
+                        self.performUnlock()
+                    } else if let error {
+                        // User cancelled or failed — don't surface cancellation as an error.
+                        let code = (error as NSError).code
+                        if code != LAError.userCancel.rawValue && code != LAError.systemCancel.rawValue {
+                            self.errorMessage = error.localizedDescription
+                        }
+                    }
+                }
+            }
+        } else {
+            // No biometrics configured — unlock without auth prompt.
+            performUnlock()
+        }
+    }
+
+    func lock() {
+        lockTimer?.invalidate()
+        lockTimer = nil
+        Vault.shared.lock()
+        secrets = []
+        isLocked = true
+    }
+
+    private func performUnlock() {
         do {
             try Vault.shared.unlock()
             isLocked = false
             refresh()
+            startLockTimer()
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
-    func lock() {
-        Vault.shared.lock()
-        secrets = []
-        isLocked = true
+    private func startLockTimer() {
+        lockTimer?.invalidate()
+        lockTimer = Timer.scheduledTimer(withTimeInterval: sessionTimeoutSeconds, repeats: false) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.lock() }
+        }
     }
+
+    // MARK: - CRUD
 
     func refresh() {
         guard !isLocked else { return }
@@ -59,8 +119,19 @@ final class VaultViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Clipboard
+
     func copyToClipboard(_ secret: Secret) {
+        let value = secret.value
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(secret.value, forType: .string)
+        NSPasteboard.general.setString(value, forType: .string)
+
+        let delay = clipboardClearSeconds
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(delay))
+            if NSPasteboard.general.string(forType: .string) == value {
+                NSPasteboard.general.clearContents()
+            }
+        }
     }
 }
