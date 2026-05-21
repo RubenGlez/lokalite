@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 160" width="760" height="160">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0D1117"/>
+      <stop offset="100%" stop-color="#161B22"/>
+    </linearGradient>
+    <linearGradient id="keyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F5B731"/>
+      <stop offset="100%" stop-color="#E8920A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="760" height="160" rx="14" fill="url(#bg)"/>
+
+  <!-- Key icon -->
+  <!-- Outer ring -->
+  <circle cx="68" cy="80" r="34" fill="none" stroke="url(#keyGrad)" stroke-width="9"/>
+  <!-- Inner hole -->
+  <circle cx="68" cy="80" r="14" fill="none" stroke="url(#keyGrad)" stroke-width="7"/>
+  <!-- Shaft -->
+  <rect x="101" y="73.5" width="78" height="13" rx="6.5" fill="url(#keyGrad)"/>
+  <!-- Teeth -->
+  <rect x="148" y="86" width="11" height="17" rx="4" fill="url(#keyGrad)"/>
+  <rect x="168" y="86" width="11" height="11" rx="4" fill="url(#keyGrad)"/>
+
+  <!-- Wordmark -->
+  <text
+    x="200"
+    y="97"
+    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif"
+    font-size="52"
+    font-weight="700"
+    letter-spacing="-1.5"
+    fill="#FFFFFF">Lokalite</text>
+
+  <!-- Tagline -->
+  <text
+    x="202"
+    y="122"
+    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif"
+    font-size="13.5"
+    letter-spacing="0.4"
+    fill="#8B949E">Local-first secrets workspace for developers</text>
+</svg>
