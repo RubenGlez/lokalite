@@ -1,96 +1,119 @@
-![Lokalite](./public/lokalite.png)
-
 # Lokalite
 
-Lokalite is an open-source localization management platform designed to streamline the translation process for your applications. With an intuitive interface and powerful features, it helps teams efficiently manage and maintain their application translations across multiple languages.
+Lokalite is an exploration of locale-aware testing for AI behavior.
 
-## Features
+The project is starting from one core belief:
 
-- 🌐 **Multi-language Support**: Manage translations for multiple languages in one place
-- 🔑 **Translation Key Management**: Organize and structure your translation keys efficiently
-- 🤖 **AI-Powered Translations**: Get translation suggestions using advanced AI technology
-- 📱 **Modern Interface**: Clean and responsive design built with Next.js
-- 🔄 **Real-time Updates**: See changes instantly as you work
-- 🔍 **Search & Filter**: Quickly find the translations you need
-- 📊 **Progress Tracking**: Monitor translation completion status
+> AI localization is moving from translated strings to localized behavior.
 
-## Getting Started
+Traditional i18n asks whether the product text exists in another language.
+Lokalite asks whether an AI workflow still behaves correctly when the user
+speaks another language, uses another region, or expects another cultural norm.
 
-### Prerequisites
+## Current Direction
 
-- Node.js 18+
-- pnpm (recommended) or npm
-- PostgreSQL database
+Lokalite is not currently a product or framework. This branch is a clean
+research and planning space for a possible OSS tool.
 
-### Installation
+The proposed tool is:
 
-1. Clone the repository:
+> A locale-aware eval harness for AI workflows.
 
-```bash
-git clone https://github.com/RubenGlez/lokalite.git
-cd lokalite
+It should help developers detect cross-locale behavior drift in:
+
+- agent tool calls
+- tool arguments
+- structured outputs
+- generated product copy
+- response language
+- placeholders
+- glossary and brand terms
+- locale-specific formatting
+- policy and safety behavior
+
+## Why This Matters
+
+AI-powered products do not only render strings. They make decisions, call tools,
+produce structured data, and generate dynamic responses. Those behaviors can
+change when the same user intent is expressed in another language.
+
+Example:
+
+```text
+English user asks for refund  -> create_refund_ticket
+Spanish user asks for refund  -> create_refund_ticket
+French user asks for refund   -> no tool call
+Japanese user asks for refund -> invalid structured output
 ```
 
-2. Install dependencies:
+That is the kind of failure Lokalite should make visible.
+
+## Repository Status
+
+The previous app implementation has been removed from this branch so the project
+can restart from the research-backed direction.
+
+## Current Build Slice
+
+The first implementation target is intentionally narrow:
 
 ```bash
-pnpm install
+npm run lokalite -- run ./examples/scenarios/refund-request.yaml --target http://127.0.0.1:3000/api/agent
 ```
 
-3. Set up your environment variables:
+That v0:
+
+- load one explicit YAML scenario
+- call one strict HTTP agent target across at least three locales
+- assert that the expected tool call happened
+- report pass/fail by locale in plain terminal output
+- exit non-zero on failure
+- include a tiny demo support agent with an intentional localized failure
+
+## Try The Demo
+
+Start the example support agent:
 
 ```bash
-cp .env.example .env
+npm run example:agent
 ```
 
-4. Start the development server:
+In another terminal, run the scenario:
 
 ```bash
-pnpm dev
+npm run lokalite -- run ./examples/scenarios/refund-request.yaml --target http://127.0.0.1:3000/api/agent
 ```
 
-## Usage
+Expected result:
 
-1. Create a new project
-2. Add your translation keys
-3. Start translating using the intuitive interface
-4. Export translations to use in your application
+```text
+Lokalite run
 
-## Contributing
+Scenario: refund_request
+Target: http://127.0.0.1:3000/api/agent
 
-We welcome contributions from the community! Here's how you can help:
+Locale  Status  Detail
+en      pass    create_refund_ticket
+es      pass    create_refund_ticket
+fr      fail    expected create_refund_ticket, got no tool calls
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+Result: failed, 1 of 3 locales failed
+```
 
-## Roadmap
+The French failure is intentional. It demonstrates the first product promise:
+same intent, different locale, different behavior.
 
-[Lokalite Roadmap](https://github.com/users/RubenGlez/projects/1)
+## Documents
 
-## Tech Stack
+- [Mission, Vision, And Principles](docs/mission-vision-principles.md)
+- [Agent i18n Exploration](docs/agent-i18n-exploration.md)
+- [Research Brief](docs/research-brief-agent-i18n.md)
+- [MVP Notes](docs/mvp-agent-i18n.md)
+- [Roadmap](docs/roadmap.md)
+- [Repositioning Notes](docs/repositioning-notes.md)
 
-- Next.js
-- TypeScript
-- tRPC
-- Drizzle
-- TailwindCSS
-- PostgreSQL
-- OpenAI
+## Working Definition
 
-## License
+Lokalite is successful if it becomes the simplest way for a developer to answer:
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-If you encounter any issues or have questions:
-
-- Open an [issue](https://github.com/RubenGlez/lokalite/issues)
-- Join our community (coming soon)
-
----
-
-Built with ❤️ by developers, for developers
+> Did this AI workflow still work when the user used another language?
