@@ -19,6 +19,16 @@ struct SettingsView: View {
         } detail: {
             detail
         }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showingAdd = true
+                } label: {
+                    Image(systemName: "square.and.pencil")
+                }
+                .help("New secret")
+            }
+        }
         .onAppear {
             if vault.isLocked { vault.unlock() }
         }
@@ -45,16 +55,6 @@ struct SettingsView: View {
         .listStyle(.sidebar)
         .searchable(text: $searchText, placement: .sidebar, prompt: "Filter secrets")
         .navigationTitle("Secrets")
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    showingAdd = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .help("Add secret")
-            }
-        }
     }
 
     @ViewBuilder

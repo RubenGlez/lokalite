@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import LokaliteCore
 
@@ -89,7 +90,7 @@ struct VaultPopover: View {
             Text("No secrets yet")
                 .foregroundStyle(.secondary)
             Button("Add your first secret") {
-                openWindow(id: "settings")
+                openManageWindow()
             }
         }
         .frame(maxWidth: .infinity)
@@ -103,10 +104,15 @@ struct VaultPopover: View {
             .padding(24)
     }
 
+    private func openManageWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+        openWindow(id: "settings")
+    }
+
     private var footer: some View {
         HStack {
             Button {
-                openWindow(id: "settings")
+                openManageWindow()
             } label: {
                 Label("Manage Secrets", systemImage: "slider.horizontal.3")
                     .font(.caption)

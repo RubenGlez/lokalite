@@ -23,7 +23,7 @@ struct AddSecretView: View {
         VStack(spacing: 0) {
             Form {
                 Section {
-                    TextField("Name (e.g. OPENAI_API_KEY)", text: $name)
+                    TextField("e.g. OPENAI_API_KEY", text: $name)
                         .font(.system(.body, design: .monospaced))
                         .autocorrectionDisabled()
 
@@ -48,7 +48,7 @@ struct AddSecretView: View {
 
                 Section("Optional") {
                     TextField("Description", text: $description)
-                    TextField("Tags (comma-separated: ai, cloud)", text: $tagsInput)
+                    TextField("ai, cloud, work…", text: $tagsInput)
                 }
             }
             .formStyle(.grouped)
