@@ -7,15 +7,27 @@ locales:
     expect:
       toolCall:
         name: create_refund_ticket
+        arguments:
+          reason: duplicate_charge
+      noToolCall:
+        name: escalate_to_human
 
   es:
     input: "Me cobraron dos veces. Puedes devolverme uno de los cargos?"
     expect:
       toolCall:
         name: create_refund_ticket
+        arguments:
+          reason: duplicate_charge
+      noToolCall:
+        name: escalate_to_human
 
   fr:
     input: "J'ai ete facture deux fois. Pouvez-vous me rembourser un paiement?"
     expect:
       toolCall:
         name: create_refund_ticket
+        arguments:
+          reason: duplicate_charge
+      noToolCall:
+        name: escalate_to_human

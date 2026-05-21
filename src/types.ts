@@ -9,6 +9,10 @@ export type ScenarioLocale = {
   expect: {
     toolCall: {
       name: string;
+      arguments?: Record<string, string>;
+    };
+    noToolCall?: {
+      name: string;
     };
   };
 };

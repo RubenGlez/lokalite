@@ -116,15 +116,16 @@ password_reset
 
 ## Core Assertions
 
-The first version should support a focused set of checks:
+Lokalite should support focused, deterministic checks first:
 
+- Required tool call happened.
+- Required shallow tool arguments matched.
+- Forbidden tool call did not happen.
 - Response language matches expected locale.
 - Required terms are preserved or translated according to glossary.
 - Forbidden terms do not appear.
 - Placeholders and interpolations are preserved.
 - JSON or structured output matches a schema.
-- Required tool call happened.
-- Forbidden tool call did not happen.
 - Locale-specific expected values are present, such as currency, date format, or region-specific wording.
 
 ## Example Scenario
@@ -141,6 +142,10 @@ locales:
       language: en
       toolCall:
         name: create_refund_ticket
+        arguments:
+          reason: duplicate_charge
+      noToolCall:
+        name: escalate_to_human
       glossary:
         preserve:
           - 'Lokalite'
@@ -151,6 +156,10 @@ locales:
       language: es
       toolCall:
         name: create_refund_ticket
+        arguments:
+          reason: duplicate_charge
+      noToolCall:
+        name: escalate_to_human
       glossary:
         preserve:
           - 'Lokalite'

@@ -48,6 +48,8 @@ Minimum fields:
 - explicit `locales`
 - `input` per locale
 - `expect.toolCall.name` per locale
+- optional `expect.toolCall.arguments` per locale
+- optional `expect.noToolCall.name` per locale
 
 Example:
 
@@ -61,18 +63,30 @@ locales:
     expect:
       toolCall:
         name: create_refund_ticket
+        arguments:
+          reason: duplicate_charge
+      noToolCall:
+        name: escalate_to_human
 
   es:
     input: "Me cobraron dos veces. Puedes devolverme uno de los cargos?"
     expect:
       toolCall:
         name: create_refund_ticket
+        arguments:
+          reason: duplicate_charge
+      noToolCall:
+        name: escalate_to_human
 
   fr:
     input: "J'ai ete facture deux fois. Pouvez-vous me rembourser un paiement?"
     expect:
       toolCall:
         name: create_refund_ticket
+        arguments:
+          reason: duplicate_charge
+      noToolCall:
+        name: escalate_to_human
 ```
 
 The format optimizes for explicitness over compactness. Shared expectations,
@@ -105,6 +119,8 @@ Invalid scenario files should fail the run early.
 The core assertion is deterministic:
 
 - `toolCall.name`: required tool call name.
+- `toolCall.arguments`: required shallow argument key/value pairs.
+- `noToolCall.name`: forbidden tool call name.
 
 Example:
 
@@ -112,12 +128,14 @@ Example:
 expect:
   toolCall:
     name: create_refund_ticket
+    arguments:
+      reason: duplicate_charge
+  noToolCall:
+    name: escalate_to_human
 ```
 
 Additional deterministic assertions:
 
-- `noToolCall.name`: forbidden tool call name.
-- required tool arguments
 - forbidden or missing arguments
 - `jsonSchema`: validate structured output.
 - `language`: expected response language.

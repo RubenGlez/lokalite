@@ -63,6 +63,8 @@ function parseLocales(lines: Line[], path: string): Record<string, ScenarioLocal
     const block = lines.slice(index + 1, blockEnd);
     const input = scalarAt(block, 4, "input");
     const toolName = nestedScalarAt(block, [4, 6, 8], ["expect", "toolCall", "name"]);
+    const toolArguments = nestedMapAt(block, [4, 6, 8], ["expect", "toolCall", "arguments"], 10);
+    const forbiddenToolName = nestedScalarAt(block, [4, 6, 8], ["expect", "noToolCall", "name"]);
 
     if (!input) {
       throw new Error(`${path}: locale "${locale}" is missing "input"`);
@@ -77,7 +79,9 @@ function parseLocales(lines: Line[], path: string): Record<string, ScenarioLocal
       expect: {
         toolCall: {
           name: toolName,
+          ...(Object.keys(toolArguments).length > 0 ? { arguments: toolArguments } : {}),
         },
+        ...(forbiddenToolName ? { noToolCall: { name: forbiddenToolName } } : {}),
       },
     };
 
@@ -137,6 +141,44 @@ function nestedScalarAt(lines: Line[], indents: number[], keys: string[]): strin
   }
 
   return undefined;
+}
+
+function nestedMapAt(
+  lines: Line[],
+  indents: number[],
+  keys: string[],
+  childIndent: number,
+): Record<string, string> {
+  let start = 0;
+
+  for (let index = 0; index < keys.length; index += 1) {
+    const lineIndex = lines.findIndex(
+      (line, candidateIndex) =>
+        candidateIndex >= start && line.indent === indents[index] && line.key === keys[index],
+    );
+
+    if (lineIndex === -1) {
+      return {};
+    }
+
+    start = lineIndex + 1;
+  }
+
+  const entries: Record<string, string> = {};
+
+  for (let index = start; index < lines.length; index += 1) {
+    const line = lines[index];
+
+    if (line.indent < childIndent) {
+      break;
+    }
+
+    if (line.indent === childIndent && line.value !== "") {
+      entries[line.key] = parseScalar(line.value, line.number);
+    }
+  }
+
+  return entries;
 }
 
 function parseScalar(value: string, lineNumber: number): string {

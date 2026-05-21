@@ -60,18 +60,30 @@ locales:
     expect:
       toolCall:
         name: create_refund_ticket
+        arguments:
+          reason: duplicate_charge
+      noToolCall:
+        name: escalate_to_human
 
   es:
     input: "Me cobraron dos veces. Puedes devolverme uno de los cargos?"
     expect:
       toolCall:
         name: create_refund_ticket
+        arguments:
+          reason: duplicate_charge
+      noToolCall:
+        name: escalate_to_human
 
   fr:
     input: "J'ai ete facture deux fois. Pouvez-vous me rembourser un paiement?"
     expect:
       toolCall:
         name: create_refund_ticket
+        arguments:
+          reason: duplicate_charge
+      noToolCall:
+        name: escalate_to_human
 ```
 
 Deliverables:
@@ -80,6 +92,8 @@ Deliverables:
 - HTTP target adapter with a strict request/response contract.
 - CLI command.
 - Required tool-call-name assertion.
+- Required shallow tool argument assertions.
+- Forbidden tool-call-name assertion.
 - Plain terminal report.
 - Non-zero exit code on failure.
 - Tiny example support agent with an intentional French failure.
@@ -114,9 +128,7 @@ Make Lokalite trustworthy in CI by expanding the deterministic assertion set.
 
 Initial assertions:
 
-- forbidden tool call name
-- required tool arguments
-- forbidden or missing arguments
+- forbidden arguments
 - JSON schema validation
 - expected response language
 - `contains`

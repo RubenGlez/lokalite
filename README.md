@@ -53,7 +53,8 @@ Lokalite can:
 
 - load an explicit YAML scenario
 - call a strict HTTP agent target across multiple locales
-- assert that the expected tool call happened
+- assert required tool calls and shallow tool arguments
+- assert forbidden tool calls did not happen
 - report pass/fail by locale in plain terminal output
 - exit non-zero on failure
 - run a tiny demo support agent with an intentional localized failure
