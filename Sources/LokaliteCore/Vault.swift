@@ -18,22 +18,12 @@ public final class Vault {
         if KeychainStore.exists() {
             let keyData = try KeychainStore.load()
             key = VaultCrypto.keyFromData(keyData)
-            migrateKeychainAccessControlIfNeeded(keyData)
         } else {
             let newKey = VaultCrypto.generateKey()
             try KeychainStore.save(VaultCrypto.keyToData(newKey))
             key = newKey
         }
         _ = store  // force lazy init so DB errors surface here
-    }
-
-    // Re-saves the vault key with .userPresence access control once, so Touch ID
-    // is used on all subsequent unlocks instead of the system login-password dialog.
-    private func migrateKeychainAccessControlIfNeeded(_ keyData: Data) {
-        let migrationKey = "keychainBiometricMigrated"
-        guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
-        try? KeychainStore.save(keyData)
-        UserDefaults.standard.set(true, forKey: migrationKey)
     }
 
     public func lock() {
