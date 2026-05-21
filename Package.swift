@@ -7,6 +7,7 @@ let package = Package(
     products: [
         .library(name: "LokaliteCore", targets: ["LokaliteCore"]),
         .executable(name: "lokalite", targets: ["lokalite"]),
+        .executable(name: "LokaliteApp", targets: ["LokaliteApp"]),
     ],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift", from: "6.0.0"),
@@ -28,6 +29,12 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
             path: "Sources/lokalite",
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
+        .executableTarget(
+            name: "LokaliteApp",
+            dependencies: ["LokaliteCore"],
+            path: "Sources/LokaliteApp",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .testTarget(

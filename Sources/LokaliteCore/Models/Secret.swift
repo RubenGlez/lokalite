@@ -1,6 +1,6 @@
 import Foundation
 
-public struct Secret: Codable, Equatable {
+public struct Secret: Codable, Equatable, Hashable {
     public var id: String
     public var name: String
     public var value: String
