@@ -92,12 +92,23 @@ Result: failed, 1 of 3 locales failed
 The French failure is intentional. It demonstrates the first product promise:
 same intent, different locale, different behavior.
 
+## Real LLM Demo
+
+Lokalite also includes a DeepSeek-backed support agent demo:
+
+```bash
+DEEPSEEK_API_KEY=... npm run benchmark:deepseek
+```
+
+See [DeepSeek Demo](docs/deepseek-demo.md).
+
 ## Documents
 
 - [Mission, Vision, And Principles](docs/mission-vision-principles.md)
 - [Agent i18n Product Notes](docs/agent-i18n-product-notes.md)
 - [Research Brief](docs/research-brief-agent-i18n.md)
 - [Core Workflow](docs/core-workflow.md)
+- [DeepSeek Demo](docs/deepseek-demo.md)
 - [Roadmap](docs/roadmap.md)
 
 ## Working Definition

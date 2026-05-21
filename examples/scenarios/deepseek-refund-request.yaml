@@ -1,0 +1,43 @@
+id: deepseek_refund_request
+agent: deepseek_support
+
+locales:
+  en:
+    input: "I was charged twice for my subscription. Can you refund one of the charges?"
+    expect:
+      toolCall:
+        name: create_refund_ticket
+        arguments:
+          reason: duplicate_charge
+      noToolCall:
+        name: escalate_to_human
+
+  es:
+    input: "Me cobraron dos veces la suscripcion. Puedes devolverme uno de los cargos?"
+    expect:
+      toolCall:
+        name: create_refund_ticket
+        arguments:
+          reason: duplicate_charge
+      noToolCall:
+        name: escalate_to_human
+
+  fr:
+    input: "J'ai ete facture deux fois pour mon abonnement. Pouvez-vous me rembourser l'un des paiements?"
+    expect:
+      toolCall:
+        name: create_refund_ticket
+        arguments:
+          reason: duplicate_charge
+      noToolCall:
+        name: escalate_to_human
+
+  ja:
+    input: "サブスクリプション料金が二重に請求されました。片方を返金してもらえますか？"
+    expect:
+      toolCall:
+        name: create_refund_ticket
+        arguments:
+          reason: duplicate_charge
+      noToolCall:
+        name: escalate_to_human
