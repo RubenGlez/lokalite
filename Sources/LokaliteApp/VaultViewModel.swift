@@ -1,5 +1,4 @@
 import AppKit
-import LocalAuthentication
 import SwiftUI
 import LokaliteCore
 
@@ -31,28 +30,9 @@ final class VaultViewModel: ObservableObject {
     // MARK: - Lock / Unlock
 
     func unlock() {
-        let context = LAContext()
-        var authError: NSError?
-
-        if context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &authError) {
-            context.localizedReason = "Unlock Lokalite vault"
-            context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "Unlock Lokalite vault") { success, error in
-                DispatchQueue.main.async {
-                    if success {
-                        self.performUnlock()
-                    } else if let error {
-                        // User cancelled or failed — don't surface cancellation as an error.
-                        let code = (error as NSError).code
-                        if code != LAError.userCancel.rawValue && code != LAError.systemCancel.rawValue {
-                            self.errorMessage = error.localizedDescription
-                        }
-                    }
-                }
-            }
-        } else {
-            // No biometrics configured — unlock without auth prompt.
-            performUnlock()
-        }
+        // Authentication is handled by the Keychain access control (userPresence).
+        // KeychainStore.load() will trigger Touch ID / passcode as needed.
+        performUnlock()
     }
 
     func lock() {
