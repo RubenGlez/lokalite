@@ -100,10 +100,32 @@ Sources/
 docs/              # architecture, decisions, roadmap
 ```
 
+## Claude Code / MCP Integration
+
+Run the MCP server to expose your vault to Claude Code and local agents:
+
+```bash
+lokalite mcp
+```
+
+To wire it up in Claude Code, add it to your `.claude/mcp.json` (project-level) or `~/.claude/mcp.json` (global):
+
+```json
+{
+  "mcpServers": {
+    "lokalite": {
+      "command": "lokalite",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Once connected, Claude can call `get_secret` and `list_secrets` to read from your vault directly.
+
 ## Roadmap
 
 - Environment profiles (`ai`, `production`, etc.)
-- MCP server for Claude Code and local agent integration
 - Project linking (associate secrets with a directory)
 - Secret references (`lokalite://KEY_NAME` in config files)
 - Cross-platform (Windows, Linux)

@@ -15,6 +15,7 @@ struct LokaliteCLI: ParsableCommand {
             ListCommand.self,
             ExportCommand.self,
             RunCommand.self,
+            MCPCommand.self,
         ]
     )
 }
