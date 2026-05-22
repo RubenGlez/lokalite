@@ -39,22 +39,33 @@ struct SettingsView: View {
     }
 
     private var sidebar: some View {
-        List(filtered, id: \.id, selection: $selected) { secret in
-            VStack(alignment: .leading, spacing: 2) {
-                Text(secret.name)
-                    .font(.system(.body, design: .monospaced))
-                if let desc = secret.description {
-                    Text(desc)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+        List(selection: $selected) {
+            Section("Secrets") {
+                ForEach(filtered, id: \.id) { secret in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(secret.name)
+                            .font(.system(.body, design: .monospaced))
+                        if let desc = secret.description {
+                            Text(desc)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    .tag(secret)
                 }
             }
-            .tag(secret)
+
+            Section("General") {
+                Toggle("Launch at Login", isOn: Binding(
+                    get: { vault.launchAtLogin },
+                    set: { vault.launchAtLogin = $0 }
+                ))
+            }
         }
         .listStyle(.sidebar)
         .searchable(text: $searchText, placement: .sidebar, prompt: "Filter secrets")
-        .navigationTitle("Secrets")
+        .navigationTitle("Lokalite")
     }
 
     @ViewBuilder

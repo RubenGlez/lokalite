@@ -66,12 +66,16 @@ jobs:
       - name: Create DMG
         run: |
           VERSION="${GITHUB_REF_NAME}"
+          mkdir -p dmg-staging
+          cp -r LokaliteApp.app dmg-staging/
+          ln -s /Applications dmg-staging/Applications
           hdiutil create \
             -volname "Lokalite ${VERSION}" \
-            -srcfolder LokaliteApp.app \
+            -srcfolder dmg-staging \
             -ov \
             -format UDZO \
             "Lokalite-${VERSION}.dmg"
+          rm -rf dmg-staging
 
       - name: Create CLI PKG
         run: |

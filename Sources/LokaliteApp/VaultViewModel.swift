@@ -1,5 +1,6 @@
 import AppKit
 import LocalAuthentication
+import ServiceManagement
 import SwiftUI
 import LokaliteCore
 
@@ -16,6 +17,21 @@ final class VaultViewModel: ObservableObject {
             return v > 0 ? v : 300
         }
         set { UserDefaults.standard.set(newValue, forKey: "sessionTimeoutSeconds") }
+    }
+
+    var launchAtLogin: Bool {
+        get { SMAppService.mainApp.status == .enabled }
+        set {
+            do {
+                if newValue {
+                    try SMAppService.mainApp.register()
+                } else {
+                    try SMAppService.mainApp.unregister()
+                }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 
     var clipboardClearSeconds: Double {
