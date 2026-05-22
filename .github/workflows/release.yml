@@ -60,6 +60,9 @@ jobs:
 
           printf 'APPL????' > LokaliteApp.app/Contents/PkgInfo
 
+      - name: Ad-hoc sign app bundle
+        run: codesign --force --deep --sign - LokaliteApp.app
+
       - name: Create DMG
         run: |
           VERSION="${GITHUB_REF_NAME}"
