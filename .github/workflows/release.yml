@@ -65,17 +65,17 @@ jobs:
 
       - name: Create DMG
         run: |
+          brew install create-dmg
           VERSION="${GITHUB_REF_NAME}"
-          mkdir -p dmg-staging
-          cp -r LokaliteApp.app dmg-staging/
-          ln -s /Applications dmg-staging/Applications
-          hdiutil create \
-            -volname "Lokalite ${VERSION}" \
-            -srcfolder dmg-staging \
-            -ov \
-            -format UDZO \
-            "Lokalite-${VERSION}.dmg"
-          rm -rf dmg-staging
+          create-dmg \
+            --volname "Lokalite ${VERSION}" \
+            --window-size 560 340 \
+            --icon-size 96 \
+            --icon "LokaliteApp.app" 140 160 \
+            --app-drop-link 420 160 \
+            --hide-extension "LokaliteApp.app" \
+            "Lokalite-${VERSION}.dmg" \
+            LokaliteApp.app
 
       - name: Create CLI PKG
         run: |
