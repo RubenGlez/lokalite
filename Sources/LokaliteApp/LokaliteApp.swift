@@ -20,7 +20,7 @@ struct LokaliteApp: App {
                 .environmentObject(vault)
                 .frame(minWidth: 580, minHeight: 460)
         }
-        .defaultSize(width: 640, height: 520)
+        .defaultSize(width: 800, height: 540)
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
     }
