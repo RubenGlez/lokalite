@@ -5,6 +5,7 @@ struct SettingsView: View {
     @EnvironmentObject private var vault: VaultViewModel
     @State private var selected: Secret?
     @State private var showingAdd = false
+    @State private var showingAppSettings = false
     @State private var searchText = ""
 
     private var filtered: [Secret] {
@@ -20,6 +21,15 @@ struct SettingsView: View {
             detail
         }
         .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button {
+                    showingAppSettings = true
+                } label: {
+                    Image(systemName: "gearshape")
+                }
+                .help("Settings")
+            }
+
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     showingAdd = true
@@ -34,6 +44,10 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showingAdd) {
             AddSecretView()
+                .environmentObject(vault)
+        }
+        .sheet(isPresented: $showingAppSettings) {
+            AppSettingsView()
                 .environmentObject(vault)
         }
     }
@@ -54,13 +68,6 @@ struct SettingsView: View {
                     }
                     .tag(secret)
                 }
-            }
-
-            Section("General") {
-                Toggle("Launch at Login", isOn: Binding(
-                    get: { vault.launchAtLogin },
-                    set: { vault.launchAtLogin = $0 }
-                ))
             }
         }
         .listStyle(.sidebar)
@@ -84,6 +91,35 @@ struct SettingsView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+}
+
+struct AppSettingsView: View {
+    @EnvironmentObject private var vault: VaultViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Form {
+                Section("General") {
+                    Toggle("Launch at Login", isOn: Binding(
+                        get: { vault.launchAtLogin },
+                        set: { vault.launchAtLogin = $0 }
+                    ))
+                }
+            }
+            .formStyle(.grouped)
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding()
+        }
+        .frame(width: 420, height: 180)
     }
 }
 

@@ -42,7 +42,6 @@ struct VaultPopover: View {
         }
         .frame(width: 340)
         .onAppear { vault.unlock() }
-        .onDisappear { vault.lock() }
     }
 
     private var searchBar: some View {
