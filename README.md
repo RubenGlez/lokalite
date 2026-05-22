@@ -29,12 +29,21 @@ Lokalite is a macOS menu bar app and CLI for managing developer secrets locally.
 - macOS 13 or later
 - Swift 5.9 or later
 
-## Build
+## Install
 
 ```bash
 git clone https://github.com/RubenGlez/lokalite
 cd lokalite
+make install
+```
+
+This builds a release binary, copies it to `/usr/local/bin/lokalite`, and registers it as an MCP server in `~/.claude.json`.
+
+If `/usr/local/bin` requires elevated permissions:
+
+```bash
 swift build -c release
+sudo .build/release/lokalite install
 ```
 
 ## CLI
@@ -104,13 +113,7 @@ docs/              # architecture, decisions, roadmap
 
 ## Claude Code / MCP Integration
 
-Run the MCP server to expose your vault to Claude Code and local agents:
-
-```bash
-lokalite mcp
-```
-
-To wire it up in Claude Code, add it to your `.claude/mcp.json` (project-level) or `~/.claude/mcp.json` (global):
+`lokalite install` registers the MCP server automatically. You can also add it manually to `~/.claude.json`:
 
 ```json
 {
@@ -123,11 +126,31 @@ To wire it up in Claude Code, add it to your `.claude/mcp.json` (project-level) 
 }
 ```
 
-Once connected, Claude can call `get_secret` and `list_secrets` to read from your vault directly.
+The same config works for Codex, Cursor, Windsurf, and any other MCP-compatible agent.
+
+By default the server is **read-only** and exposes two tools:
+
+| Tool | Description |
+|---|---|
+| `list_secrets` | List secret names, tags, and descriptions (values never exposed) |
+| `get_secret` | Retrieve a secret value by name |
+
+Pass `--read-write` to also expose write tools:
+
+```json
+{ "command": "lokalite", "args": ["mcp", "--read-write"] }
+```
+
+| Tool | Description |
+|---|---|
+| `add_secret` | Create a new secret |
+| `set_secret` | Update an existing secret's value |
+| `delete_secret` | Permanently delete a secret |
 
 ## Roadmap
 
 - Environment profiles (`ai`, `production`, etc.)
+- Command injection (`lokalite run <cmd>`)
 - Project linking (associate secrets with a directory)
 - Secret references (`lokalite://KEY_NAME` in config files)
 - Cross-platform (Windows, Linux)

@@ -4,21 +4,26 @@ import LokaliteCore
 struct ListCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "list",
-        abstract: "List secret names."
+        abstract: "List secrets in a project."
     )
 
-    @Option(name: .shortAndLong, help: "Filter by tag.")
-    var tag: String?
+    @Option(name: .shortAndLong, help: "Project name. Defaults to the active project.")
+    var project: String?
+
+    @Option(name: .shortAndLong, help: "Environment name. Defaults to the active environment.")
+    var env: String?
 
     func run() throws {
-        let secrets = try withVault { try $0.list(tag: tag) }
+        let ctx = try resolveContext(projectFlag: project, envFlag: env)
+        let secrets = try withVault { vault in
+            try vault.list(projectId: ctx.project.id, environmentName: ctx.environmentName)
+        }
         if secrets.isEmpty {
             print("No secrets found.")
             return
         }
         for secret in secrets {
-            let tagSuffix = secret.tags.isEmpty ? "" : "  [\(secret.tags.joined(separator: ", "))]"
-            print(secret.name + tagSuffix)
+            print(secret.name)
         }
     }
 }

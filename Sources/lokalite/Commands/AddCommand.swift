@@ -16,13 +16,17 @@ struct AddCommand: ParsableCommand {
     @Option(name: .shortAndLong, help: "Optional description.")
     var description: String?
 
-    @Option(name: .shortAndLong, help: "Comma-separated tags (e.g. ai,cloud).")
-    var tags: String?
+    @Option(name: .shortAndLong, help: "Project name. Defaults to the active project.")
+    var project: String?
+
+    @Option(name: .shortAndLong, help: "Environment name. Defaults to the active environment.")
+    var env: String?
 
     func run() throws {
-        let tagList = tags.map { $0.split(separator: ",").map(String.init) } ?? []
+        let ctx = try resolveContext(projectFlag: project, envFlag: env)
         let secret = try withVault { vault in
-            try vault.add(name: name, value: value, description: description, tags: tagList)
+            try vault.add(name: name, value: value, description: description,
+                          projectId: ctx.project.id, environmentName: ctx.environmentName)
         }
         print("Added \(secret.name).")
     }

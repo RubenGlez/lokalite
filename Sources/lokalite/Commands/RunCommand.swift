@@ -11,6 +11,12 @@ struct RunCommand: ParsableCommand {
     @Option(name: .shortAndLong, help: "Comma-separated secret names to inject. Defaults to all secrets.")
     var keys: String?
 
+    @Option(name: .shortAndLong, help: "Project name. Defaults to the active project.")
+    var project: String?
+
+    @Option(name: .shortAndLong, help: "Environment name. Defaults to the active environment.")
+    var env: String?
+
     @Argument(parsing: .captureForPassthrough, help: "Command and arguments to run.")
     var command: [String]
 
@@ -20,23 +26,25 @@ struct RunCommand: ParsableCommand {
             throw ExitCode.failure
         }
 
+        let ctx = try resolveContext(projectFlag: project, envFlag: env)
         let secrets = try withVault { vault -> [Secret] in
             if let keys {
                 let names = keys.split(separator: ",").map(String.init)
-                return try names.map { try vault.get(name: $0) }
+                return try names.map { try vault.get(name: $0, projectId: ctx.project.id,
+                                                      environmentName: ctx.environmentName) }
             }
-            return try vault.list()
+            return try vault.list(projectId: ctx.project.id, environmentName: ctx.environmentName)
         }
 
-        var env = ProcessInfo.processInfo.environment
+        var environment = ProcessInfo.processInfo.environment
         for secret in secrets {
-            env[secret.name] = secret.value
+            environment[secret.name] = secret.value
         }
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = command
-        process.environment = env
+        process.environment = environment
         process.standardInput = FileHandle.standardInput
         process.standardOutput = FileHandle.standardOutput
         process.standardError = FileHandle.standardError

@@ -10,19 +10,22 @@ struct DeleteCommand: ParsableCommand {
     @Argument(help: "Secret name.")
     var name: String
 
+    @Option(name: .shortAndLong, help: "Project name. Defaults to the active project.")
+    var project: String?
+
     @Flag(name: .shortAndLong, help: "Skip confirmation prompt.")
     var force: Bool = false
 
     func run() throws {
+        let ctx = try resolveContext(projectFlag: project, envFlag: nil)
         if !force {
             print("Delete '\(name)'? This cannot be undone. [y/N] ", terminator: "")
-            let input = readLine() ?? ""
-            guard input.lowercased() == "y" else {
+            guard readLine()?.lowercased() == "y" else {
                 print("Cancelled.")
                 return
             }
         }
-        try withVault { try $0.delete(name: name) }
+        try withVault { try $0.delete(name: name, projectId: ctx.project.id) }
         print("Deleted \(name).")
     }
 }

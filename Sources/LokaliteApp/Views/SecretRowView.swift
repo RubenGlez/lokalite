@@ -26,20 +26,6 @@ struct SecretRowView: View {
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
                 }
-
-                if !secret.tags.isEmpty {
-                    HStack(spacing: 4) {
-                        ForEach(secret.tags, id: \.self) { tag in
-                            Text(tag)
-                                .font(.caption2)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 1)
-                                .background(Color.accentColor.opacity(0.12))
-                                .clipShape(Capsule())
-                                .foregroundStyle(Color.accentColor)
-                        }
-                    }
-                }
             }
 
             Spacer()

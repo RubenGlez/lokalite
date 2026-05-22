@@ -1,40 +1,96 @@
 import Foundation
 import GRDB
 
-struct SecretRecord: Codable, FetchableRecord, PersistableRecord {
-    static let databaseTableName = "secrets"
+// MARK: - Records
 
+struct ConfigRecord: Codable, FetchableRecord, PersistableRecord {
+    static let databaseTableName = "config"
+    var key: String
+    var value: String
+}
+
+struct ProjectRecord: Codable, FetchableRecord, PersistableRecord {
+    static let databaseTableName = "projects"
     var id: String
     var name: String
-    var description: String?
-    var tags: String
-    var encryptedValue: Data
+    var path: String?
+    var activeEnvironment: String?
     var createdAt: String
     var updatedAt: String
 
     enum CodingKeys: String, CodingKey {
-        case id
-        case name
-        case description
-        case tags
-        case encryptedValue = "encrypted_value"
+        case id, name, path
+        case activeEnvironment = "active_environment"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
 }
 
+struct EnvironmentRecord: Codable, FetchableRecord, PersistableRecord {
+    static let databaseTableName = "environments"
+    var id: String
+    var projectId: String
+    var name: String
+    var createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case projectId = "project_id"
+        case name
+        case createdAt = "created_at"
+    }
+}
+
+struct SecretRecord: Codable, FetchableRecord, PersistableRecord {
+    static let databaseTableName = "secrets"
+    var id: String
+    var projectId: String
+    var name: String
+    var description: String?
+    var createdAt: String
+    var updatedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case projectId = "project_id"
+        case name, description
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+struct SecretValueRecord: Codable, FetchableRecord, PersistableRecord {
+    static let databaseTableName = "secret_values"
+    var id: String
+    var secretId: String
+    var environmentId: String?
+    var encryptedValue: Data
+    var updatedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case secretId = "secret_id"
+        case environmentId = "environment_id"
+        case encryptedValue = "encrypted_value"
+        case updatedAt = "updated_at"
+    }
+}
+
+// MARK: - Store
+
 final class VaultStore {
     private let db: DatabaseQueue
 
     init(path: String) throws {
-        db = try DatabaseQueue(path: path)
-        var config = db.configuration
+        var config = Configuration()
         config.journalMode = .wal
+        db = try DatabaseQueue(path: path, configuration: config)
         try migrate()
     }
 
     private func migrate() throws {
         var migrator = DatabaseMigrator()
+
         migrator.registerMigration("v1") { db in
             try db.create(table: "secrets") { t in
                 t.column("id", .text).primaryKey()
@@ -46,54 +102,272 @@ final class VaultStore {
                 t.column("updated_at", .text).notNull()
             }
         }
+
+        migrator.registerMigration("v2") { db in
+            let now = iso8601()
+
+            // New supporting tables
+            try db.create(table: "config") { t in
+                t.column("key", .text).primaryKey()
+                t.column("value", .text).notNull()
+            }
+
+            try db.create(table: "projects") { t in
+                t.column("id", .text).primaryKey()
+                t.column("name", .text).notNull().unique()
+                t.column("path", .text)
+                t.column("active_environment", .text)
+                t.column("created_at", .text).notNull()
+                t.column("updated_at", .text).notNull()
+            }
+
+            try db.create(table: "environments") { t in
+                t.column("id", .text).primaryKey()
+                t.column("project_id", .text).notNull().references("projects", onDelete: .cascade)
+                t.column("name", .text).notNull()
+                t.column("created_at", .text).notNull()
+                t.uniqueKey(["project_id", "name"])
+            }
+
+            // Snapshot old secrets before dropping
+            try db.execute(sql: "ALTER TABLE secrets RENAME TO secrets_v1")
+
+            try db.create(table: "secrets") { t in
+                t.column("id", .text).primaryKey()
+                t.column("project_id", .text).notNull().references("projects", onDelete: .cascade)
+                t.column("name", .text).notNull()
+                t.column("description", .text)
+                t.column("created_at", .text).notNull()
+                t.column("updated_at", .text).notNull()
+                t.uniqueKey(["project_id", "name"])
+            }
+
+            try db.create(table: "secret_values") { t in
+                t.column("id", .text).primaryKey()
+                t.column("secret_id", .text).notNull().references("secrets", onDelete: .cascade)
+                t.column("environment_id", .text).references("environments", onDelete: .cascade)
+                t.column("encrypted_value", .blob).notNull()
+                t.column("updated_at", .text).notNull()
+                t.uniqueKey(["secret_id", "environment_id"])
+            }
+
+            // Create the Default project
+            let defaultProjectId = UUID().uuidString
+            try db.execute(sql: """
+                INSERT INTO projects (id, name, path, active_environment, created_at, updated_at)
+                VALUES (?, 'Default', NULL, NULL, ?, ?)
+            """, arguments: [defaultProjectId, now, now])
+
+            // Migrate secret records
+            try db.execute(sql: """
+                INSERT INTO secrets (id, project_id, name, description, created_at, updated_at)
+                SELECT id, ?, name, description, created_at, updated_at
+                FROM secrets_v1
+            """, arguments: [defaultProjectId])
+
+            // Migrate encrypted values as default (NULL environment)
+            let rows = try Row.fetchAll(db, sql: "SELECT id, encrypted_value, updated_at FROM secrets_v1")
+            for row in rows {
+                let secretId: String = row["id"]
+                let encryptedValue: Data = row["encrypted_value"]
+                let updatedAt: String = row["updated_at"]
+                try db.execute(sql: """
+                    INSERT INTO secret_values (id, secret_id, environment_id, encrypted_value, updated_at)
+                    VALUES (?, ?, NULL, ?, ?)
+                """, arguments: [UUID().uuidString, secretId, encryptedValue, updatedAt])
+            }
+
+            try db.execute(sql: "DROP TABLE secrets_v1")
+
+            // Set active project
+            try db.execute(sql: "INSERT INTO config (key, value) VALUES ('active_project_id', ?)",
+                           arguments: [defaultProjectId])
+        }
+
         try migrator.migrate(db)
     }
 
-    func insert(_ record: SecretRecord) throws {
+    // MARK: - Config
+
+    func configValue(key: String) throws -> String? {
+        try db.read { db in
+            try ConfigRecord.filter(Column("key") == key).fetchOne(db)?.value
+        }
+    }
+
+    func setConfigValue(key: String, value: String?) throws {
         try db.write { db in
-            guard try SecretRecord.filter(Column("name") == record.name).fetchCount(db) == 0 else {
+            if let value {
+                try db.execute(sql: "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
+                               arguments: [key, value])
+            } else {
+                try db.execute(sql: "DELETE FROM config WHERE key = ?", arguments: [key])
+            }
+        }
+    }
+
+    // MARK: - Projects
+
+    func insertProject(_ record: ProjectRecord) throws {
+        try db.write { db in
+            guard try ProjectRecord.filter(Column("name") == record.name).fetchCount(db) == 0 else {
+                throw VaultError.projectAlreadyExists(record.name)
+            }
+            try record.insert(db)
+        }
+    }
+
+    func fetchAllProjects() throws -> [ProjectRecord] {
+        try db.read { db in
+            try ProjectRecord.order(Column("name")).fetchAll(db)
+        }
+    }
+
+    func fetchProject(id: String) throws -> ProjectRecord? {
+        try db.read { db in
+            try ProjectRecord.filter(Column("id") == id).fetchOne(db)
+        }
+    }
+
+    func fetchProject(name: String) throws -> ProjectRecord? {
+        try db.read { db in
+            try ProjectRecord.filter(Column("name") == name).fetchOne(db)
+        }
+    }
+
+    func fetchProject(matchingPath path: String) throws -> ProjectRecord? {
+        try db.read { db in
+            let projects = try ProjectRecord.filter(Column("path") != nil).fetchAll(db)
+            return projects.first { record in
+                guard let recordPath = record.path else { return false }
+                return path == recordPath || path.hasPrefix(recordPath + "/")
+            }
+        }
+    }
+
+    func updateProject(_ record: ProjectRecord) throws {
+        try db.write { db in try record.update(db) }
+    }
+
+    func deleteProject(id: String) throws {
+        try db.write { db in
+            let deleted = try ProjectRecord.filter(Column("id") == id).deleteAll(db)
+            guard deleted > 0 else { throw VaultError.projectNotFound(id) }
+        }
+    }
+
+    // MARK: - Environments
+
+    func insertEnvironment(_ record: EnvironmentRecord) throws {
+        try db.write { db in
+            guard try EnvironmentRecord
+                .filter(Column("project_id") == record.projectId && Column("name") == record.name)
+                .fetchCount(db) == 0 else {
+                throw VaultError.environmentAlreadyExists(record.name)
+            }
+            try record.insert(db)
+        }
+    }
+
+    func fetchAllEnvironments(projectId: String) throws -> [EnvironmentRecord] {
+        try db.read { db in
+            try EnvironmentRecord
+                .filter(Column("project_id") == projectId)
+                .order(Column("name"))
+                .fetchAll(db)
+        }
+    }
+
+    func fetchEnvironment(name: String, projectId: String) throws -> EnvironmentRecord? {
+        try db.read { db in
+            try EnvironmentRecord
+                .filter(Column("project_id") == projectId && Column("name") == name)
+                .fetchOne(db)
+        }
+    }
+
+    func deleteEnvironment(name: String, projectId: String) throws {
+        try db.write { db in
+            let deleted = try EnvironmentRecord
+                .filter(Column("project_id") == projectId && Column("name") == name)
+                .deleteAll(db)
+            guard deleted > 0 else { throw VaultError.environmentNotFound(name) }
+        }
+    }
+
+    // MARK: - Secrets
+
+    func insertSecret(_ record: SecretRecord) throws {
+        try db.write { db in
+            guard try SecretRecord
+                .filter(Column("project_id") == record.projectId && Column("name") == record.name)
+                .fetchCount(db) == 0 else {
                 throw VaultError.secretAlreadyExists(record.name)
             }
             try record.insert(db)
         }
     }
 
-    func update(_ record: SecretRecord) throws {
-        try db.write { db in
-            try record.update(db)
-        }
-    }
-
-    func upsert(_ record: SecretRecord) throws {
-        try db.write { db in
-            try record.save(db)
-        }
-    }
-
-    func delete(name: String) throws {
-        try db.write { db in
-            let deleted = try SecretRecord.filter(Column("name") == name).deleteAll(db)
-            guard deleted > 0 else {
-                throw VaultError.secretNotFound(name)
-            }
-        }
-    }
-
-    func fetch(name: String) throws -> SecretRecord? {
+    func fetchSecret(name: String, projectId: String) throws -> SecretRecord? {
         try db.read { db in
-            try SecretRecord.filter(Column("name") == name).fetchOne(db)
+            try SecretRecord
+                .filter(Column("project_id") == projectId && Column("name") == name)
+                .fetchOne(db)
         }
     }
 
-    func fetchAll(tag: String? = nil) throws -> [SecretRecord] {
+    func fetchAllSecrets(projectId: String) throws -> [SecretRecord] {
         try db.read { db in
-            if let tag {
-                return try SecretRecord
-                    .filter(Column("tags").like("%\(tag)%"))
-                    .order(Column("name"))
-                    .fetchAll(db)
-            }
-            return try SecretRecord.order(Column("name")).fetchAll(db)
+            try SecretRecord
+                .filter(Column("project_id") == projectId)
+                .order(Column("name"))
+                .fetchAll(db)
         }
     }
+
+    func updateSecret(_ record: SecretRecord) throws {
+        try db.write { db in try record.update(db) }
+    }
+
+    func deleteSecret(name: String, projectId: String) throws {
+        try db.write { db in
+            let deleted = try SecretRecord
+                .filter(Column("project_id") == projectId && Column("name") == name)
+                .deleteAll(db)
+            guard deleted > 0 else { throw VaultError.secretNotFound(name) }
+        }
+    }
+
+    // MARK: - Secret Values
+
+    func upsertSecretValue(_ record: SecretValueRecord) throws {
+        try db.write { db in try record.save(db) }
+    }
+
+    // Returns the env-specific value, or falls back to the default (NULL environment).
+    func fetchSecretValue(secretId: String, environmentId: String?) throws -> SecretValueRecord? {
+        try db.read { db in
+            if let environmentId {
+                if let specific = try SecretValueRecord
+                    .filter(Column("secret_id") == secretId && Column("environment_id") == environmentId)
+                    .fetchOne(db) {
+                    return specific
+                }
+            }
+            // Fall back to default (NULL environment_id).
+            return try SecretValueRecord
+                .filter(Column("secret_id") == secretId && Column("environment_id") == nil)
+                .fetchOne(db)
+        }
+    }
+
+    func fetchAllSecretValues(secretId: String) throws -> [SecretValueRecord] {
+        try db.read { db in
+            try SecretValueRecord.filter(Column("secret_id") == secretId).fetchAll(db)
+        }
+    }
+}
+
+private func iso8601() -> String {
+    ISO8601DateFormatter().string(from: Date())
 }

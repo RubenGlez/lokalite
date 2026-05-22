@@ -7,16 +7,10 @@ struct AddSecretView: View {
     @State private var name = ""
     @State private var value = ""
     @State private var description = ""
-    @State private var tagsInput = ""
     @State private var revealed = false
 
-    private var tags: [String] {
-        tagsInput.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
-    }
-
     private var isValid: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !value.isEmpty
+        !name.trimmingCharacters(in: .whitespaces).isEmpty && !value.isEmpty
     }
 
     var body: some View {
@@ -48,7 +42,6 @@ struct AddSecretView: View {
 
                 Section("Optional") {
                     TextField("Description", text: $description)
-                    TextField("Tags", text: $tagsInput)
                 }
             }
             .formStyle(.grouped)
@@ -63,8 +56,7 @@ struct AddSecretView: View {
                     vault.add(
                         name: name.trimmingCharacters(in: .whitespaces),
                         value: value,
-                        description: description.isEmpty ? nil : description,
-                        tags: tags
+                        description: description.isEmpty ? nil : description
                     )
                     dismiss()
                 }
@@ -74,6 +66,6 @@ struct AddSecretView: View {
             }
             .padding()
         }
-        .frame(width: 440, height: 340)
+        .frame(width: 440, height: 300)
     }
 }

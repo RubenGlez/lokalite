@@ -57,9 +57,16 @@ All targets use `swiftLanguageMode(.v5)` in `Package.swift`. New targets must in
 
 ## MCP Server
 
-`Sources/lokalite/MCP/MCPServer.swift` implements the Model Context Protocol for Claude Code integration. It exposes two tools: `get_secret` and `list_secrets`. The protocol version is `2024-11-05`. Notifications (no `id` field) are silently dropped; all other methods return a JSON-RPC response.
+`Sources/lokalite/MCP/MCPServer.swift` implements the Model Context Protocol for Claude Code integration. Transport is stdio, JSON-RPC 2.0, protocol version `2024-11-05`. Notifications (no `id` field) are silently dropped; all other methods return a JSON-RPC response.
 
-Claude Code config:
+**Default (read-only):** exposes `get_secret` and `list_secrets`.  
+**With `--read-write`:** also exposes `add_secret`, `set_secret`, and `delete_secret`.
+
+`list_secrets` uses `vault.listInfo()` — metadata only, no decryption.
+
+`MCPServer` takes an `allowWrites: Bool` parameter; `MCPCommand` passes it from the `--read-write` flag.
+
+Claude Code config (written automatically by `lokalite install`):
 ```json
 {
   "mcpServers": {
@@ -67,3 +74,7 @@ Claude Code config:
   }
 }
 ```
+
+## Install Command
+
+`Sources/lokalite/Commands/InstallCommand.swift` copies the running binary to `--bin-dir` (default `/usr/local/bin`) and writes the MCP server entry to `~/.claude.json`. Run via `make install` after a release build.

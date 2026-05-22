@@ -11,21 +11,27 @@ struct ExportCommand: ParsableCommand {
     @Option(name: .shortAndLong, help: "Output file path. Defaults to stdout.")
     var output: String?
 
+    @Option(name: .shortAndLong, help: "Project name. Defaults to the active project.")
+    var project: String?
+
+    @Option(name: .shortAndLong, help: "Environment name. Defaults to the active environment.")
+    var env: String?
+
     @Flag(help: "Export as plaintext JSON. Requires confirmation.")
     var plain: Bool = false
 
     func run() throws {
+        let ctx = try resolveContext(projectFlag: project, envFlag: env)
         let data: Data
 
         if plain {
             print("Warning: plain export writes secret values unencrypted.")
             print("Type 'yes' to confirm: ", terminator: "")
-            let input = readLine() ?? ""
-            guard input == "yes" else {
+            guard readLine() == "yes" else {
                 print("Cancelled.")
                 return
             }
-            data = try withVault { try $0.export(passphrase: nil) }
+            data = try withVault { try $0.export(projectId: ctx.project.id, passphrase: nil) }
         } else {
             print("Enter passphrase for encrypted export: ", terminator: "")
             let passphrase = readPassphrase()
@@ -33,12 +39,11 @@ struct ExportCommand: ParsableCommand {
                 print("Passphrase cannot be empty.")
                 return
             }
-            data = try withVault { try $0.export(passphrase: passphrase) }
+            data = try withVault { try $0.export(projectId: ctx.project.id, passphrase: passphrase) }
         }
 
         if let outputPath = output {
-            let url = URL(fileURLWithPath: outputPath)
-            try data.write(to: url)
+            try data.write(to: URL(fileURLWithPath: outputPath))
             print("Exported to \(outputPath).")
         } else {
             if plain {
@@ -50,7 +55,6 @@ struct ExportCommand: ParsableCommand {
     }
 
     private func readPassphrase() -> String {
-        // Disable echo for passphrase input.
         var term = termios()
         tcgetattr(STDIN_FILENO, &term)
         var noEcho = term

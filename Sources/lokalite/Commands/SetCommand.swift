@@ -13,9 +13,17 @@ struct SetCommand: ParsableCommand {
     @Argument(help: "New value.")
     var value: String
 
+    @Option(name: .shortAndLong, help: "Project name. Defaults to the active project.")
+    var project: String?
+
+    @Option(name: .shortAndLong, help: "Environment name. Defaults to the active environment.")
+    var env: String?
+
     func run() throws {
+        let ctx = try resolveContext(projectFlag: project, envFlag: env)
         try withVault { vault in
-            _ = try vault.set(name: name, value: value)
+            _ = try vault.set(name: name, value: value,
+                              projectId: ctx.project.id, environmentName: ctx.environmentName)
         }
         print("Updated \(name).")
     }

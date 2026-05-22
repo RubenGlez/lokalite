@@ -1,0 +1,112 @@
+import ArgumentParser
+import LokaliteCore
+
+struct ProjectCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "project",
+        abstract: "Manage projects.",
+        subcommands: [Add.self, List.self, Use.self, Link.self, Delete.self]
+    )
+
+    struct Add: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: "Create a new project.")
+
+        @Argument(help: "Project name.")
+        var name: String
+
+        @Option(name: .long, help: "Link to a directory path.")
+        var path: String?
+
+        func run() throws {
+            let project = try withVault { try $0.addProject(name: name, path: path) }
+            print("Created project '\(project.name)'.")
+            if let path = project.path { print("Linked to \(path).") }
+        }
+    }
+
+    struct List: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: "List all projects.")
+
+        func run() throws {
+            let activeId = try withVault { try $0.activeProjectId() }
+            let projects = try withVault { try $0.listProjects() }
+            if projects.isEmpty {
+                print("No projects found.")
+                return
+            }
+            for p in projects {
+                let active = p.id == activeId ? " *" : ""
+                var line = p.name + active
+                if let path = p.path { line += "  \(path)" }
+                if let env = p.activeEnvironment { line += "  [\(env)]" }
+                print(line)
+            }
+        }
+    }
+
+    struct Use: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: "Set the active project.")
+
+        @Argument(help: "Project name.")
+        var name: String
+
+        func run() throws {
+            try withVault { vault in
+                guard let project = try vault.project(name: name) else {
+                    throw VaultError.projectNotFound(name)
+                }
+                try vault.setActiveProject(id: project.id)
+            }
+            print("Active project set to '\(name)'.")
+        }
+    }
+
+    struct Link: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: "Link a project to a directory path.")
+
+        @Argument(help: "Project name.")
+        var name: String
+
+        @Option(name: .long, help: "Directory path to link. Omit to unlink.")
+        var path: String?
+
+        func run() throws {
+            try withVault { vault in
+                guard let project = try vault.project(name: name) else {
+                    throw VaultError.projectNotFound(name)
+                }
+                try vault.linkProject(id: project.id, path: path)
+            }
+            if let path { print("Linked '\(name)' to \(path).") }
+            else { print("Unlinked '\(name)'.") }
+        }
+    }
+
+    struct Delete: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: "Delete a project and all its secrets.")
+
+        @Argument(help: "Project name.")
+        var name: String
+
+        @Flag(name: .shortAndLong, help: "Skip confirmation prompt.")
+        var force = false
+
+        func run() throws {
+            if !force {
+                print("Delete project '\(name)' and all its secrets? This cannot be undone. [y/N] ",
+                      terminator: "")
+                guard readLine()?.lowercased() == "y" else {
+                    print("Cancelled.")
+                    return
+                }
+            }
+            try withVault { vault in
+                guard let project = try vault.project(name: name) else {
+                    throw VaultError.projectNotFound(name)
+                }
+                try vault.deleteProject(id: project.id)
+            }
+            print("Deleted project '\(name)'.")
+        }
+    }
+}

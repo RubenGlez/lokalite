@@ -7,10 +7,11 @@ import LokaliteCore
 @MainActor
 final class VaultViewModel: ObservableObject {
     @Published var secrets: [Secret] = []
+    @Published var projects: [Project] = []
+    @Published var activeProject: Project?
     @Published var isLocked = true
     @Published var errorMessage: String?
 
-    // Configurable timeouts stored in UserDefaults.
     var sessionTimeoutSeconds: Double {
         get {
             let v = UserDefaults.standard.double(forKey: "sessionTimeoutSeconds")
@@ -23,11 +24,8 @@ final class VaultViewModel: ObservableObject {
         get { SMAppService.mainApp.status == .enabled }
         set {
             do {
-                if newValue {
-                    try SMAppService.mainApp.register()
-                } else {
-                    try SMAppService.mainApp.unregister()
-                }
+                if newValue { try SMAppService.mainApp.register() }
+                else { try SMAppService.mainApp.unregister() }
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -51,12 +49,12 @@ final class VaultViewModel: ObservableObject {
             let context = LAContext()
             var authError: NSError?
             guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &authError) else {
-                // No biometrics — unlock directly.
                 self?.performUnlock()
                 return
             }
             do {
-                try await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "Unlock Lokalite vault")
+                try await context.evaluatePolicy(.deviceOwnerAuthentication,
+                                                 localizedReason: "Unlock Lokalite vault")
                 self?.performUnlock()
             } catch {
                 let code = (error as NSError).code
@@ -99,15 +97,29 @@ final class VaultViewModel: ObservableObject {
     func refresh() {
         guard !isLocked else { return }
         do {
-            secrets = try Vault.shared.list()
+            projects = try Vault.shared.listProjects()
+            if let activeId = try Vault.shared.activeProjectId() {
+                activeProject = projects.first { $0.id == activeId }
+            } else {
+                activeProject = projects.first
+            }
+            if let project = activeProject {
+                secrets = try Vault.shared.list(projectId: project.id,
+                                                environmentName: project.activeEnvironment)
+            } else {
+                secrets = []
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
-    func add(name: String, value: String, description: String?, tags: [String]) {
+    func add(name: String, value: String, description: String?) {
+        guard let project = activeProject else { return }
         do {
-            _ = try Vault.shared.add(name: name, value: value, description: description, tags: tags)
+            _ = try Vault.shared.add(name: name, value: value, description: description,
+                                     projectId: project.id,
+                                     environmentName: project.activeEnvironment)
             refresh()
         } catch {
             errorMessage = error.localizedDescription
@@ -115,8 +127,10 @@ final class VaultViewModel: ObservableObject {
     }
 
     func update(name: String, value: String) {
+        guard let project = activeProject else { return }
         do {
-            _ = try Vault.shared.set(name: name, value: value)
+            _ = try Vault.shared.set(name: name, value: value, projectId: project.id,
+                                     environmentName: project.activeEnvironment)
             refresh()
         } catch {
             errorMessage = error.localizedDescription
@@ -124,8 +138,9 @@ final class VaultViewModel: ObservableObject {
     }
 
     func delete(_ secret: Secret) {
+        guard let project = activeProject else { return }
         do {
-            try Vault.shared.delete(name: secret.name)
+            try Vault.shared.delete(name: secret.name, projectId: project.id)
             secrets.removeAll { $0.id == secret.id }
         } catch {
             errorMessage = error.localizedDescription

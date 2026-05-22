@@ -162,21 +162,6 @@ struct SecretDetailView: View {
                     Text(desc).foregroundStyle(.secondary)
                 }
             }
-
-            if !secret.tags.isEmpty {
-                Section("Tags") {
-                    HStack {
-                        ForEach(secret.tags, id: \.self) { tag in
-                            Text(tag)
-                                .font(.caption)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.accentColor.opacity(0.12))
-                                .clipShape(Capsule())
-                        }
-                    }
-                }
-            }
         }
         .formStyle(.grouped)
         .onAppear { editingValue = secret.value }

@@ -58,17 +58,9 @@ Allow applications to resolve secrets dynamically.
 
 ---
 
-## Agent & MCP Integration
+## Agent & MCP Integration ✓
 
-Provide a standard way for:
-
-* Claude Code
-* Codex
-* MCP Servers
-* Local agents
-* Development tools
-
-to consume secrets from Lokalite. This could become one of the project's most unique differentiators.
+MCP stdio server (`lokalite mcp`) exposes `get_secret` and `list_secrets` by default. Write tools (`add_secret`, `set_secret`, `delete_secret`) are opt-in via `--read-write`. `lokalite install` registers the server in `~/.claude.json` automatically. Compatible with Claude Code, Codex, Cursor, Windsurf, and any MCP client.
 
 ---
 
