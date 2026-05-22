@@ -19,9 +19,10 @@ Lokalite is a macOS menu bar app and CLI for managing developer secrets locally.
 - **Touch ID unlock**: biometric authentication before accessing secrets
 - **Menu bar app**: search, copy, and reveal secrets without leaving your workflow
 - **Full CLI**: read, write, and inject secrets from the terminal
+- **Projects**: group secrets by project; each project is an isolated namespace
+- **Environments**: per-project environment profiles (e.g. dev, staging, production) with per-environment secret values; Default values serve as fallback for all environments
 - **Clipboard auto-clear**: copied values are wiped after 30 seconds
 - **Session timeout**: vault auto-locks after inactivity
-- **Tag filtering**: organize secrets by category
 - **Zero dependencies at runtime**: no cloud, no telemetry, no vendor lock-in
 
 ## Requirements
@@ -85,7 +86,12 @@ lokalite export --plain --output secrets.json
 swift run LokaliteApp
 ```
 
-Click the key icon in your menu bar to open the vault. Use **Manage Secrets** to add, edit, and delete secrets.
+Click the dial icon in your menu bar to open the vault popover. Use **Manage Secrets** to open the full secrets manager window.
+
+The secrets manager is a three-column view:
+- **Left sidebar** — project list; create and switch between projects
+- **Centre column** — environment switcher + searchable secrets list for the selected project
+- **Right detail** — edit the selected secret's value; save or delete
 
 ## Security Model
 
@@ -149,7 +155,6 @@ Pass `--read-write` to also expose write tools:
 
 ## Roadmap
 
-- Environment profiles (`ai`, `production`, etc.)
 - Command injection (`lokalite run <cmd>`)
 - Project linking (associate secrets with a directory)
 - Secret references (`lokalite://KEY_NAME` in config files)

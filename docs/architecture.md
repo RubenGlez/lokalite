@@ -48,21 +48,52 @@ SwiftUI app. `LSUIElement = true` (no dock icon). Two surfaces:
 
 **Library**: GRDB.swift
 
-**Schema**:
+**Schema** (current, after v2 migration):
 
 ```sql
+CREATE TABLE projects (
+  id                 TEXT PRIMARY KEY,
+  name               TEXT NOT NULL UNIQUE,
+  path               TEXT,
+  active_environment TEXT,
+  created_at         TEXT NOT NULL,
+  updated_at         TEXT NOT NULL
+);
+
+CREATE TABLE environments (
+  id         TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE (project_id, name)
+);
+
 CREATE TABLE secrets (
-  id          TEXT PRIMARY KEY,
-  name        TEXT NOT NULL,
+  id         TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,
   description TEXT,
-  tags        TEXT,             -- JSON array, e.g. ["ai", "cloud"]
-  encrypted_value BLOB NOT NULL, -- CryptoKit AES-256-GCM sealed box
-  created_at  TEXT NOT NULL,
-  updated_at  TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE (project_id, name)
+);
+
+CREATE TABLE secret_values (
+  id             TEXT PRIMARY KEY,
+  secret_id      TEXT NOT NULL REFERENCES secrets(id) ON DELETE CASCADE,
+  environment_id TEXT REFERENCES environments(id) ON DELETE CASCADE,  -- NULL = Default
+  encrypted_value BLOB NOT NULL,
+  updated_at     TEXT NOT NULL,
+  UNIQUE (secret_id, environment_id)
+);
+
+CREATE TABLE config (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
 );
 ```
 
-Metadata columns (`name`, `tags`, `description`) are plaintext for fast fuzzy search. Only the secret value is encrypted. WAL mode enabled for safe concurrent access between CLI and app.
+Secrets are namespaced by project. Each secret can have a value per environment; a `NULL` `environment_id` in `secret_values` means the Default value, which serves as a fallback for all environments. `name`, `description` are plaintext for fast search; only `encrypted_value` is encrypted. WAL mode enabled for safe concurrent access between CLI and app.
 
 ---
 
@@ -178,11 +209,15 @@ Then spawns the subprocess with those secrets in its environment. They never app
 - [Manage Secrets] opens the settings window
 - [Lock] invalidates the session immediately
 
-### Settings Window (`SettingsWindow`)
+### Settings Window (`SettingsView`)
 
-Full CRUD. Two panels:
-- **Secrets list**: add, edit, delete, tag
-- **Settings**: clipboard clear timeout, session timeout, export / import
+Full CRUD, three-column `NavigationSplitView`:
+
+- **Left sidebar** — project list. Each project is a folder-like namespace. Create and delete projects; selected project highlighted in amber.
+- **Centre column** — environment picker (dropdown, per project) + searchable secrets list. Secrets show name (monospaced) and optional description. Hover reveals a copy button. The Default environment's values serve as fallback for named environments.
+- **Right detail** — selected secret's name, description, and value (masked by default with a reveal toggle). Inline Save button; Delete at the bottom as a destructive link.
+
+Settings (session timeout, launch at login) are accessible via the gear icon in the toolbar.
 
 ---
 

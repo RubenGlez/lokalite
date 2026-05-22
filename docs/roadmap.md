@@ -4,21 +4,9 @@ Items beyond MVP, ordered roughly by priority.
 
 ---
 
-## Environment Profiles
+## Environment Profiles ✓
 
-Define reusable environments and activate them on demand.
-
-```yaml
-ai:
-  OPENAI_API_KEY
-  ANTHROPIC_API_KEY
-  GEMINI_API_KEY
-
-production:
-  DATABASE_URL
-  REDIS_URL
-  JWT_SECRET
-```
+Per-project environments (e.g. dev, staging, production). Each secret can carry a separate value per environment; the Default value serves as a fallback. Managed from the secrets manager window.
 
 ---
 
@@ -33,16 +21,9 @@ lokalite run npm start
 
 ---
 
-## Project Linking
+## Project Linking ✓
 
-Associate secrets with specific projects.
-
-```text
-samplebyte
- ├─ YOUTUBE_API_KEY
- ├─ SUPABASE_URL
- └─ SUPABASE_ANON_KEY
-```
+Secrets are organized under named projects, each an isolated namespace in the vault. Create, switch, and delete projects from the left sidebar in the secrets manager.
 
 ---
 
