@@ -11,7 +11,7 @@ struct LokaliteApp: App {
             VaultPopover()
                 .environmentObject(vault)
         } label: {
-            Image(systemName: "key.fill")
+            DialMenuBarIcon()
         }
         .menuBarExtraStyle(.window)
 
