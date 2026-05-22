@@ -42,6 +42,7 @@ struct VaultPopover: View {
         }
         .frame(width: 340)
         .onAppear { vault.unlock() }
+        .onDisappear { vault.lock() }
     }
 
     private var searchBar: some View {
@@ -118,13 +119,10 @@ struct VaultPopover: View {
 
     private var lockedView: some View {
         VStack(spacing: 8) {
-            Image(systemName: "lock.fill")
-                .font(.title)
+            ProgressView()
+            Text("Authenticating…")
                 .foregroundStyle(.secondary)
-            Text("Vault locked")
-                .foregroundStyle(.secondary)
-            Button("Unlock") { vault.unlock() }
-                .buttonStyle(.borderedProminent)
+                .font(.callout)
         }
         .frame(maxWidth: .infinity)
         .padding(24)
@@ -164,16 +162,6 @@ struct VaultPopover: View {
             .foregroundStyle(.secondary)
 
             Spacer()
-
-            Button {
-                vault.lock()
-            } label: {
-                Image(systemName: "lock")
-                    .font(.caption)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-            .help("Lock vault")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
