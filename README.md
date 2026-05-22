@@ -1,6 +1,8 @@
 <p align="center">
-  <img src="assets/logo.svg" alt="Lokalite" width="600"/>
+  <img src="assets/AppIcon.png" alt="Lokalite" width="120"/>
 </p>
+
+<h1 align="center">Lokalite</h1>
 
 <p align="center">
   An open-source, local-first secrets workspace for developers.<br/>

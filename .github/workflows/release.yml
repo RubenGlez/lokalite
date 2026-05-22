@@ -23,7 +23,9 @@ jobs:
           SHORT_VERSION="${VERSION#v}"
 
           mkdir -p LokaliteApp.app/Contents/MacOS
+          mkdir -p LokaliteApp.app/Contents/Resources
           cp .build/release/LokaliteApp LokaliteApp.app/Contents/MacOS/LokaliteApp
+          cp assets/AppIcon.icns LokaliteApp.app/Contents/Resources/AppIcon.icns
 
           cat > LokaliteApp.app/Contents/Info.plist << EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -38,6 +40,8 @@ jobs:
             <string>LokaliteApp</string>
             <key>CFBundleIdentifier</key>
             <string>com.lokalite.app</string>
+            <key>CFBundleIconFile</key>
+            <string>AppIcon</string>
             <key>CFBundleVersion</key>
             <string>${SHORT_VERSION}</string>
             <key>CFBundleShortVersionString</key>
