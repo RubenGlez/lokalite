@@ -47,22 +47,21 @@ final class VaultViewModel: ObservableObject {
     // MARK: - Lock / Unlock
 
     func unlock() {
-        Task.detached { [weak self] in
+        Task { [weak self] in
             let context = LAContext()
             var authError: NSError?
             guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &authError) else {
                 // No biometrics — unlock directly.
-                await self?.performUnlock()
+                self?.performUnlock()
                 return
             }
             do {
                 try await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "Unlock Lokalite vault")
-                await self?.performUnlock()
+                self?.performUnlock()
             } catch {
                 let code = (error as NSError).code
                 if code != LAError.userCancel.rawValue && code != LAError.systemCancel.rawValue {
-                    let msg = error.localizedDescription
-                    await MainActor.run { self?.errorMessage = msg }
+                    self?.errorMessage = error.localizedDescription
                 }
             }
         }
