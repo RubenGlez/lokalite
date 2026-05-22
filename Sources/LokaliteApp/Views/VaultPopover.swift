@@ -162,6 +162,16 @@ struct VaultPopover: View {
             .foregroundStyle(.secondary)
 
             Spacer()
+
+            Button {
+                NSApp.terminate(nil)
+            } label: {
+                Image(systemName: "power")
+                    .font(.caption)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .help("Quit Lokalite")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
