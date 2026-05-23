@@ -197,6 +197,54 @@ final class VaultViewModel: ObservableObject {
         }
     }
 
+    func renameProject(_ project: Project, newName: String) {
+        do {
+            try Vault.shared.renameProject(id: project.id, newName: newName)
+            let renamed = Project(id: project.id, name: newName, path: project.path,
+                                  activeEnvironment: project.activeEnvironment)
+            if let idx = projects.firstIndex(where: { $0.id == project.id }) { projects[idx] = renamed }
+            if selectedProject?.id == project.id { selectedProject = renamed }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func renameEnvironment(_ env: VaultEnvironment, newName: String) {
+        do {
+            try Vault.shared.renameEnvironment(id: env.id, newName: newName, projectId: env.projectId)
+            let renamed = VaultEnvironment(id: env.id, projectId: env.projectId, name: newName)
+            if let idx = environments.firstIndex(where: { $0.id == env.id }) { environments[idx] = renamed }
+            if selectedEnvironment?.id == env.id { selectedEnvironment = renamed }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func moveSecret(_ secret: Secret, toEnvironmentName: String?) {
+        guard let project = selectedProject else { return }
+        do {
+            try Vault.shared.moveSecretToEnvironment(
+                name: secret.name, projectId: project.id,
+                fromEnvironmentName: selectedEnvironment?.name,
+                toEnvironmentName: toEnvironmentName)
+            reloadSecrets()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func moveSecret(_ secret: Secret, toProjectId: String) {
+        guard let project = selectedProject else { return }
+        do {
+            try Vault.shared.moveSecretToProject(
+                name: secret.name, fromProjectId: project.id, toProjectId: toProjectId,
+                fromEnvironmentName: selectedEnvironment?.name)
+            reloadSecrets()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     // MARK: - Secret CRUD
 
     func add(name: String, value: String, description: String?) {
@@ -211,11 +259,13 @@ final class VaultViewModel: ObservableObject {
         }
     }
 
-    func update(name: String, value: String) {
+    func update(name: String, value: String, description: String?) {
         guard let project = selectedProject else { return }
         do {
             _ = try Vault.shared.set(name: name, value: value, projectId: project.id,
                                      environmentName: selectedEnvironment?.name)
+            let desc = description.flatMap { $0.isEmpty ? nil : $0 }
+            try Vault.shared.setDescription(name: name, description: desc, projectId: project.id)
             reloadSecrets()
         } catch {
             errorMessage = error.localizedDescription

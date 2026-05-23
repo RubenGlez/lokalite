@@ -1,6 +1,10 @@
 import SwiftUI
 import LokaliteCore
 
+// MARK: - Identifiable
+
+extension Secret: Identifiable {}
+
 // MARK: - Theme
 
 private enum Theme {
@@ -20,10 +24,30 @@ private enum Theme {
 struct SettingsView: View {
     @EnvironmentObject private var vault: VaultViewModel
     @State private var selectedSecret: Secret?
+
+    // Sheets
     @State private var showingAddProject = false
     @State private var showingAddSecret = false
     @State private var showingAddEnv = false
     @State private var showingAppSettings = false
+    @State private var editingSecret: Secret?
+    @State private var movingSecret: Secret?
+
+    // Search
+    @State private var searchExpanded = false
+
+    // Rename
+    @State private var renamingProject: Project?
+    @State private var renameProjectText = ""
+    @State private var renamingEnv: VaultEnvironment?
+    @State private var renameEnvText = ""
+
+    // Delete confirmations
+    @State private var deletingProject: Project?
+    @State private var deletingEnv: VaultEnvironment?
+    @State private var deletingSecret: Secret?
+
+    // Inline input
     @State private var newProjectName = ""
     @State private var newEnvName = ""
     @State private var searchText = ""
@@ -51,8 +75,8 @@ struct SettingsView: View {
             if vault.isLocked { vault.unlock() }
         }
         .onChange(of: vault.secrets) { newSecrets in
-            if let selected = selectedSecret, !newSecrets.contains(where: { $0.id == selected.id }) {
-                selectedSecret = nil
+            if let selected = selectedSecret {
+                selectedSecret = newSecrets.first { $0.name == selected.name }
             }
         }
         .sheet(isPresented: $showingAddSecret) {
@@ -60,6 +84,12 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showingAppSettings) {
             AppSettingsView().environmentObject(vault)
+        }
+        .sheet(item: $editingSecret) { s in
+            EditSecretView(secret: s).environmentObject(vault)
+        }
+        .sheet(item: $movingSecret) { s in
+            MoveSecretView(secret: s).environmentObject(vault)
         }
         .alert("New Project", isPresented: $showingAddProject) {
             TextField("Name", text: $newProjectName)
@@ -79,6 +109,74 @@ struct SettingsView: View {
             }
             Button("Cancel", role: .cancel) { newEnvName = "" }
         }
+        .alert("Rename Project", isPresented: Binding(
+            get: { renamingProject != nil },
+            set: { if !$0 { renamingProject = nil } }
+        )) {
+            TextField("Name", text: $renameProjectText)
+            Button("Rename") {
+                if let p = renamingProject, !renameProjectText.isEmpty {
+                    vault.renameProject(p, newName: renameProjectText)
+                }
+                renamingProject = nil
+            }
+            Button("Cancel", role: .cancel) { renamingProject = nil }
+        }
+        .alert("Rename Environment", isPresented: Binding(
+            get: { renamingEnv != nil },
+            set: { if !$0 { renamingEnv = nil } }
+        )) {
+            TextField("Name", text: $renameEnvText)
+            Button("Rename") {
+                if let e = renamingEnv, !renameEnvText.isEmpty {
+                    vault.renameEnvironment(e, newName: renameEnvText)
+                }
+                renamingEnv = nil
+            }
+            Button("Cancel", role: .cancel) { renamingEnv = nil }
+        }
+        .confirmationDialog(
+            "Delete \"\(deletingProject?.name ?? "")\"?",
+            isPresented: Binding(
+                get: { deletingProject != nil },
+                set: { if !$0 { deletingProject = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let p = deletingProject { vault.deleteProject(p) }
+                deletingProject = nil
+            }
+            Button("Cancel", role: .cancel) { deletingProject = nil }
+        } message: { Text("This cannot be undone.") }
+        .confirmationDialog(
+            "Delete \"\(deletingEnv?.name ?? "")\"?",
+            isPresented: Binding(
+                get: { deletingEnv != nil },
+                set: { if !$0 { deletingEnv = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let e = deletingEnv { vault.deleteEnvironment(e) }
+                deletingEnv = nil
+            }
+            Button("Cancel", role: .cancel) { deletingEnv = nil }
+        } message: { Text("This cannot be undone.") }
+        .confirmationDialog(
+            "Delete \"\(deletingSecret?.name ?? "")\"?",
+            isPresented: Binding(
+                get: { deletingSecret != nil },
+                set: { if !$0 { deletingSecret = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let s = deletingSecret { vault.delete(s) }
+                deletingSecret = nil
+            }
+            Button("Cancel", role: .cancel) { deletingSecret = nil }
+        } message: { Text("This cannot be undone.") }
     }
 
     // MARK: - Sidebar Column
@@ -86,18 +184,21 @@ struct SettingsView: View {
     private var sidebarColumn: some View {
         List(vault.projects, id: \.id) { project in
             let isSelected = vault.selectedProject?.id == project.id
-            Label(project.name, systemImage: "folder")
-                .foregroundStyle(isSelected ? Theme.gold : .primary)
-                .listRowBackground(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(isSelected ? Theme.goldSubtle : Color.clear)
-                        .padding(.horizontal, 4)
-                )
-                .contentShape(Rectangle())
-                .onTapGesture { vault.selectProject(project) }
-                .contextMenu {
-                    Button("Delete", role: .destructive) { vault.deleteProject(project) }
-                }
+            SidebarProjectRow(
+                project: project,
+                isSelected: isSelected,
+                onSelect: { vault.selectProject(project) },
+                onRename: {
+                    renamingProject = project
+                    renameProjectText = project.name
+                },
+                onDelete: { deletingProject = project }
+            )
+            .listRowBackground(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isSelected ? Theme.goldSubtle : Color.clear)
+                    .padding(.horizontal, 4)
+            )
         }
         .listStyle(.sidebar)
         .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
@@ -127,10 +228,6 @@ struct SettingsView: View {
             if vault.selectedProject == nil {
                 noProjectView
             } else {
-                envPickerRow
-                Rectangle().fill(Theme.sep).frame(height: 1)
-                searchBar
-                Rectangle().fill(Theme.sep).frame(height: 1)
                 secretsList
             }
         }
@@ -140,34 +237,29 @@ struct SettingsView: View {
             let n = vault.secrets.count
             return "\(n) secret\(n == 1 ? "" : "s")"
         }())
+        .searchable(text: $searchText, placement: .toolbar, prompt: "Filter secrets\u{2026}")
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarItemGroup(placement: .primaryAction) {
                 Button { showingAppSettings = true } label: {
                     Image(systemName: "gearshape")
                 }
                 .help("Settings")
-            }
-            if vault.selectedProject != nil {
-                ToolbarItem(placement: .primaryAction) {
+                if vault.selectedProject != nil {
                     Button { showingAddSecret = true } label: {
                         Image(systemName: "square.and.pencil")
                     }
                     .help("New secret")
                 }
             }
+            if vault.selectedProject != nil {
+                ToolbarItem(placement: .automatic) {
+                    envSelectorMenu
+                }
+            }
         }
     }
 
-    private var envPickerRow: some View {
-        HStack {
-            envPickerInline
-            Spacer()
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-    }
-
-    private var envPickerInline: some View {
+    private var envSelectorMenu: some View {
         Menu {
             Button {
                 vault.selectEnvironment(nil)
@@ -181,53 +273,39 @@ struct SettingsView: View {
             if !vault.environments.isEmpty {
                 Divider()
                 ForEach(vault.environments, id: \.id) { env in
-                    Button {
-                        vault.selectEnvironment(env)
+                    let isSelected = vault.selectedEnvironment?.id == env.id
+                    Menu {
+                        Button("Select") { vault.selectEnvironment(env) }
+                        Divider()
+                        Button("Rename\u{2026}") {
+                            renamingEnv = env
+                            renameEnvText = env.name
+                        }
+                        Button("Delete", role: .destructive) { deletingEnv = env }
                     } label: {
-                        if vault.selectedEnvironment?.id == env.id {
+                        if isSelected {
                             Label(env.name, systemImage: "checkmark")
                         } else {
                             Text(env.name)
                         }
-                    }
-                    .contextMenu {
-                        Button("Delete", role: .destructive) { vault.deleteEnvironment(env) }
                     }
                 }
             }
             Divider()
             Button("New Environment\u{2026}") { showingAddEnv = true }
         } label: {
-            Text(vault.selectedEnvironment?.name ?? "Default")
-                .foregroundStyle(Theme.gold)
-                .font(.caption)
+            HStack(spacing: 4) {
+                Text(vault.selectedEnvironment?.name ?? "Default")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Theme.gold)
+            }
         }
         .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
         .fixedSize()
     }
 
-    private var searchBar: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.textDim)
-            TextField("Filter secrets\u{2026}", text: $searchText)
-                .font(.system(size: 12))
-                .textFieldStyle(.plain)
-            if !searchText.isEmpty {
-                Button { searchText = "" } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 11))
-                        .foregroundStyle(Theme.textDim)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-    }
-
-    @ViewBuilder
+@ViewBuilder
     private var secretsList: some View {
         if filteredSecrets.isEmpty {
             VStack(spacing: 8) {
@@ -241,16 +319,26 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             List(filteredSecrets, id: \.id) { secret in
-                SecretRow(secret: secret) { vault.copyToClipboard(secret) }
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(selectedSecret?.id == secret.id ? Theme.goldSubtle : Color.clear)
-                    .contentShape(Rectangle())
-                    .onTapGesture { selectedSecret = secret }
-                    .contextMenu {
-                        Button("Copy Value") { vault.copyToClipboard(secret) }
-                        Divider()
-                        Button("Delete", role: .destructive) { vault.delete(secret) }
-                    }
+                SecretRow(
+                    secret: secret,
+                    onEdit: { editingSecret = secret },
+                    onMove: { movingSecret = secret },
+                    onDelete: { deletingSecret = secret }
+                )
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(selectedSecret?.name == secret.name ? Theme.goldSubtle : Color.clear)
+                        .padding(.horizontal, 4)
+                )
+                .contentShape(Rectangle())
+                .onTapGesture { selectedSecret = secret }
+                .contextMenu {
+                    Button("Edit\u{2026}") { editingSecret = secret }
+                    Button("Move\u{2026}") { movingSecret = secret }
+                    Divider()
+                    Button("Delete", role: .destructive) { deletingSecret = secret }
+                }
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
@@ -283,7 +371,7 @@ struct SettingsView: View {
         if let secret = selectedSecret {
             SecretDetailView(secret: secret)
                 .environmentObject(vault)
-                .id(secret.id)
+                .id(secret.name)
         } else {
             VStack(spacing: 10) {
                 Image(systemName: "lock.shield")
@@ -298,11 +386,64 @@ struct SettingsView: View {
     }
 }
 
+// MARK: - Sidebar Project Row
+
+private struct SidebarProjectRow: View {
+    let project: Project
+    let isSelected: Bool
+    let onSelect: () -> Void
+    let onRename: () -> Void
+    let onDelete: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        HStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Image(systemName: "folder")
+                    .font(.system(size: 12))
+                    .foregroundStyle(isSelected ? Theme.gold : Theme.textMuted)
+                Text(project.name)
+                    .foregroundStyle(isSelected ? Theme.gold : .primary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture { onSelect() }
+
+            if isHovered {
+                Menu {
+                    Button("Rename\u{2026}", action: onRename)
+                    Divider()
+                    Button("Delete", role: .destructive, action: onDelete)
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Theme.textMuted)
+                        .frame(width: 24, height: 24)
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .transition(.opacity)
+            }
+        }
+        .onHover { h in
+            withAnimation(.easeInOut(duration: 0.12)) { isHovered = h }
+        }
+        .contextMenu {
+            Button("Rename\u{2026}", action: onRename)
+            Divider()
+            Button("Delete", role: .destructive, action: onDelete)
+        }
+    }
+}
+
 // MARK: - Secret Row
 
 private struct SecretRow: View {
     let secret: Secret
-    let onCopy: () -> Void
+    let onEdit: () -> Void
+    let onMove: () -> Void
+    let onDelete: () -> Void
     @State private var isHovered = false
 
     var body: some View {
@@ -320,24 +461,27 @@ private struct SecretRow: View {
                 }
             }
             Spacer()
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
-        .overlay(alignment: .trailing) {
+
             if isHovered {
-                Button(action: onCopy) {
-                    Image(systemName: "doc.on.doc")
+                Menu {
+                    Button("Edit\u{2026}", action: onEdit)
+                    Button("Move\u{2026}", action: onMove)
+                    Divider()
+                    Button("Delete", role: .destructive, action: onDelete)
+                } label: {
+                    Image(systemName: "ellipsis")
                         .font(.system(size: 11))
                         .foregroundStyle(Theme.textMuted)
                         .frame(width: 26, height: 26)
-                        .background(RoundedRectangle(cornerRadius: 5).fill(Theme.bgHigh))
                 }
-                .buttonStyle(.plain)
-                .help("Copy value")
-                .padding(.trailing, 12)
-                .transition(.opacity.combined(with: .scale(scale: 0.9, anchor: .trailing)))
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .transition(.opacity)
             }
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
         .onHover { h in
             withAnimation(.easeInOut(duration: 0.12)) { isHovered = h }
         }
@@ -381,16 +525,10 @@ struct AppSettingsView: View {
 struct SecretDetailView: View {
     let secret: Secret
     @EnvironmentObject private var vault: VaultViewModel
-    @State private var editingValue = ""
     @State private var revealed = false
-    @State private var saved = false
-    @State private var confirmDelete = false
-
-    private var hasChanges: Bool { editingValue != secret.value && !editingValue.isEmpty }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-
             VStack(alignment: .leading, spacing: 4) {
                 Text(secret.name)
                     .font(.system(size: 16, design: .monospaced).weight(.semibold))
@@ -435,17 +573,16 @@ struct SecretDetailView: View {
                         .strokeBorder(Theme.sep, lineWidth: 1)
 
                     if revealed {
-                        TextField("", text: $editingValue, axis: .vertical)
+                        Text(secret.value)
                             .font(.system(size: 13, design: .monospaced))
                             .foregroundStyle(Theme.text)
-                            .textFieldStyle(.plain)
-                            .lineLimit(1...8)
+                            .textSelection(.enabled)
                             .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
-                        SecureField("", text: $editingValue)
+                        Text(String(repeating: "•", count: min(secret.value.count, 24)))
                             .font(.system(size: 18, design: .monospaced))
                             .foregroundStyle(Theme.text)
-                            .textFieldStyle(.plain)
                             .padding(12)
                     }
                 }
@@ -453,59 +590,109 @@ struct SecretDetailView: View {
             }
             .padding(.horizontal, 24)
             .padding(.top, 20)
-            .padding(.bottom, 16)
-
-            HStack {
-                if saved {
-                    Label("Saved", systemImage: "checkmark.circle.fill")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Theme.green)
-                        .transition(.opacity)
-                }
-                Spacer()
-                Button("Save Changes") {
-                    vault.update(name: secret.name, value: editingValue)
-                    withAnimation(.easeInOut(duration: 0.2)) { saved = true }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                        withAnimation(.easeInOut(duration: 0.2)) { saved = false }
-                    }
-                }
-                .buttonStyle(PrimaryButtonStyle())
-                .disabled(!hasChanges)
-            }
-            .padding(.horizontal, 24)
-            .animation(.easeInOut(duration: 0.2), value: saved)
 
             Spacer()
-
-            Rectangle()
-                .fill(Theme.sep)
-                .frame(height: 1)
-                .padding(.horizontal, 24)
-
-            Button {
-                confirmDelete = true
-            } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: "trash")
-                        .font(.system(size: 11))
-                    Text("Delete Secret")
-                        .font(.system(size: 12))
-                }
-                .foregroundStyle(Theme.red.opacity(0.65))
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 24)
-            .padding(.vertical, 14)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .onAppear { editingValue = secret.value }
+    }
+}
+
+// MARK: - Edit Secret
+
+struct EditSecretView: View {
+    let secret: Secret
+    @EnvironmentObject private var vault: VaultViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var value: String
+    @State private var description: String
+    @State private var revealed = false
+    @State private var confirmDelete = false
+
+    init(secret: Secret) {
+        self.secret = secret
+        _value = State(initialValue: secret.value)
+        _description = State(initialValue: secret.description ?? "")
+    }
+
+    private var isValid: Bool { !value.isEmpty }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Form {
+                Section {
+                    LabeledContent("Name") {
+                        Text(secret.name)
+                            .font(.system(.body, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack {
+                        if revealed {
+                            TextField("Value", text: $value)
+                                .font(.system(.body, design: .monospaced))
+                                .autocorrectionDisabled()
+                        } else {
+                            SecureField("Value", text: $value)
+                                .font(.system(.body, design: .monospaced))
+                        }
+                        Button {
+                            revealed.toggle()
+                        } label: {
+                            Image(systemName: revealed ? "eye.slash" : "eye")
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                    }
+                }
+
+                Section("Optional") {
+                    TextField("Description", text: $description)
+                }
+            }
+            .formStyle(.grouped)
+
+            Divider()
+
+            HStack {
+                Button(role: .destructive) {
+                    confirmDelete = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "trash")
+                        Text("Delete")
+                    }
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.red.opacity(0.8))
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+
+                Button("Save") {
+                    vault.update(name: secret.name, value: value, description: description)
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+                .disabled(!isValid)
+            }
+            .padding()
+        }
+        .frame(width: 440, height: 320)
+        .preferredColorScheme(.dark)
         .confirmationDialog(
             "Delete \(secret.name)?",
             isPresented: $confirmDelete,
             titleVisibility: .visible
         ) {
-            Button("Delete", role: .destructive) { vault.delete(secret) }
+            Button("Delete", role: .destructive) {
+                vault.delete(secret)
+                dismiss()
+            }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This cannot be undone.")
@@ -513,24 +700,79 @@ struct SecretDetailView: View {
     }
 }
 
-// MARK: - Primary Button Style
+// MARK: - Move Secret
 
-private struct PrimaryButtonStyle: ButtonStyle {
-    @Environment(\.isEnabled) private var isEnabled
+struct MoveSecretView: View {
+    let secret: Secret
+    @EnvironmentObject private var vault: VaultViewModel
+    @Environment(\.dismiss) private var dismiss
 
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(isEnabled ? Color.white : Theme.textDim)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 7)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(
-                        isEnabled
-                            ? Theme.gold.opacity(configuration.isPressed ? 0.75 : 1.0)
-                            : Theme.bgHigh
-                    )
-            )
+    @State private var destProjectId: String = ""
+    @State private var destEnvironmentName: String? = nil
+    @State private var availableEnvironments: [VaultEnvironment] = []
+
+    private var isSameDestination: Bool {
+        destProjectId == vault.selectedProject?.id &&
+        destEnvironmentName == vault.selectedEnvironment?.name
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Form {
+                Section("Move \"\(secret.name)\" to") {
+                    Picker("Project", selection: $destProjectId) {
+                        ForEach(vault.projects, id: \.id) { project in
+                            Text(project.name).tag(project.id)
+                        }
+                    }
+
+                    Picker("Environment", selection: $destEnvironmentName) {
+                        Text("Default").tag(nil as String?)
+                        ForEach(availableEnvironments, id: \.id) { env in
+                            Text(env.name).tag(env.name as String?)
+                        }
+                    }
+                }
+            }
+            .formStyle(.grouped)
+            .onChange(of: destProjectId) { projectId in
+                availableEnvironments = (try? Vault.shared.listEnvironments(projectId: projectId)) ?? []
+                destEnvironmentName = nil
+            }
+
+            Divider()
+
+            HStack {
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Spacer()
+                Button("Move") {
+                    performMove()
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+                .disabled(isSameDestination)
+            }
+            .padding()
+        }
+        .frame(width: 380, height: 260)
+        .preferredColorScheme(.dark)
+        .onAppear {
+            destProjectId = vault.selectedProject?.id ?? ""
+            destEnvironmentName = vault.selectedEnvironment?.name
+            if let projectId = vault.selectedProject?.id {
+                availableEnvironments = (try? Vault.shared.listEnvironments(projectId: projectId)) ?? []
+            }
+        }
+    }
+
+    private func performMove() {
+        guard let srcProject = vault.selectedProject else { return }
+        if destProjectId == srcProject.id {
+            vault.moveSecret(secret, toEnvironmentName: destEnvironmentName)
+        } else {
+            vault.moveSecret(secret, toProjectId: destProjectId)
+        }
     }
 }

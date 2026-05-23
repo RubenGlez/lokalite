@@ -6,6 +6,13 @@ public struct Project: Equatable, Hashable {
     public var path: String?
     public var activeEnvironment: String?
 
+    public init(id: String, name: String, path: String? = nil, activeEnvironment: String? = nil) {
+        self.id = id
+        self.name = name
+        self.path = path
+        self.activeEnvironment = activeEnvironment
+    }
+
     public static func == (lhs: Project, rhs: Project) -> Bool { lhs.id == rhs.id }
     public func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }

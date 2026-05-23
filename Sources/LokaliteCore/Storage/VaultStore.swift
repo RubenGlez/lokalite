@@ -295,6 +295,65 @@ final class VaultStore {
         }
     }
 
+    func renameProject(id: String, newName: String) throws {
+        try db.write { db in
+            guard try ProjectRecord.filter(Column("name") == newName).fetchCount(db) == 0 else {
+                throw VaultError.projectAlreadyExists(newName)
+            }
+            try db.execute(sql: "UPDATE projects SET name = ?, updated_at = ? WHERE id = ?",
+                          arguments: [newName, iso8601(), id])
+        }
+    }
+
+    func renameEnvironment(id: String, newName: String, projectId: String) throws {
+        try db.write { db in
+            guard let env = try EnvironmentRecord.filter(Column("id") == id).fetchOne(db) else {
+                throw VaultError.environmentNotFound(id)
+            }
+            let oldName = env.name
+            guard try EnvironmentRecord
+                .filter(Column("project_id") == projectId && Column("name") == newName)
+                .fetchCount(db) == 0 else {
+                throw VaultError.environmentAlreadyExists(newName)
+            }
+            try db.execute(sql: "UPDATE environments SET name = ? WHERE id = ?",
+                          arguments: [newName, id])
+            try db.execute(
+                sql: "UPDATE projects SET active_environment = ?, updated_at = ? WHERE id = ? AND active_environment = ?",
+                arguments: [newName, iso8601(), projectId, oldName])
+        }
+    }
+
+    func moveSecretValue(secretId: String, fromEnvironmentId: String?, toEnvironmentId: String?) throws {
+        try db.write { db in
+            let source: SecretValueRecord?
+            if let fromId = fromEnvironmentId {
+                source = try SecretValueRecord
+                    .filter(Column("secret_id") == secretId && Column("environment_id") == fromId)
+                    .fetchOne(db)
+            } else {
+                source = try SecretValueRecord
+                    .filter(Column("secret_id") == secretId && Column("environment_id") == nil)
+                    .fetchOne(db)
+            }
+            guard var record = source else { return }
+
+            if let toId = toEnvironmentId {
+                try SecretValueRecord
+                    .filter(Column("secret_id") == secretId && Column("environment_id") == toId)
+                    .deleteAll(db)
+            } else {
+                try SecretValueRecord
+                    .filter(Column("secret_id") == secretId && Column("environment_id") == nil)
+                    .deleteAll(db)
+            }
+
+            record.environmentId = toEnvironmentId
+            record.updatedAt = iso8601()
+            try record.update(db)
+        }
+    }
+
     // MARK: - Secrets
 
     func insertSecret(_ record: SecretRecord) throws {
@@ -344,17 +403,13 @@ final class VaultStore {
         try db.write { db in try record.save(db) }
     }
 
-    // Returns the env-specific value, or falls back to the default (NULL environment).
     func fetchSecretValue(secretId: String, environmentId: String?) throws -> SecretValueRecord? {
         try db.read { db in
             if let environmentId {
-                if let specific = try SecretValueRecord
+                return try SecretValueRecord
                     .filter(Column("secret_id") == secretId && Column("environment_id") == environmentId)
-                    .fetchOne(db) {
-                    return specific
-                }
+                    .fetchOne(db)
             }
-            // Fall back to default (NULL environment_id).
             return try SecretValueRecord
                 .filter(Column("secret_id") == secretId && Column("environment_id") == nil)
                 .fetchOne(db)

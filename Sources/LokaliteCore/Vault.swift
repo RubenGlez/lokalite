@@ -117,6 +117,14 @@ public final class Vault {
         try store.deleteEnvironment(name: name, projectId: projectId)
     }
 
+    public func renameProject(id: String, newName: String) throws {
+        try store.renameProject(id: id, newName: newName)
+    }
+
+    public func renameEnvironment(id: String, newName: String, projectId: String) throws {
+        try store.renameEnvironment(id: id, newName: newName, projectId: projectId)
+    }
+
     // MARK: - Secret CRUD
 
     public func add(name: String, value: String, description: String? = nil,
@@ -153,6 +161,15 @@ public final class Vault {
         return Secret(name: name, value: value, description: secretRecord.description)
     }
 
+    public func setDescription(name: String, description: String?, projectId: String) throws {
+        guard var record = try store.fetchSecret(name: name, projectId: projectId) else {
+            throw VaultError.secretNotFound(name)
+        }
+        record.description = description
+        record.updatedAt = iso8601()
+        try store.updateSecret(record)
+    }
+
     public func set(name: String, value: String, projectId: String,
                     environmentName: String? = nil) throws -> Secret {
         let key = try requireKey()
@@ -166,6 +183,34 @@ public final class Vault {
                                             updatedAt: iso8601())
         try store.upsertSecretValue(valueRecord)
         return Secret(name: name, value: value, description: secretRecord.description)
+    }
+
+    public func moveSecretToEnvironment(name: String, projectId: String,
+                                        fromEnvironmentName: String?,
+                                        toEnvironmentName: String?) throws {
+        guard let secretRecord = try store.fetchSecret(name: name, projectId: projectId) else {
+            throw VaultError.secretNotFound(name)
+        }
+        let fromEnvId = try resolveEnvironmentId(name: fromEnvironmentName, projectId: projectId)
+        let toEnvId = try resolveEnvironmentId(name: toEnvironmentName, projectId: projectId)
+        try store.moveSecretValue(secretId: secretRecord.id, fromEnvironmentId: fromEnvId, toEnvironmentId: toEnvId)
+    }
+
+    public func moveSecretToProject(name: String, fromProjectId: String, toProjectId: String,
+                                     fromEnvironmentName: String?) throws {
+        let key = try requireKey()
+        guard let secretRecord = try store.fetchSecret(name: name, projectId: fromProjectId) else {
+            throw VaultError.secretNotFound(name)
+        }
+        let fromEnvId = try resolveEnvironmentId(name: fromEnvironmentName, projectId: fromProjectId)
+        guard let valueRecord = try store.fetchSecretValue(secretId: secretRecord.id,
+                                                           environmentId: fromEnvId) else {
+            throw VaultError.secretNotFound(name)
+        }
+        let value = try VaultCrypto.decrypt(valueRecord.encryptedValue, using: key)
+        _ = try add(name: name, value: value, description: secretRecord.description,
+                    projectId: toProjectId, environmentName: nil)
+        try store.deleteSecret(name: name, projectId: fromProjectId)
     }
 
     public func delete(name: String, projectId: String) throws {
