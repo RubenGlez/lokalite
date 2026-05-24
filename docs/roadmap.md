@@ -10,13 +10,13 @@ Per-project environments (e.g. dev, staging, production). Each secret can carry 
 
 ---
 
-## Command Injection
+## Command Injection ✓
 
 Run applications with secrets automatically injected, without storing credentials in shell profiles or `.env` files.
 
 ```bash
-lokalite run claude
-lokalite run npm start
+lokalite run -- claude
+lokalite run -- npm start
 ```
 
 ---

@@ -69,9 +69,11 @@ Full CRUD from the CLI. Commands: `add`, `set`, `delete`, `get`, `copy`, `list`,
 
 ## D8: Agent integration
 
-**Status**: decided `lokalite run` for MVP, MCP server on roadmap
+**Status**: decided `lokalite run` plus MCP server
 
-`lokalite run <command>` injects resolved secrets as env vars into the subprocess. Secrets travel from Keychain → Lokalite memory → child process env. Nothing touches the shell. MCP server is a roadmap item.
+`lokalite run <command>` injects resolved secrets as env vars into the subprocess. Secrets travel from Keychain → Lokalite memory → child process env. Nothing touches the shell.
+
+`lokalite mcp` exposes read-only agent access by default (`get_secret`, `list_secrets`) and write tools only when explicitly started with `--read-write`.
 
 ---
 

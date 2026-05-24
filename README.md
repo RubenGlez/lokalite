@@ -155,10 +155,15 @@ Pass `--read-write` to also expose write tools:
 
 ## Roadmap
 
-- Command injection (`lokalite run <cmd>`)
-- Project linking (associate secrets with a directory)
 - Secret references (`lokalite://KEY_NAME` in config files)
 - Cross-platform (Windows, Linux)
+
+Recently completed:
+
+- Environment profiles
+- Command injection (`lokalite run <cmd>`)
+- Project linking (associate secrets with a directory)
+- Agent & MCP integration
 
 ## License
 

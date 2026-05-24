@@ -277,13 +277,21 @@ public final class Vault {
     }
 
     private func encryptExport(_ data: Data, passphrase: String) throws -> Data {
+        let kdfParameters = ExportKDFParameters.current
         let salt = VaultCrypto.generateSalt()
-        let derivedKey = VaultCrypto.deriveKey(from: passphrase, salt: salt)
+        let derivedKey = try VaultCrypto.deriveExportKey(
+            from: passphrase,
+            salt: salt,
+            parameters: kdfParameters
+        )
         guard let combined = try AES.GCM.seal(data, using: derivedKey).combined else {
             throw VaultError.encryptionFailed
         }
         var envelope = Data()
-        envelope.append(0x01)
+        envelope.append(0x02)
+        envelope.appendUInt32(kdfParameters.iterations)
+        envelope.appendUInt32(kdfParameters.memoryKiB)
+        envelope.appendUInt32(kdfParameters.parallelism)
         envelope.append(salt)
         envelope.append(combined)
         return envelope
@@ -329,5 +337,12 @@ public final class Vault {
 
     private func iso8601() -> String {
         ISO8601DateFormatter().string(from: Date())
+    }
+}
+
+private extension Data {
+    mutating func appendUInt32(_ value: UInt32) {
+        var bigEndian = value.bigEndian
+        Swift.withUnsafeBytes(of: &bigEndian) { append(contentsOf: $0) }
     }
 }

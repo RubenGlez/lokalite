@@ -17,10 +17,18 @@ struct RunCommand: ParsableCommand {
     @Option(name: .shortAndLong, help: "Environment name. Defaults to the active environment.")
     var env: String?
 
+    @Flag(name: [.customShort("h"), .customLong("help")], help: .hidden)
+    var help: Bool = false
+
     @Argument(parsing: .captureForPassthrough, help: "Command and arguments to run.")
     var command: [String]
 
     func run() throws {
+        if help {
+            print(Self.helpMessage())
+            return
+        }
+
         guard !command.isEmpty else {
             print("Error: no command specified.")
             throw ExitCode.failure

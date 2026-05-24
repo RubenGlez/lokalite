@@ -45,7 +45,7 @@ The better model: SQLite stores encrypted secret records, Keychain stores the en
 ## Cryptography
 
 * **Encryption**: AES-256-GCM (authenticated encryption)
-* **Key derivation** (portable/export path): Argon2id
+* **Key derivation** (portable/export path): Argon2id (3 iterations, 64 MiB memory, parallelism 1)
 * **macOS primary path**: app-generated random key stored in Keychain
 
 ---
