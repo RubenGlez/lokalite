@@ -237,72 +237,23 @@ struct SettingsView: View {
             let n = vault.secrets.count
             return "\(n) secret\(n == 1 ? "" : "s")"
         }())
-        .searchable(text: $searchText, placement: .toolbar, prompt: "Filter secrets\u{2026}")
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button { showingAppSettings = true } label: {
-                    Image(systemName: "gearshape")
-                }
-                .help("Settings")
-                if vault.selectedProject != nil {
-                    Button { showingAddSecret = true } label: {
-                        Image(systemName: "square.and.pencil")
-                    }
-                    .help("New secret")
-                }
-            }
-            if vault.selectedProject != nil {
-                ToolbarItem(placement: .automatic) {
-                    envSelectorMenu
-                }
-            }
-        }
+        .background(settingsToolbarConfigurator)
     }
 
-    private var envSelectorMenu: some View {
-        Menu {
-            Button {
-                vault.selectEnvironment(nil)
-            } label: {
-                if vault.selectedEnvironment == nil {
-                    Label("Default", systemImage: "checkmark")
-                } else {
-                    Text("Default")
-                }
-            }
-            if !vault.environments.isEmpty {
-                Divider()
-                ForEach(vault.environments, id: \.id) { env in
-                    let isSelected = vault.selectedEnvironment?.id == env.id
-                    Menu {
-                        Button("Select") { vault.selectEnvironment(env) }
-                        Divider()
-                        Button("Rename\u{2026}") {
-                            renamingEnv = env
-                            renameEnvText = env.name
-                        }
-                        Button("Delete", role: .destructive) { deletingEnv = env }
-                    } label: {
-                        if isSelected {
-                            Label(env.name, systemImage: "checkmark")
-                        } else {
-                            Text(env.name)
-                        }
-                    }
-                }
-            }
-            Divider()
-            Button("New Environment\u{2026}") { showingAddEnv = true }
-        } label: {
-            HStack(spacing: 4) {
-                Text(vault.selectedEnvironment?.name ?? "Default")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Theme.gold)
-            }
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
+    private var settingsToolbarConfigurator: some View {
+        SettingsToolbarConfigurator(
+            vault: vault,
+            searchText: $searchText,
+            onSettings: { showingAppSettings = true },
+            onAddSecret: { showingAddSecret = true },
+            onNewEnvironment: { showingAddEnv = true },
+            onRenameEnvironment: { env in
+                renamingEnv = env
+                renameEnvText = env.name
+            },
+            onDeleteEnvironment: { env in deletingEnv = env }
+        )
+        .frame(width: 0, height: 0)
     }
 
 @ViewBuilder
@@ -325,7 +276,8 @@ struct SettingsView: View {
                     onMove: { movingSecret = secret },
                     onDelete: { deletingSecret = secret }
                 )
-                .listRowInsets(EdgeInsets())
+                .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0))
+                .listRowSeparator(.hidden)
                 .listRowBackground(
                     RoundedRectangle(cornerRadius: 6)
                         .fill(selectedSecret?.name == secret.name ? Theme.goldSubtle : Color.clear)
@@ -448,18 +400,10 @@ private struct SecretRow: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(secret.name)
-                    .font(.system(size: 12, design: .monospaced).weight(.medium))
-                    .foregroundStyle(Theme.text)
-                    .lineLimit(1)
-                if let desc = secret.description, !desc.isEmpty {
-                    Text(desc)
-                        .font(.system(size: 11))
-                        .foregroundStyle(Theme.textDim)
-                        .lineLimit(1)
-                }
-            }
+            Text(secret.name)
+                .font(.system(size: 12, design: .monospaced).weight(.medium))
+                .foregroundStyle(Theme.text)
+                .lineLimit(1)
             Spacer()
 
             if isHovered {
@@ -543,7 +487,7 @@ struct SecretDetailView: View {
             .padding(.top, 24)
             .padding(.bottom, 20)
 
-            Rectangle().fill(Theme.sep).frame(height: 1)
+            Color.clear.frame(height: 8)
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
@@ -566,7 +510,7 @@ struct SecretDetailView: View {
                     .buttonStyle(.plain)
                 }
 
-                ZStack(alignment: .leading) {
+                ZStack(alignment: .topLeading) {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color(NSColor.controlBackgroundColor))
                     RoundedRectangle(cornerRadius: 8)
@@ -578,15 +522,16 @@ struct SecretDetailView: View {
                             .foregroundStyle(Theme.text)
                             .textSelection(.enabled)
                             .padding(12)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
                     } else {
                         Text(String(repeating: "•", count: min(secret.value.count, 24)))
                             .font(.system(size: 18, design: .monospaced))
                             .foregroundStyle(Theme.text)
-                            .padding(12)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
                     }
                 }
-                .frame(minHeight: 52)
+                .frame(height: 44, alignment: .topLeading)
             }
             .padding(.horizontal, 24)
             .padding(.top, 20)
