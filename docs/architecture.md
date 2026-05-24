@@ -172,16 +172,16 @@ lokalite run <command> [args...]  # injects secrets as env vars into subprocess
 
 ### `lokalite run` detail
 
-Lokalite reads a project-local `.lokalite` file (or `--env` flag) listing which secrets to inject:
+Lokalite resolves the current project from `--project`, `LOKALITE_PROJECT`, a linked working directory, or the active project. It resolves the environment from `--env`, `LOKALITE_ENV`, or the project's active environment.
 
-```yaml
-# .lokalite
-inject:
-  - OPENAI_API_KEY
-  - ANTHROPIC_API_KEY
+By default, `lokalite run` injects all secrets from that resolved project/environment. Use `--keys` to limit injection:
+
+```bash
+lokalite run -- npm start
+lokalite run --keys OPENAI_API_KEY,ANTHROPIC_API_KEY -- claude
 ```
 
-Then spawns the subprocess with those secrets in its environment. They never appear in the parent shell.
+The subprocess receives secrets in its environment. They never appear in the parent shell.
 
 ---
 
@@ -223,19 +223,20 @@ Settings (session timeout, launch at login) are accessible via the gear icon in 
 
 ## Export Format
 
-**Encrypted** (default):
+**Encrypted** (default): binary envelope, printed as base64 when no output file is provided.
 
-```json
-{
-  "version": 1,
-  "algorithm": "AES-256-GCM",
-  "kdf": "Argon2id",
-  "salt": "<base64>",
-  "nonce": "<base64>",
-  "ciphertext": "<base64>",
-  "tag": "<base64>"
-}
+Envelope layout:
+
+```text
+0x02
+argon2id_iterations: UInt32BE
+argon2id_memory_kib: UInt32BE
+argon2id_parallelism: UInt32BE
+salt: 32 bytes
+aes_gcm_combined: nonce + ciphertext + tag
 ```
+
+Current Argon2id parameters are 3 iterations, 64 MiB memory, and parallelism 1.
 
 The plaintext being encrypted is a JSON object: `{ "NAME": "value", ... }`.
 
@@ -268,9 +269,6 @@ Also compatible with `.env` format via `--format env`.
 
 ## Roadmap Items (not in MVP)
 
-- MCP server (`lokalite serve`) for agent/Claude Code integration
-- Environment profiles (`ai`, `production`, etc.)
-- Project linking (associate secrets with a directory)
 - Secret references (`lokalite://KEY_NAME` in config files)
 - Cross-platform support (Windows Credential Manager, Linux Secret Service)
 - iCloud Keychain sync (optional, opt-in)

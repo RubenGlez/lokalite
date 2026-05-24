@@ -32,4 +32,26 @@ final class VaultCryptoTests: XCTestCase {
         let restored = VaultCrypto.keyFromData(data)
         XCTAssertEqual(VaultCrypto.keyToData(restored), data)
     }
+
+    func testExportKeyDerivationUsesArgon2idParameters() throws {
+        let salt = Data((0..<32).map(UInt8.init))
+        let params = ExportKDFParameters(iterations: 2, memoryKiB: 8 * 1024, parallelism: 1)
+
+        let first = try VaultCrypto.deriveExportKey(from: "passphrase", salt: salt, parameters: params)
+        let second = try VaultCrypto.deriveExportKey(from: "passphrase", salt: salt, parameters: params)
+
+        XCTAssertEqual(VaultCrypto.keyToData(first), VaultCrypto.keyToData(second))
+        XCTAssertEqual(VaultCrypto.keyToData(first).count, 32)
+    }
+
+    func testExportKeyDerivationChangesWithSalt() throws {
+        let params = ExportKDFParameters(iterations: 2, memoryKiB: 8 * 1024, parallelism: 1)
+        let saltA = Data(repeating: 0xA, count: 32)
+        let saltB = Data(repeating: 0xB, count: 32)
+
+        let first = try VaultCrypto.deriveExportKey(from: "passphrase", salt: saltA, parameters: params)
+        let second = try VaultCrypto.deriveExportKey(from: "passphrase", salt: saltB, parameters: params)
+
+        XCTAssertNotEqual(VaultCrypto.keyToData(first), VaultCrypto.keyToData(second))
+    }
 }

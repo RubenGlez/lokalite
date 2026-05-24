@@ -12,12 +12,14 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift", from: "6.0.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.3.0"),
+        .package(url: "https://github.com/P-H-C/phc-winner-argon2.git", branch: "master"),
     ],
     targets: [
         .target(
             name: "LokaliteCore",
             dependencies: [
                 .product(name: "GRDB", package: "GRDB.swift"),
+                .product(name: "argon2", package: "phc-winner-argon2"),
             ],
             path: "Sources/LokaliteCore",
             swiftSettings: [.swiftLanguageMode(.v5)]

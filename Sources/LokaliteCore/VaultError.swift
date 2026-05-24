@@ -14,6 +14,7 @@ public enum VaultError: Error, LocalizedError {
     case noActiveProject
     case databaseError(String)
     case invalidExportPassphrase
+    case keyDerivationFailed(String)
 
     public var errorDescription: String? {
         switch self {
@@ -43,6 +44,8 @@ public enum VaultError: Error, LocalizedError {
             return "Database error: \(message)"
         case .invalidExportPassphrase:
             return "Invalid passphrase for encrypted export."
+        case .keyDerivationFailed(let message):
+            return "Failed to derive export key: \(message)"
         }
     }
 }
