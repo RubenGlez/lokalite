@@ -157,15 +157,15 @@ struct SettingsToolbarConfigurator: NSViewRepresentable {
             item.paletteLabel = "Environment"
             item.toolTip = "Environment"
 
-            let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 160, height: 32), pullsDown: true)
-            popUp.bezelStyle = .rounded
-            popUp.controlSize = .large
+            let popUp = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 132, height: 28), pullsDown: false)
+            popUp.bezelStyle = .inline
+            popUp.controlSize = .regular
             popUp.font = .systemFont(ofSize: 13, weight: .medium)
             popUp.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([
-                popUp.widthAnchor.constraint(greaterThanOrEqualToConstant: 150),
-                popUp.widthAnchor.constraint(lessThanOrEqualToConstant: 190),
-                popUp.heightAnchor.constraint(equalToConstant: 32)
+                popUp.widthAnchor.constraint(greaterThanOrEqualToConstant: 118),
+                popUp.widthAnchor.constraint(lessThanOrEqualToConstant: 160),
+                popUp.heightAnchor.constraint(equalToConstant: 28)
             ])
 
             item.view = popUp
@@ -189,16 +189,6 @@ struct SettingsToolbarConfigurator: NSViewRepresentable {
             let selectedTitle = vault.selectedEnvironment?.name ?? "Default"
 
             let menu = NSMenu()
-            let titleItem = NSMenuItem(title: selectedTitle, action: nil, keyEquivalent: "")
-            titleItem.attributedTitle = NSAttributedString(
-                string: selectedTitle,
-                attributes: [
-                    .foregroundColor: NSColor.labelColor,
-                    .font: NSFont.systemFont(ofSize: 13, weight: .medium)
-                ]
-            )
-            menu.addItem(titleItem)
-            menu.addItem(.separator())
 
             let defaultItem = menuItem(title: "Default", action: .select(nil))
             defaultItem.state = vault.selectedEnvironment == nil ? .on : .off
@@ -225,7 +215,7 @@ struct SettingsToolbarConfigurator: NSViewRepresentable {
             }
 
             popUp.menu = menu
-            popUp.selectItem(at: 0)
+            popUp.selectItem(withTitle: selectedTitle)
             popUp.isEnabled = vault.selectedProject != nil
         }
 
@@ -251,8 +241,10 @@ struct SettingsToolbarConfigurator: NSViewRepresentable {
                 action: #selector(expandSearch)
             )
             button.bezelStyle = .texturedRounded
-            button.controlSize = .large
+            button.isBordered = false
+            button.controlSize = .regular
             button.imagePosition = .imageOnly
+            button.contentTintColor = .secondaryLabelColor
             button.toolTip = "Search"
             searchToolbarItem.view = button
             searchField = nil
