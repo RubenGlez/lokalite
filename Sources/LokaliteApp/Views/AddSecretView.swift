@@ -1,16 +1,23 @@
 import SwiftUI
+import LokaliteCore
 
 struct AddSecretView: View {
     @EnvironmentObject private var vault: VaultViewModel
     @Environment(\.dismiss) private var dismiss
+    var onClose: () -> Void = {}
 
     @State private var name = ""
     @State private var value = ""
     @State private var description = ""
+    @State private var category: SecretCategory = .other
     @State private var revealed = false
 
     private var isValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty && !value.isEmpty
+    }
+
+    private var detectedCategory: SecretCategory {
+        SecretCategory.infer(name: name, value: value, description: description)
     }
 
     var body: some View {
@@ -41,6 +48,13 @@ struct AddSecretView: View {
                 }
 
                 Section("Optional") {
+                    Picker("Category", selection: $category) {
+                        ForEach(SecretCategory.allCases, id: \.self) { category in
+                            Label(category.label, systemImage: category.systemImage)
+                                .tag(category)
+                        }
+                    }
+
                     TextField("Description", text: $description)
                 }
             }
@@ -49,16 +63,17 @@ struct AddSecretView: View {
             Divider()
 
             HStack {
-                Button("Cancel") { dismiss() }
+                Button("Cancel") { close() }
                     .keyboardShortcut(.cancelAction)
                 Spacer()
                 Button("Add Secret") {
                     vault.add(
                         name: name.trimmingCharacters(in: .whitespaces),
                         value: value,
-                        description: description.isEmpty ? nil : description
+                        description: description.isEmpty ? nil : description,
+                        category: category
                     )
-                    dismiss()
+                    close()
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)
@@ -66,6 +81,14 @@ struct AddSecretView: View {
             }
             .padding()
         }
-        .frame(width: 440, height: 300)
+        .frame(width: 440, height: 320)
+        .onChange(of: name) { _ in category = detectedCategory }
+        .onChange(of: value) { _ in category = detectedCategory }
+        .onChange(of: description) { _ in category = detectedCategory }
+    }
+
+    private func close() {
+        onClose()
+        dismiss()
     }
 }

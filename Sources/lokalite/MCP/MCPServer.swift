@@ -88,7 +88,7 @@ final class MCPServer {
                     return ok(id, content("No secrets found."))
                 }
                 let text = secrets.map { s -> String in
-                    var line = s.name
+                    var line = "[\(s.category.label)] \(s.name)"
                     if let d = s.description { line += "  — \(d)" }
                     return line
                 }.joined(separator: "\n")

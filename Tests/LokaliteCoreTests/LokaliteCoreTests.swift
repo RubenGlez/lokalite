@@ -55,3 +55,47 @@ final class VaultCryptoTests: XCTestCase {
         XCTAssertNotEqual(VaultCrypto.keyToData(first), VaultCrypto.keyToData(second))
     }
 }
+
+final class SecretCategoryTests: XCTestCase {
+    func testInfersApiKeyFromName() {
+        XCTAssertEqual(
+            SecretCategory.infer(name: "OPENAI_API_KEY", value: "sk-proj-123"),
+            .apiKey
+        )
+    }
+
+    func testInfersTokenFromKnownValuePrefix() {
+        XCTAssertEqual(
+            SecretCategory.infer(name: "GITHUB_AUTH", value: "ghp_1234567890"),
+            .token
+        )
+    }
+
+    func testInfersDatabaseFromUrlValue() {
+        XCTAssertEqual(
+            SecretCategory.infer(name: "PRIMARY_URL", value: "postgres://user:pass@localhost/app"),
+            .database
+        )
+    }
+
+    func testInfersCertificateFromPemValue() {
+        XCTAssertEqual(
+            SecretCategory.infer(name: "TLS_CHAIN", value: "-----BEGIN CERTIFICATE-----\nabc"),
+            .certificate
+        )
+    }
+
+    func testInfersPasswordBeforeGenericSecret() {
+        XCTAssertEqual(
+            SecretCategory.infer(name: "DATABASE_PASSWORD", value: "secret-value"),
+            .password
+        )
+    }
+
+    func testFallsBackToOtherForUnknownSecrets() {
+        XCTAssertEqual(
+            SecretCategory.infer(name: "MISC_VALUE", value: "plain text"),
+            .other
+        )
+    }
+}

@@ -5,49 +5,43 @@ struct SecretRowView: View {
     let secret: Secret
     @EnvironmentObject private var vault: VaultViewModel
     @State private var copied = false
-    @State private var revealed = false
 
     var body: some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(secret.name)
-                    .font(.system(.body, design: .monospaced))
-                    .lineLimit(1)
-
-                if revealed {
-                    Text(secret.value)
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .transition(.opacity)
+        HStack(spacing: 8) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.accentColor.opacity(0.14))
+                let icon = secret.category.defaultIcon
+                if !icon.isEmpty {
+                    Text(icon)
+                        .font(.system(size: 13))
                 } else {
-                    Text(String(repeating: "•", count: min(secret.value.count, 16)))
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(1)
+                    Image(systemName: secret.category.systemImage)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
                 }
             }
+            .frame(width: 22, height: 22)
+
+            Text(secret.name)
+                .font(.system(size: 13, design: .monospaced))
+                .lineLimit(1)
 
             Spacer()
 
             if copied {
-                Image(systemName: "checkmark")
+                Label("Copied", systemImage: "checkmark")
+                    .font(.caption)
                     .foregroundStyle(.green)
                     .transition(.scale.combined(with: .opacity))
-            } else {
-                Image(systemName: "doc.on.doc")
-                    .foregroundStyle(.secondary)
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.vertical, 6)
         .contentShape(Rectangle())
         .onTapGesture { copySecret() }
         .contextMenu {
             Button("Copy") { copySecret() }
-            Button(revealed ? "Hide" : "Reveal") {
-                withAnimation(.easeInOut(duration: 0.15)) { revealed.toggle() }
-            }
             Divider()
             Button("Delete", role: .destructive) { vault.delete(secret) }
         }
