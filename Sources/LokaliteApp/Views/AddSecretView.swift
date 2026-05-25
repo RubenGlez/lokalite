@@ -82,9 +82,9 @@ struct AddSecretView: View {
             .padding()
         }
         .frame(width: 440, height: 320)
-        .onChange(of: name) { _ in category = detectedCategory }
-        .onChange(of: value) { _ in category = detectedCategory }
-        .onChange(of: description) { _ in category = detectedCategory }
+        .onChange(of: name) { category = detectedCategory }
+        .onChange(of: value) { category = detectedCategory }
+        .onChange(of: description) { category = detectedCategory }
     }
 
     private func close() {

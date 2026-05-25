@@ -93,7 +93,7 @@ struct ProjectCommand: ParsableCommand {
 
         func run() throws {
             if !force {
-                print("Delete project '\(name)' and all its secrets? This cannot be undone. [y/N] ",
+                print("Delete empty project '\(name)'? This cannot be undone. [y/N] ",
                       terminator: "")
                 guard readLine()?.lowercased() == "y" else {
                     print("Cancelled.")

@@ -9,8 +9,10 @@ public enum VaultError: Error, LocalizedError {
     case secretAlreadyExists(String)
     case projectNotFound(String)
     case projectAlreadyExists(String)
+    case projectContainsSecrets(String)
     case environmentNotFound(String)
     case environmentAlreadyExists(String)
+    case environmentContainsSecrets(String)
     case noActiveProject
     case databaseError(String)
     case invalidExportPassphrase
@@ -34,10 +36,14 @@ public enum VaultError: Error, LocalizedError {
             return "Project '\(name)' not found."
         case .projectAlreadyExists(let name):
             return "Project '\(name)' already exists."
+        case .projectContainsSecrets(let name):
+            return "Project '\(name)' contains secrets and cannot be deleted."
         case .environmentNotFound(let name):
             return "Environment '\(name)' not found."
         case .environmentAlreadyExists(let name):
             return "Environment '\(name)' already exists in this project."
+        case .environmentContainsSecrets(let name):
+            return "Environment '\(name)' contains secret values and cannot be deleted."
         case .noActiveProject:
             return "No active project. Run `lokalite project use <name>` or `cd` into a linked project directory."
         case .databaseError(let message):

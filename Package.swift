@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "Lokalite",
-    platforms: [.macOS(.v13)],
+    platforms: [.macOS(.v14)],
     products: [
         .library(name: "LokaliteCore", targets: ["LokaliteCore"]),
         .executable(name: "lokalite", targets: ["lokalite"]),

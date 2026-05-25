@@ -58,6 +58,10 @@ public final class Vault {
     }
 
     public func deleteProject(id: String) throws {
+        let project = try project(id: id)
+        guard try store.secretCount(projectId: id) == 0 else {
+            throw VaultError.projectContainsSecrets(project.name)
+        }
         try store.deleteProject(id: id)
     }
 
@@ -115,6 +119,12 @@ public final class Vault {
     }
 
     public func deleteEnvironment(name: String, projectId: String) throws {
+        guard let environment = try store.fetchEnvironment(name: name, projectId: projectId) else {
+            throw VaultError.environmentNotFound(name)
+        }
+        guard try store.secretValueCount(environmentId: environment.id) == 0 else {
+            throw VaultError.environmentContainsSecrets(name)
+        }
         try store.deleteEnvironment(name: name, projectId: projectId)
     }
 

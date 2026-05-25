@@ -56,6 +56,17 @@ private func firstEmoji(_ value: String) -> String {
     return String(first)
 }
 
+private extension View {
+    func toolbarSearch(text: Binding<String>, isPresented: Binding<Bool>) -> some View {
+        searchable(
+            text: text,
+            isPresented: isPresented,
+            placement: .toolbar,
+            prompt: "Filter secrets"
+        )
+    }
+}
+
 // MARK: - Root
 
 struct SettingsView: View {
@@ -102,6 +113,16 @@ struct SettingsView: View {
         }
     }
 
+    private var selectedProjectTitle: String {
+        vault.selectedProject?.name ?? "Lokalite"
+    }
+
+    private var selectedProjectSubtitle: String {
+        guard vault.selectedProject != nil else { return "" }
+        let n = vault.secrets.count
+        return "\(n) secret\(n == 1 ? "" : "s")"
+    }
+
     var body: some View {
         NavigationSplitView {
             sidebarColumn
@@ -115,7 +136,7 @@ struct SettingsView: View {
         .onAppear {
             if vault.isLocked { vault.unlock() }
         }
-        .onChange(of: vault.secrets) { newSecrets in
+        .onChange(of: vault.secrets) { _, newSecrets in
             if let selected = selectedSecret {
                 selectedSecret = newSecrets.first { $0.name == selected.name }
             }
@@ -278,26 +299,10 @@ struct SettingsView: View {
                 secretsList
             }
         }
-        .navigationTitle("")
+        .navigationTitle(selectedProjectTitle)
+        .navigationSubtitle(selectedProjectSubtitle)
         .toolbar {
-            ToolbarItem(placement: .navigation) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(vault.selectedProject?.name ?? "Lokalite")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(.primary)
-
-                    if vault.selectedProject != nil {
-                        let n = vault.secrets.count
-                        Text("\(n) secret\(n == 1 ? "" : "s")")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .allowsHitTesting(false)
-                .accessibilityElement(children: .combine)
-            }
-
-            ToolbarItem(placement: .navigation) {
+            ToolbarItem(placement: .automatic) {
                 Menu {
                     Button("Default") {
                         vault.selectEnvironment(nil)
@@ -340,82 +345,27 @@ struct SettingsView: View {
                 .disabled(vault.selectedProject == nil)
             }
 
-            ToolbarItem(placement: .primaryAction) {
-                ControlGroup {
-                    Button {
-                        showingAppSettings = true
-                    } label: {
-                        Label("Settings", systemImage: "gearshape")
-                    }
-                    .help("Settings")
-
-                    Button {
-                        showingAddSecret = true
-                    } label: {
-                        Label("New Secret", systemImage: "square.and.pencil")
-                    }
-                    .disabled(vault.selectedProject == nil)
-                    .help("New secret")
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    showingAppSettings = true
+                } label: {
+                    Label("Settings", systemImage: "gearshape")
                 }
-                .controlGroupStyle(.navigation)
+                .help("Settings")
             }
 
             ToolbarItem(placement: .primaryAction) {
-                ControlGroup {
-                    if searchExpanded {
-                        HStack(spacing: 4) {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundColor(.secondary)
-                                .font(.system(size: 11))
-                            
-                            TextField("Filter secrets...", text: $searchText)
-                                .textFieldStyle(.plain)
-                                .frame(width: 140)
-                                .font(.system(size: 12))
-                            
-                            if !searchText.isEmpty {
-                                Button {
-                                    searchText = ""
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.secondary)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(Color.white.opacity(0.08))
-                        )
-                        .transition(.move(edge: .trailing).combined(with: .opacity))
-                        
-                        Button("Cancel") {
-                            withAnimation(.easeOut(duration: 0.15)) {
-                                searchText = ""
-                                searchExpanded = false
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundColor(Theme.gold)
-                        .font(.system(size: 12, weight: .medium))
-                    } else {
-                        Button {
-                            withAnimation(.easeOut(duration: 0.15)) {
-                                searchExpanded = true
-                            }
-                        } label: {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 14))
-                        }
-                        .buttonStyle(.plain)
-                        .help("Search")
-                    }
+                Button {
+                    showingAddSecret = true
+                } label: {
+                    Label("New Secret", systemImage: "square.and.pencil")
                 }
-                .controlGroupStyle(.navigation)
+                .disabled(vault.selectedProject == nil)
+                .help("New secret")
             }
+
         }
+        .toolbarSearch(text: $searchText, isPresented: $searchExpanded)
     }
 
     @ViewBuilder
@@ -600,7 +550,7 @@ private struct ProjectAppearanceView: View {
         }
         .frame(width: 420, height: 220)
         .preferredColorScheme(.dark)
-        .onChange(of: icon) { icon = firstEmoji($0) }
+        .onChange(of: icon) { _, newIcon in icon = firstEmoji(newIcon) }
     }
 }
 
@@ -994,8 +944,8 @@ struct AppSettingsView: View {
                 sessionTimeoutSeconds = vault.sessionTimeoutSeconds
                 clipboardClearSeconds = vault.clipboardClearSeconds
             }
-            .onChange(of: sessionTimeoutSeconds) { vault.sessionTimeoutSeconds = $0 }
-            .onChange(of: clipboardClearSeconds) { vault.clipboardClearSeconds = $0 }
+            .onChange(of: sessionTimeoutSeconds) { _, newValue in vault.sessionTimeoutSeconds = newValue }
+            .onChange(of: clipboardClearSeconds) { _, newValue in vault.clipboardClearSeconds = newValue }
 
             Divider()
 
@@ -1247,7 +1197,7 @@ struct MoveSecretView: View {
                 }
             }
             .formStyle(.grouped)
-            .onChange(of: destProjectId) { projectId in
+            .onChange(of: destProjectId) { _, projectId in
                 availableEnvironments = (try? Vault.shared.listEnvironments(projectId: projectId)) ?? []
                 destEnvironmentName = nil
             }

@@ -298,6 +298,12 @@ final class VaultStore {
 
     func deleteProject(id: String) throws {
         try db.write { db in
+            guard let project = try ProjectRecord.filter(Column("id") == id).fetchOne(db) else {
+                throw VaultError.projectNotFound(id)
+            }
+            guard try SecretRecord.filter(Column("project_id") == id).fetchCount(db) == 0 else {
+                throw VaultError.projectContainsSecrets(project.name)
+            }
             let deleted = try ProjectRecord.filter(Column("id") == id).deleteAll(db)
             guard deleted > 0 else { throw VaultError.projectNotFound(id) }
         }
@@ -345,10 +351,28 @@ final class VaultStore {
 
     func deleteEnvironment(name: String, projectId: String) throws {
         try db.write { db in
+            guard let environment = try EnvironmentRecord
+                .filter(Column("project_id") == projectId && Column("name") == name)
+                .fetchOne(db) else {
+                throw VaultError.environmentNotFound(name)
+            }
+            guard try SecretValueRecord
+                .filter(Column("environment_id") == environment.id)
+                .fetchCount(db) == 0 else {
+                throw VaultError.environmentContainsSecrets(name)
+            }
             let deleted = try EnvironmentRecord
                 .filter(Column("project_id") == projectId && Column("name") == name)
                 .deleteAll(db)
             guard deleted > 0 else { throw VaultError.environmentNotFound(name) }
+        }
+    }
+
+    func secretValueCount(environmentId: String) throws -> Int {
+        try db.read { db in
+            try SecretValueRecord
+                .filter(Column("environment_id") == environmentId)
+                .fetchCount(db)
         }
     }
 
@@ -438,6 +462,14 @@ final class VaultStore {
                 .filter(Column("project_id") == projectId)
                 .order(Column("name"))
                 .fetchAll(db)
+        }
+    }
+
+    func secretCount(projectId: String) throws -> Int {
+        try db.read { db in
+            try SecretRecord
+                .filter(Column("project_id") == projectId)
+                .fetchCount(db)
         }
     }
 

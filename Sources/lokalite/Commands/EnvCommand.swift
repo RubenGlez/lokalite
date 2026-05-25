@@ -79,7 +79,7 @@ struct EnvCommand: ParsableCommand {
         func run() throws {
             let ctx = try resolveContext(projectFlag: project, envFlag: nil)
             if !force {
-                print("Delete environment '\(name)' from '\(ctx.project.name)'? Secret values for this environment will be lost. [y/N] ",
+                print("Delete empty environment '\(name)' from '\(ctx.project.name)'? This cannot be undone. [y/N] ",
                       terminator: "")
                 guard readLine()?.lowercased() == "y" else {
                     print("Cancelled.")
