@@ -340,24 +340,28 @@ struct SettingsView: View {
                 .disabled(vault.selectedProject == nil)
             }
 
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button {
-                    showingAppSettings = true
-                } label: {
-                    Label("Settings", systemImage: "gearshape")
-                }
-                .help("Settings")
+            ToolbarItem(placement: .primaryAction) {
+                ControlGroup {
+                    Button {
+                        showingAppSettings = true
+                    } label: {
+                        Label("Settings", systemImage: "gearshape")
+                    }
+                    .help("Settings")
 
-                Button {
-                    showingAddSecret = true
-                } label: {
-                    Label("New Secret", systemImage: "square.and.pencil")
+                    Button {
+                        showingAddSecret = true
+                    } label: {
+                        Label("New Secret", systemImage: "square.and.pencil")
+                    }
+                    .disabled(vault.selectedProject == nil)
+                    .help("New secret")
                 }
-                .disabled(vault.selectedProject == nil)
-                .help("New secret")
+                .controlGroupStyle(.navigation)
+            }
 
-                // Collapsible Search Item
-                HStack(spacing: 6) {
+            ToolbarItem(placement: .primaryAction) {
+                ControlGroup {
                     if searchExpanded {
                         HStack(spacing: 4) {
                             Image(systemName: "magnifyingglass")
@@ -409,6 +413,7 @@ struct SettingsView: View {
                         .help("Search")
                     }
                 }
+                .controlGroupStyle(.navigation)
             }
         }
     }
