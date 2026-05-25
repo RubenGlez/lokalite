@@ -4,7 +4,6 @@ import LokaliteCore
 struct AddSecretView: View {
     @EnvironmentObject private var vault: VaultViewModel
     @Environment(\.dismiss) private var dismiss
-    var onClose: () -> Void = {}
 
     @State private var name = ""
     @State private var value = ""
@@ -21,7 +20,7 @@ struct AddSecretView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        NavigationStack {
             Form {
                 Section {
                     TextField("Name", text: $name)
@@ -44,6 +43,7 @@ struct AddSecretView: View {
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
+                        .accessibilityLabel(revealed ? "Hide secret value" : "Reveal secret value")
                     }
                 }
 
@@ -59,36 +59,30 @@ struct AddSecretView: View {
                 }
             }
             .formStyle(.grouped)
-
-            Divider()
-
-            HStack {
-                Button("Cancel") { close() }
-                    .keyboardShortcut(.cancelAction)
-                Spacer()
-                Button("Add Secret") {
-                    vault.add(
-                        name: name.trimmingCharacters(in: .whitespaces),
-                        value: value,
-                        description: description.isEmpty ? nil : description,
-                        category: category
-                    )
-                    close()
+            .navigationTitle("Add Secret")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .keyboardShortcut(.cancelAction)
                 }
-                .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
-                .disabled(!isValid)
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") {
+                        vault.add(
+                            name: name.trimmingCharacters(in: .whitespaces),
+                            value: value,
+                            description: description.isEmpty ? nil : description,
+                            category: category
+                        )
+                        dismiss()
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!isValid)
+                }
             }
-            .padding()
         }
         .frame(width: 440, height: 320)
         .onChange(of: name) { category = detectedCategory }
         .onChange(of: value) { category = detectedCategory }
         .onChange(of: description) { category = detectedCategory }
-    }
-
-    private func close() {
-        onClose()
-        dismiss()
     }
 }

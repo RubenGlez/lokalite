@@ -31,9 +31,7 @@ struct VaultPopover: View {
         .onAppear { vault.unlock() }
         .onDisappear { showingAddSecret = false }
         .sheet(isPresented: $showingAddSecret) {
-            AddSecretView {
-                showingAddSecret = false
-            }
+            AddSecretView()
                 .environmentObject(vault)
         }
     }
@@ -177,28 +175,22 @@ struct VaultPopover: View {
     }
 
     private var secretsList: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(filtered, id: \.id) { secret in
-                    SecretRowView(secret: secret)
-                    if secret.id != filtered.last?.id {
-                        Divider().padding(.leading, 12)
-                    }
-                }
-            }
+        List(filtered) { secret in
+            SecretRowView(secret: secret)
+                .environmentObject(vault)
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
         .frame(minHeight: 110, maxHeight: 420)
     }
 
 
 
     private var emptyView: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "key")
-                .font(.title)
-                .foregroundStyle(.secondary)
-            Text("No secrets yet")
-                .foregroundStyle(.secondary)
+        ContentUnavailableView {
+            Label("No Secrets", systemImage: "key")
+        } actions: {
             Button("Add your first secret") {
                 showingAddSecret = true
             }
@@ -208,8 +200,7 @@ struct VaultPopover: View {
     }
 
     private var noResultsView: some View {
-        Text("No results")
-            .foregroundStyle(.secondary)
+        ContentUnavailableView.search(text: searchText)
             .frame(maxWidth: .infinity)
             .padding(24)
     }

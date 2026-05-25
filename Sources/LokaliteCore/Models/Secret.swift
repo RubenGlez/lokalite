@@ -9,13 +9,14 @@ public struct Secret: Codable, Equatable, Hashable {
     public var category: SecretCategory
 
     public init(
+        id: String = UUID().uuidString,
         name: String,
         value: String,
         description: String? = nil,
         icon: String? = nil,
         category: SecretCategory = .other
     ) {
-        self.id = UUID().uuidString
+        self.id = id
         self.name = name
         self.value = value
         self.description = description

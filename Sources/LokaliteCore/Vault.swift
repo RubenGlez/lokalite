@@ -181,7 +181,7 @@ public final class Vault {
                                             updatedAt: now)
         try store.upsertSecretValue(valueRecord)
 
-        return Secret(name: name, value: value, description: description, icon: icon, category: category)
+        return Secret(id: secretRecord.id, name: name, value: value, description: description, icon: icon, category: category)
     }
 
     public func get(name: String, projectId: String, environmentName: String? = nil) throws -> Secret {
@@ -371,7 +371,7 @@ public final class Vault {
     }
 
     private func secretFromRecord(_ record: SecretRecord, value: String) -> Secret {
-        Secret(name: record.name, value: value, description: record.description,
+        Secret(id: record.id, name: record.name, value: value, description: record.description,
                icon: record.icon, category: category(from: record))
     }
 
