@@ -15,11 +15,12 @@ struct ProjectRecord: Codable, FetchableRecord, PersistableRecord {
     var name: String
     var path: String?
     var activeEnvironment: String?
+    var icon: String?
     var createdAt: String
     var updatedAt: String
 
     enum CodingKeys: String, CodingKey {
-        case id, name, path
+        case id, name, path, icon
         case activeEnvironment = "active_environment"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
@@ -31,12 +32,13 @@ struct EnvironmentRecord: Codable, FetchableRecord, PersistableRecord {
     var id: String
     var projectId: String
     var name: String
+    var color: String?
     var createdAt: String
 
     enum CodingKeys: String, CodingKey {
         case id
         case projectId = "project_id"
-        case name
+        case name, color
         case createdAt = "created_at"
     }
 }
@@ -47,13 +49,15 @@ struct SecretRecord: Codable, FetchableRecord, PersistableRecord {
     var projectId: String
     var name: String
     var description: String?
+    var icon: String?
+    var category: String
     var createdAt: String
     var updatedAt: String
 
     enum CodingKeys: String, CodingKey {
         case id
         case projectId = "project_id"
-        case name, description
+        case name, description, icon, category
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
@@ -184,6 +188,49 @@ final class VaultStore {
                            arguments: [defaultProjectId])
         }
 
+        migrator.registerMigration("v3") { db in
+            try db.alter(table: "projects") { t in
+                t.add(column: "icon", .text)
+            }
+            try db.alter(table: "environments") { t in
+                t.add(column: "color", .text)
+            }
+            try db.alter(table: "secrets") { t in
+                t.add(column: "icon", .text)
+            }
+        }
+
+        migrator.registerMigration("v4") { db in
+            try db.alter(table: "secrets") { t in
+                t.add(column: "category", .text).notNull().defaults(to: SecretCategory.secret.rawValue)
+            }
+        }
+
+        migrator.registerMigration("v5") { db in
+            try db.execute(sql: """
+                UPDATE secrets
+                SET category = CASE
+                    WHEN lower(name) LIKE '%cert%' OR lower(name) LIKE '%certificate%' THEN 'certificate'
+                    WHEN lower(name) LIKE '%password%' OR lower(name) LIKE '%passwd%' OR lower(name) LIKE '%pwd%' THEN 'password'
+                    WHEN lower(name) LIKE '%database%' OR lower(name) LIKE '%db_%' OR lower(name) LIKE '%postgres%' OR lower(name) LIKE '%mysql%' OR lower(name) LIKE '%mongodb%' OR lower(name) LIKE '%redis%' THEN 'database'
+                    WHEN lower(name) LIKE '%webhook%' OR lower(name) LIKE '%callback%' THEN 'webhook'
+                    WHEN lower(name) LIKE '%api_key%' OR lower(name) LIKE '%apikey%' OR lower(name) LIKE '%secret_key%' OR lower(name) LIKE '%public_key%' OR lower(name) LIKE '%publishable_key%' OR lower(name) LIKE '%client_key%' THEN 'api_key'
+                    WHEN lower(name) LIKE '%token%' OR lower(name) LIKE '%access_token%' OR lower(name) LIKE '%refresh_token%' THEN 'token'
+                    ELSE category
+                END
+                WHERE category = 'secret'
+            """)
+        }
+
+        migrator.registerMigration("v6") { db in
+            try db.execute(sql: """
+                UPDATE secrets
+                SET category = 'other'
+                WHERE category = 'secret'
+                  AND lower(name) NOT LIKE '%secret%'
+            """)
+        }
+
         try migrator.migrate(db)
     }
 
@@ -284,6 +331,16 @@ final class VaultStore {
                 .filter(Column("project_id") == projectId && Column("name") == name)
                 .fetchOne(db)
         }
+    }
+
+    func fetchEnvironment(id: String) throws -> EnvironmentRecord? {
+        try db.read { db in
+            try EnvironmentRecord.filter(Column("id") == id).fetchOne(db)
+        }
+    }
+
+    func updateEnvironment(_ record: EnvironmentRecord) throws {
+        try db.write { db in try record.update(db) }
     }
 
     func deleteEnvironment(name: String, projectId: String) throws {

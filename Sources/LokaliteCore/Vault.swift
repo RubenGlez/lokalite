@@ -32,12 +32,13 @@ public final class Vault {
 
     // MARK: - Project Management
 
-    public func addProject(name: String, path: String? = nil) throws -> Project {
+    public func addProject(name: String, path: String? = nil, icon: String? = nil) throws -> Project {
         let now = iso8601()
         let record = ProjectRecord(id: UUID().uuidString, name: name, path: path,
-                                   activeEnvironment: nil, createdAt: now, updatedAt: now)
+                                   activeEnvironment: nil, icon: icon,
+                                   createdAt: now, updatedAt: now)
         try store.insertProject(record)
-        return Project(id: record.id, name: name, path: path, activeEnvironment: nil)
+        return Project(id: record.id, name: name, path: path, activeEnvironment: nil, icon: icon)
     }
 
     public func listProjects() throws -> [Project] {
@@ -93,16 +94,16 @@ public final class Vault {
 
     // MARK: - Environment Management
 
-    public func addEnvironment(name: String, projectId: String) throws -> VaultEnvironment {
+    public func addEnvironment(name: String, projectId: String, color: String? = nil) throws -> VaultEnvironment {
         let record = EnvironmentRecord(id: UUID().uuidString, projectId: projectId,
-                                       name: name, createdAt: iso8601())
+                                       name: name, color: color, createdAt: iso8601())
         try store.insertEnvironment(record)
-        return VaultEnvironment(id: record.id, projectId: projectId, name: name)
+        return VaultEnvironment(id: record.id, projectId: projectId, name: name, color: color)
     }
 
     public func listEnvironments(projectId: String) throws -> [VaultEnvironment] {
         try store.fetchAllEnvironments(projectId: projectId).map {
-            VaultEnvironment(id: $0.id, projectId: $0.projectId, name: $0.name)
+            VaultEnvironment(id: $0.id, projectId: $0.projectId, name: $0.name, color: $0.color)
         }
     }
 
@@ -110,7 +111,7 @@ public final class Vault {
         guard let record = try store.fetchEnvironment(name: name, projectId: projectId) else {
             return nil
         }
-        return VaultEnvironment(id: record.id, projectId: record.projectId, name: record.name)
+        return VaultEnvironment(id: record.id, projectId: record.projectId, name: record.name, color: record.color)
     }
 
     public func deleteEnvironment(name: String, projectId: String) throws {
@@ -125,16 +126,42 @@ public final class Vault {
         try store.renameEnvironment(id: id, newName: newName, projectId: projectId)
     }
 
+    public func setProjectIcon(id: String, icon: String?) throws {
+        guard var record = try store.fetchProject(id: id) else {
+            throw VaultError.projectNotFound(id)
+        }
+        record.icon = icon.flatMap { $0.isEmpty ? nil : $0 }
+        record.updatedAt = iso8601()
+        try store.updateProject(record)
+    }
+
+    public func setEnvironmentColor(id: String, color: String?) throws {
+        guard var record = try store.fetchEnvironment(id: id) else {
+            throw VaultError.environmentNotFound(id)
+        }
+        record.color = color.flatMap { $0.isEmpty ? nil : $0 }
+        try store.updateEnvironment(record)
+    }
+
     // MARK: - Secret CRUD
 
-    public func add(name: String, value: String, description: String? = nil,
-                    projectId: String, environmentName: String? = nil) throws -> Secret {
+    public func add(
+        name: String,
+        value: String,
+        description: String? = nil,
+        icon: String? = nil,
+        category: SecretCategory? = nil,
+        projectId: String,
+        environmentName: String? = nil
+    ) throws -> Secret {
         let key = try requireKey()
         let encrypted = try VaultCrypto.encrypt(value, using: key)
         let now = iso8601()
+        let category = category ?? SecretCategory.infer(name: name, value: value, description: description)
 
         let secretRecord = SecretRecord(id: UUID().uuidString, projectId: projectId,
-                                        name: name, description: description,
+                                        name: name, description: description, icon: icon,
+                                        category: category.rawValue,
                                         createdAt: now, updatedAt: now)
         try store.insertSecret(secretRecord)
 
@@ -144,7 +171,7 @@ public final class Vault {
                                             updatedAt: now)
         try store.upsertSecretValue(valueRecord)
 
-        return Secret(name: name, value: value, description: description)
+        return Secret(name: name, value: value, description: description, icon: icon, category: category)
     }
 
     public func get(name: String, projectId: String, environmentName: String? = nil) throws -> Secret {
@@ -158,7 +185,7 @@ public final class Vault {
             throw VaultError.secretNotFound(name)
         }
         let value = try VaultCrypto.decrypt(valueRecord.encryptedValue, using: key)
-        return Secret(name: name, value: value, description: secretRecord.description)
+        return secretFromRecord(secretRecord, value: value)
     }
 
     public func setDescription(name: String, description: String?, projectId: String) throws {
@@ -170,19 +197,33 @@ public final class Vault {
         try store.updateSecret(record)
     }
 
+    public func setSecretCategory(name: String, category: SecretCategory, projectId: String) throws {
+        guard var record = try store.fetchSecret(name: name, projectId: projectId) else {
+            throw VaultError.secretNotFound(name)
+        }
+        record.category = category.rawValue
+        record.updatedAt = iso8601()
+        try store.updateSecret(record)
+    }
+
     public func set(name: String, value: String, projectId: String,
                     environmentName: String? = nil) throws -> Secret {
         let key = try requireKey()
-        guard let secretRecord = try store.fetchSecret(name: name, projectId: projectId) else {
+        guard var secretRecord = try store.fetchSecret(name: name, projectId: projectId) else {
             throw VaultError.secretNotFound(name)
         }
         let encrypted = try VaultCrypto.encrypt(value, using: key)
+        secretRecord.category = SecretCategory
+            .infer(name: secretRecord.name, value: value, description: secretRecord.description)
+            .rawValue
+        secretRecord.updatedAt = iso8601()
+        try store.updateSecret(secretRecord)
         let environmentId = try resolveEnvironmentId(name: environmentName, projectId: projectId)
         let valueRecord = SecretValueRecord(id: UUID().uuidString, secretId: secretRecord.id,
                                             environmentId: environmentId, encryptedValue: encrypted,
                                             updatedAt: iso8601())
         try store.upsertSecretValue(valueRecord)
-        return Secret(name: name, value: value, description: secretRecord.description)
+        return secretFromRecord(secretRecord, value: value)
     }
 
     public func moveSecretToEnvironment(name: String, projectId: String,
@@ -208,7 +249,7 @@ public final class Vault {
             throw VaultError.secretNotFound(name)
         }
         let value = try VaultCrypto.decrypt(valueRecord.encryptedValue, using: key)
-        _ = try add(name: name, value: value, description: secretRecord.description,
+        _ = try add(name: name, value: value, description: secretRecord.description, icon: secretRecord.icon,
                     projectId: toProjectId, environmentName: nil)
         try store.deleteSecret(name: name, projectId: fromProjectId)
     }
@@ -227,13 +268,13 @@ public final class Vault {
                 return nil
             }
             let value = try VaultCrypto.decrypt(valueRecord.encryptedValue, using: key)
-            return Secret(name: secretRecord.name, value: value, description: secretRecord.description)
+            return secretFromRecord(secretRecord, value: value)
         }
     }
 
     public func listInfo(projectId: String) throws -> [SecretInfo] {
         try store.fetchAllSecrets(projectId: projectId).map {
-            SecretInfo(name: $0.name, description: $0.description)
+            SecretInfo(name: $0.name, description: $0.description, icon: $0.icon, category: category(from: $0))
         }
     }
 
@@ -316,7 +357,16 @@ public final class Vault {
 
     private func projectFromRecord(_ record: ProjectRecord) -> Project {
         Project(id: record.id, name: record.name, path: record.path,
-                activeEnvironment: record.activeEnvironment)
+                activeEnvironment: record.activeEnvironment, icon: record.icon)
+    }
+
+    private func secretFromRecord(_ record: SecretRecord, value: String) -> Secret {
+        Secret(name: record.name, value: value, description: record.description,
+               icon: record.icon, category: category(from: record))
+    }
+
+    private func category(from record: SecretRecord) -> SecretCategory {
+        SecretCategory(rawValue: record.category) ?? .other
     }
 
     private func vaultFileURL() -> URL {

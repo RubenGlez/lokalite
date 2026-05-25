@@ -1,15 +1,19 @@
+import AppKit
 import SwiftUI
 import LokaliteCore
 
 // MARK: - Identifiable
 
 extension Secret: Identifiable {}
+extension Project: Identifiable {}
+extension VaultEnvironment: Identifiable {}
 
 // MARK: - Theme
 
 private enum Theme {
     static let gold       = Color(red: 0.910, green: 0.627, blue: 0.118)
     static let goldSubtle = Color(red: 0.910, green: 0.627, blue: 0.118).opacity(0.15)
+    static let neutralSubtle = Color.white.opacity(0.08)
     static let sep        = Color.white.opacity(0.08)
     static let text       = Color(red: 0.929, green: 0.929, blue: 0.941)
     static let textMuted  = Color(red: 0.565, green: 0.565, blue: 0.612)
@@ -17,6 +21,39 @@ private enum Theme {
     static let bgHigh     = Color.white.opacity(0.06)
     static let red        = Color(red: 0.965, green: 0.369, blue: 0.369)
     static let green      = Color(red: 0.302, green: 0.847, blue: 0.569)
+    static let blue       = Color(red: 0.341, green: 0.635, blue: 1.000)
+    static let mint       = Color(red: 0.318, green: 0.859, blue: 0.757)
+    static let violet     = Color(red: 0.659, green: 0.522, blue: 1.000)
+    static let pink       = Color(red: 1.000, green: 0.455, blue: 0.647)
+    static let orange     = Color(red: 1.000, green: 0.604, blue: 0.286)
+
+    static let environmentPalette = ["#E8A01E", "#57A2FF", "#51DBC1", "#A885FF", "#FF749F", "#FF9A49", "#4CD964"]
+
+    static func color(hex: String?) -> Color {
+        guard let hex else { return gold }
+        switch hex {
+        case "#57A2FF": return blue
+        case "#51DBC1": return mint
+        case "#A885FF": return violet
+        case "#FF749F": return pink
+        case "#FF9A49": return orange
+        case "#4CD964": return green
+        default: return gold
+        }
+    }
+}
+
+private let projectEmojiOptions = [
+    "🚀", "🧪", "⚙️", "🧰", "🔐", "🔑", "🛡️", "📦", "☁️", "🗄️", "🔌", "💳",
+    "📱", "💻", "🖥️", "⌨️", "🧠", "✨", "🔥", "⚡️", "🌐", "📡", "🛰️", "🧭",
+    "🏗️", "🏢", "🏷️", "📊", "📈", "📉", "🧾", "📝", "📚", "🗂️", "📁", "🗃️",
+    "🧬", "🧿", "🎛️", "🎯", "🪄", "🪪", "🧑‍💻", "🤖", "💎", "🧱", "🪙", "🧲"
+]
+
+private func firstEmoji(_ value: String) -> String {
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard let first = trimmed.first else { return "" }
+    return String(first)
 }
 
 // MARK: - Root
@@ -30,8 +67,11 @@ struct SettingsView: View {
     @State private var showingAddSecret = false
     @State private var showingAddEnv = false
     @State private var showingAppSettings = false
+    @State private var showingEnvironmentManager = false
     @State private var editingSecret: Secret?
     @State private var movingSecret: Secret?
+    @State private var customizingProject: Project?
+    @State private var customizingEnvironment: VaultEnvironment?
 
     // Search
     @State private var searchExpanded = false
@@ -57,7 +97,8 @@ struct SettingsView: View {
         let q = searchText.lowercased()
         return vault.secrets.filter {
             $0.name.lowercased().contains(q) ||
-            ($0.description?.lowercased().contains(q) ?? false)
+            ($0.description?.lowercased().contains(q) ?? false) ||
+            $0.category.label.lowercased().contains(q)
         }
     }
 
@@ -85,11 +126,20 @@ struct SettingsView: View {
         .sheet(isPresented: $showingAppSettings) {
             AppSettingsView().environmentObject(vault)
         }
+        .sheet(isPresented: $showingEnvironmentManager) {
+            EnvironmentManagerView().environmentObject(vault)
+        }
         .sheet(item: $editingSecret) { s in
             EditSecretView(secret: s).environmentObject(vault)
         }
         .sheet(item: $movingSecret) { s in
             MoveSecretView(secret: s).environmentObject(vault)
+        }
+        .sheet(item: $customizingProject) { project in
+            ProjectAppearanceView(project: project).environmentObject(vault)
+        }
+        .sheet(item: $customizingEnvironment) { environment in
+            EnvironmentAppearanceView(environment: environment).environmentObject(vault)
         }
         .alert("New Project", isPresented: $showingAddProject) {
             TextField("Name", text: $newProjectName)
@@ -188,15 +238,12 @@ struct SettingsView: View {
                 project: project,
                 isSelected: isSelected,
                 onSelect: { vault.selectProject(project) },
-                onRename: {
-                    renamingProject = project
-                    renameProjectText = project.name
-                },
+                onEdit: { customizingProject = project },
                 onDelete: { deletingProject = project }
             )
             .listRowBackground(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? Theme.goldSubtle : Color.clear)
+                    .fill(isSelected ? Theme.neutralSubtle : Color.clear)
                     .padding(.horizontal, 4)
             )
         }
@@ -231,32 +278,142 @@ struct SettingsView: View {
                 secretsList
             }
         }
-        .navigationTitle(vault.selectedProject?.name ?? "Lokalite")
-        .navigationSubtitle({
-            guard vault.selectedProject != nil else { return "" }
-            let n = vault.secrets.count
-            return "\(n) secret\(n == 1 ? "" : "s")"
-        }())
-        .background(settingsToolbarConfigurator)
+        .navigationTitle("")
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(vault.selectedProject?.name ?? "Lokalite")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(.primary)
+
+                    if vault.selectedProject != nil {
+                        let n = vault.secrets.count
+                        Text("\(n) secret\(n == 1 ? "" : "s")")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .allowsHitTesting(false)
+                .accessibilityElement(children: .combine)
+            }
+
+            ToolbarItem(placement: .navigation) {
+                Menu {
+                    Button("Default") {
+                        vault.selectEnvironment(nil)
+                    }
+                    ForEach(vault.environments, id: \.id) { env in
+                        Button {
+                            vault.selectEnvironment(env)
+                        } label: {
+                            Label {
+                                Text(env.name)
+                            } icon: {
+                                Image(systemName: "circle.fill")
+                                    .foregroundStyle(Theme.color(hex: env.color))
+                            }
+                        }
+                    }
+                    if vault.selectedProject != nil {
+                        Divider()
+                        Button("Configure Environments...") {
+                            showingEnvironmentManager = true
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        if let env = vault.selectedEnvironment {
+                            Circle()
+                                .fill(Theme.color(hex: env.color))
+                                .frame(width: 5, height: 5)
+                            Text(env.name)
+                        } else {
+                            Circle()
+                                .fill(Theme.gold)
+                                .frame(width: 5, height: 5)
+                            Text("Default")
+                        }
+                    }
+                    .font(.system(size: 12, weight: .medium))
+                }
+                .menuStyle(.button)
+                .disabled(vault.selectedProject == nil)
+            }
+
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button {
+                    showingAppSettings = true
+                } label: {
+                    Label("Settings", systemImage: "gearshape")
+                }
+                .help("Settings")
+
+                Button {
+                    showingAddSecret = true
+                } label: {
+                    Label("New Secret", systemImage: "square.and.pencil")
+                }
+                .disabled(vault.selectedProject == nil)
+                .help("New secret")
+
+                // Collapsible Search Item
+                HStack(spacing: 6) {
+                    if searchExpanded {
+                        HStack(spacing: 4) {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundColor(.secondary)
+                                .font(.system(size: 11))
+                            
+                            TextField("Filter secrets...", text: $searchText)
+                                .textFieldStyle(.plain)
+                                .frame(width: 140)
+                                .font(.system(size: 12))
+                            
+                            if !searchText.isEmpty {
+                                Button {
+                                    searchText = ""
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.white.opacity(0.08))
+                        )
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                        
+                        Button("Cancel") {
+                            withAnimation(.easeOut(duration: 0.15)) {
+                                searchText = ""
+                                searchExpanded = false
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundColor(Theme.gold)
+                        .font(.system(size: 12, weight: .medium))
+                    } else {
+                        Button {
+                            withAnimation(.easeOut(duration: 0.15)) {
+                                searchExpanded = true
+                            }
+                        } label: {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 14))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Search")
+                    }
+                }
+            }
+        }
     }
 
-    private var settingsToolbarConfigurator: some View {
-        SettingsToolbarConfigurator(
-            vault: vault,
-            searchText: $searchText,
-            onSettings: { showingAppSettings = true },
-            onAddSecret: { showingAddSecret = true },
-            onNewEnvironment: { showingAddEnv = true },
-            onRenameEnvironment: { env in
-                renamingEnv = env
-                renameEnvText = env.name
-            },
-            onDeleteEnvironment: { env in deletingEnv = env }
-        )
-        .frame(width: 0, height: 0)
-    }
-
-@ViewBuilder
+    @ViewBuilder
     private var secretsList: some View {
         if filteredSecrets.isEmpty {
             VStack(spacing: 8) {
@@ -338,24 +495,372 @@ struct SettingsView: View {
     }
 }
 
+// MARK: - Identity
+
+private struct IdentityBadge: View {
+    let icon: String?
+    let fallbackSystemImage: String
+    let color: Color
+    let size: CGFloat
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: min(8, size * 0.24))
+                .fill(color.opacity(0.16))
+            RoundedRectangle(cornerRadius: min(8, size * 0.24))
+                .strokeBorder(color.opacity(0.22), lineWidth: 1)
+            if let icon, !icon.isEmpty {
+                Text(icon)
+                    .font(.system(size: size * 0.5))
+            } else {
+                Image(systemName: fallbackSystemImage)
+                    .font(.system(size: size * 0.42, weight: .semibold))
+                    .foregroundStyle(color)
+            }
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+private struct CategoryPill: View {
+    let category: SecretCategory
+
+    var body: some View {
+        Label(category.label, systemImage: category.systemImage)
+            .font(.system(size: 10, weight: .semibold))
+            .labelStyle(.titleAndIcon)
+            .foregroundStyle(Theme.gold)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(
+                Capsule()
+                    .fill(Theme.gold.opacity(0.12))
+            )
+    }
+}
+
+private struct ProjectAppearanceView: View {
+    let project: Project
+    @EnvironmentObject private var vault: VaultViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var name: String
+    @State private var icon: String
+
+    init(project: Project) {
+        self.project = project
+        _name = State(initialValue: project.name)
+        _icon = State(initialValue: project.icon ?? "")
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Form {
+                Section("Project") {
+                    TextField("Name", text: $name)
+
+                    LabeledContent("Icon") {
+                        EmojiPicker(selection: $icon)
+                    }
+                }
+            }
+            .formStyle(.grouped)
+
+            Divider()
+
+            HStack {
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Spacer()
+                Button("Save") {
+                    let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmedName.isEmpty, trimmedName != project.name {
+                        vault.renameProject(project, newName: trimmedName)
+                    }
+                    let updated = Project(
+                        id: project.id,
+                        name: trimmedName.isEmpty ? project.name : trimmedName,
+                        path: project.path,
+                        activeEnvironment: project.activeEnvironment,
+                        icon: project.icon
+                    )
+                    let normalizedIcon = firstEmoji(icon)
+                    vault.setProjectIcon(updated, icon: normalizedIcon.isEmpty ? nil : normalizedIcon)
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            .padding()
+        }
+        .frame(width: 420, height: 220)
+        .preferredColorScheme(.dark)
+        .onChange(of: icon) { icon = firstEmoji($0) }
+    }
+}
+
+private struct EmojiPicker: View {
+    @Binding var selection: String
+    @State private var isShowingPicker = false
+
+    var body: some View {
+        Button {
+            isShowingPicker.toggle()
+        } label: {
+            HStack(spacing: 6) {
+                Text(selection.isEmpty ? "📁" : selection)
+                    .font(.system(size: 16))
+                    .frame(width: 22)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .frame(width: 58, height: 26)
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $isShowingPicker, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 8) {
+                Button("Default") {
+                    selection = ""
+                    isShowingPicker = false
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+
+                LazyVGrid(columns: Array(repeating: GridItem(.fixed(28), spacing: 4), count: 6), spacing: 4) {
+                    ForEach(projectEmojiOptions, id: \.self) { emoji in
+                        Button {
+                            selection = emoji
+                            isShowingPicker = false
+                        } label: {
+                            Text(emoji)
+                                .font(.system(size: 17))
+                                .frame(width: 28, height: 28)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .padding(10)
+            .frame(width: 206)
+        }
+        .fixedSize()
+    }
+}
+
+private struct EnvironmentAppearanceView: View {
+    let environment: VaultEnvironment
+    @EnvironmentObject private var vault: VaultViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var color: String
+
+    init(environment: VaultEnvironment) {
+        self.environment = environment
+        _color = State(initialValue: environment.color ?? Theme.environmentPalette[0])
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Form {
+                Section(environment.name) {
+                    HStack(spacing: 10) {
+                        ForEach(Theme.environmentPalette, id: \.self) { hex in
+                            Button {
+                                color = hex
+                            } label: {
+                                ZStack {
+                                    Circle()
+                                        .fill(Theme.color(hex: hex))
+                                    if color == hex {
+                                        Image(systemName: "checkmark")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundStyle(.black.opacity(0.7))
+                                    }
+                                }
+                                .frame(width: 22, height: 22)
+                            }
+                            .buttonStyle(.plain)
+                            .help(hex)
+                        }
+                    }
+                }
+            }
+            .formStyle(.grouped)
+
+            Divider()
+
+            HStack {
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Spacer()
+                Button("Save") {
+                    vault.setEnvironmentColor(environment, color: color)
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+            }
+            .padding()
+        }
+        .frame(width: 420, height: 190)
+        .preferredColorScheme(.dark)
+    }
+}
+
+private struct EnvironmentManagerView: View {
+    @EnvironmentObject private var vault: VaultViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var newName = ""
+    @State private var newColor = Theme.environmentPalette[0]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Form {
+                Section("Environments") {
+                    if vault.environments.isEmpty {
+                        Text("No custom environments")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(vault.environments, id: \.id) { environment in
+                            EnvironmentEditorRow(environment: environment)
+                                .environmentObject(vault)
+                        }
+                    }
+                }
+
+                Section("New Environment") {
+                    HStack(spacing: 10) {
+                        TextField("Name", text: $newName)
+                        ColorSwatches(selection: $newColor)
+                        Button {
+                            let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+                            guard !trimmed.isEmpty else { return }
+                            vault.addEnvironment(name: trimmed, color: newColor)
+                            newName = ""
+                            newColor = Theme.environmentPalette[0]
+                        } label: {
+                            Image(systemName: "plus")
+                                .frame(width: 28, height: 24)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .help("Add environment")
+                    }
+                }
+            }
+            .formStyle(.grouped)
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding()
+        }
+        .frame(width: 560, height: 420)
+        .preferredColorScheme(.dark)
+    }
+}
+
+private struct EnvironmentEditorRow: View {
+    let environment: VaultEnvironment
+    @EnvironmentObject private var vault: VaultViewModel
+    @State private var name: String
+    @State private var color: String
+
+    init(environment: VaultEnvironment) {
+        self.environment = environment
+        _name = State(initialValue: environment.name)
+        _color = State(initialValue: environment.color ?? Theme.environmentPalette[0])
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            TextField("Name", text: $name)
+            ColorSwatches(selection: $color)
+            Button {
+                save()
+            } label: {
+                Image(systemName: "checkmark")
+                    .frame(width: 28, height: 24)
+            }
+            .buttonStyle(.plain)
+            .disabled(!hasChanges || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .help("Save environment")
+
+            Button(role: .destructive) {
+                vault.deleteEnvironment(environment)
+            } label: {
+                Image(systemName: "trash")
+                    .frame(width: 28, height: 24)
+            }
+            .buttonStyle(.plain)
+            .help("Delete environment")
+        }
+    }
+
+    private var hasChanges: Bool {
+        name.trimmingCharacters(in: .whitespacesAndNewlines) != environment.name ||
+            color != (environment.color ?? Theme.environmentPalette[0])
+    }
+
+    private func save() {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        if trimmed != environment.name {
+            vault.renameEnvironment(environment, newName: trimmed)
+        }
+        let updated = VaultEnvironment(id: environment.id, projectId: environment.projectId, name: trimmed, color: environment.color)
+        vault.setEnvironmentColor(updated, color: color)
+    }
+}
+
+private struct ColorSwatches: View {
+    @Binding var selection: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(Theme.environmentPalette, id: \.self) { hex in
+                Button {
+                    selection = hex
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(Theme.color(hex: hex))
+                        if selection == hex {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(.black.opacity(0.72))
+                        }
+                    }
+                    .frame(width: 18, height: 18)
+                    .frame(width: 24, height: 24)
+                }
+                .buttonStyle(.plain)
+                .help(hex)
+            }
+        }
+    }
+}
+
 // MARK: - Sidebar Project Row
 
 private struct SidebarProjectRow: View {
     let project: Project
     let isSelected: Bool
     let onSelect: () -> Void
-    let onRename: () -> Void
+    let onEdit: () -> Void
     let onDelete: () -> Void
     @State private var isHovered = false
 
     var body: some View {
         HStack(spacing: 0) {
-            HStack(spacing: 6) {
-                Image(systemName: "folder")
-                    .font(.system(size: 12))
-                    .foregroundStyle(isSelected ? Theme.gold : Theme.textMuted)
+            HStack(spacing: 8) {
+                IdentityBadge(icon: project.icon, fallbackSystemImage: "folder.fill", color: .white, size: 24)
                 Text(project.name)
-                    .foregroundStyle(isSelected ? Theme.gold : .primary)
+                    .foregroundStyle(isSelected ? .white : .primary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
@@ -363,7 +868,7 @@ private struct SidebarProjectRow: View {
 
             if isHovered {
                 Menu {
-                    Button("Rename\u{2026}", action: onRename)
+                    Button("Edit\u{2026}", action: onEdit)
                     Divider()
                     Button("Delete", role: .destructive, action: onDelete)
                 } label: {
@@ -382,7 +887,7 @@ private struct SidebarProjectRow: View {
             withAnimation(.easeInOut(duration: 0.12)) { isHovered = h }
         }
         .contextMenu {
-            Button("Rename\u{2026}", action: onRename)
+            Button("Edit\u{2026}", action: onEdit)
             Divider()
             Button("Delete", role: .destructive, action: onDelete)
         }
@@ -399,11 +904,18 @@ private struct SecretRow: View {
     @State private var isHovered = false
 
     var body: some View {
-        HStack(spacing: 0) {
-            Text(secret.name)
-                .font(.system(size: 12, design: .monospaced).weight(.medium))
-                .foregroundStyle(Theme.text)
-                .lineLimit(1)
+        HStack(spacing: 9) {
+            IdentityBadge(icon: secret.category.defaultIcon, fallbackSystemImage: secret.category.systemImage, color: Theme.gold, size: 26)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(secret.name)
+                    .font(.system(size: 12, design: .monospaced).weight(.medium))
+                    .foregroundStyle(Theme.text)
+                    .lineLimit(1)
+                Text(secret.category.label)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Theme.textDim)
+                    .lineLimit(1)
+            }
             Spacer()
 
             if isHovered {
@@ -437,6 +949,8 @@ private struct SecretRow: View {
 struct AppSettingsView: View {
     @EnvironmentObject private var vault: VaultViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var sessionTimeoutSeconds: Double = 300
+    @State private var clipboardClearSeconds: Double = 30
 
     var body: some View {
         VStack(spacing: 0) {
@@ -447,8 +961,36 @@ struct AppSettingsView: View {
                         set: { vault.launchAtLogin = $0 }
                     ))
                 }
+
+                Section("Security") {
+                    Picker("Auto-lock", selection: $sessionTimeoutSeconds) {
+                        Text("1 minute").tag(60.0)
+                        Text("5 minutes").tag(300.0)
+                        Text("15 minutes").tag(900.0)
+                        Text("1 hour").tag(3600.0)
+                    }
+
+                    Picker("Clear Clipboard", selection: $clipboardClearSeconds) {
+                        Text("15 seconds").tag(15.0)
+                        Text("30 seconds").tag(30.0)
+                        Text("1 minute").tag(60.0)
+                        Text("5 minutes").tag(300.0)
+                    }
+
+                    Button {
+                        vault.lock()
+                    } label: {
+                        Label("Lock Now", systemImage: "lock")
+                    }
+                }
             }
             .formStyle(.grouped)
+            .onAppear {
+                sessionTimeoutSeconds = vault.sessionTimeoutSeconds
+                clipboardClearSeconds = vault.clipboardClearSeconds
+            }
+            .onChange(of: sessionTimeoutSeconds) { vault.sessionTimeoutSeconds = $0 }
+            .onChange(of: clipboardClearSeconds) { vault.clipboardClearSeconds = $0 }
 
             Divider()
 
@@ -459,7 +1001,7 @@ struct AppSettingsView: View {
             }
             .padding()
         }
-        .frame(width: 420, height: 180)
+        .frame(width: 440, height: 340)
         .preferredColorScheme(.dark)
     }
 }
@@ -473,14 +1015,20 @@ struct SecretDetailView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(secret.name)
-                    .font(.system(size: 16, design: .monospaced).weight(.semibold))
-                    .foregroundStyle(Theme.text)
-                if let desc = secret.description, !desc.isEmpty {
-                    Text(desc)
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.textMuted)
+            HStack(alignment: .top, spacing: 12) {
+                IdentityBadge(icon: secret.category.defaultIcon, fallbackSystemImage: secret.category.systemImage, color: Theme.gold, size: 38)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text(secret.name)
+                            .font(.system(size: 16, design: .monospaced).weight(.semibold))
+                            .foregroundStyle(Theme.text)
+                        CategoryPill(category: secret.category)
+                    }
+                    if let desc = secret.description, !desc.isEmpty {
+                        Text(desc)
+                            .font(.system(size: 12))
+                            .foregroundStyle(Theme.textMuted)
+                    }
                 }
             }
             .padding(.horizontal, 24)
@@ -551,6 +1099,7 @@ struct EditSecretView: View {
 
     @State private var value: String
     @State private var description: String
+    @State private var category: SecretCategory
     @State private var revealed = false
     @State private var confirmDelete = false
 
@@ -558,6 +1107,7 @@ struct EditSecretView: View {
         self.secret = secret
         _value = State(initialValue: secret.value)
         _description = State(initialValue: secret.description ?? "")
+        _category = State(initialValue: secret.category)
     }
 
     private var isValid: Bool { !value.isEmpty }
@@ -592,6 +1142,13 @@ struct EditSecretView: View {
                 }
 
                 Section("Optional") {
+                    Picker("Category", selection: $category) {
+                        ForEach(SecretCategory.allCases, id: \.self) { category in
+                            Label(category.label, systemImage: category.systemImage)
+                                .tag(category)
+                        }
+                    }
+
                     TextField("Description", text: $description)
                 }
             }
@@ -618,7 +1175,12 @@ struct EditSecretView: View {
                     .keyboardShortcut(.cancelAction)
 
                 Button("Save") {
-                    vault.update(name: secret.name, value: value, description: description)
+                    vault.update(
+                        name: secret.name,
+                        value: value,
+                        description: description,
+                        category: category
+                    )
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
@@ -627,7 +1189,7 @@ struct EditSecretView: View {
             }
             .padding()
         }
-        .frame(width: 440, height: 320)
+        .frame(width: 440, height: 340)
         .preferredColorScheme(.dark)
         .confirmationDialog(
             "Delete \(secret.name)?",

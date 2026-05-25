@@ -19,7 +19,10 @@ final class VaultViewModel: ObservableObject {
             let v = UserDefaults.standard.double(forKey: "sessionTimeoutSeconds")
             return v > 0 ? v : 300
         }
-        set { UserDefaults.standard.set(newValue, forKey: "sessionTimeoutSeconds") }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "sessionTimeoutSeconds")
+            if !isLocked { renewSession() }
+        }
     }
 
     var launchAtLogin: Bool {
@@ -47,6 +50,10 @@ final class VaultViewModel: ObservableObject {
     // MARK: - Lock / Unlock
 
     func unlock() {
+        guard isLocked else {
+            renewSession()
+            return
+        }
         Task { [weak self] in
             let context = LAContext()
             var authError: NSError?
@@ -71,6 +78,9 @@ final class VaultViewModel: ObservableObject {
         lockTimer?.invalidate()
         lockTimer = nil
         Vault.shared.lock()
+        projects = []
+        selectedProject = nil
+        selectedEnvironment = nil
         secrets = []
         environments = []
         isLocked = true
@@ -89,6 +99,11 @@ final class VaultViewModel: ObservableObject {
     }
 
     private func startLockTimer() {
+        renewSession()
+    }
+
+    func renewSession() {
+        guard !isLocked else { return }
         lockTimer?.invalidate()
         lockTimer = Timer.scheduledTimer(withTimeInterval: sessionTimeoutSeconds, repeats: false) { [weak self] _ in
             Task { @MainActor [weak self] in self?.lock() }
@@ -98,6 +113,7 @@ final class VaultViewModel: ObservableObject {
     // MARK: - Selection
 
     func selectProject(_ project: Project?) {
+        renewSession()
         selectedProject = project
         selectedEnvironment = nil
         reloadEnvironments()
@@ -105,6 +121,7 @@ final class VaultViewModel: ObservableObject {
     }
 
     func selectEnvironment(_ env: VaultEnvironment?) {
+        renewSession()
         selectedEnvironment = env
         reloadSecrets()
     }
@@ -113,6 +130,7 @@ final class VaultViewModel: ObservableObject {
 
     func refresh() {
         guard !isLocked else { return }
+        renewSession()
         do {
             projects = try Vault.shared.listProjects()
             if selectedProject == nil || !projects.contains(where: { $0.id == selectedProject?.id }) {
@@ -151,9 +169,10 @@ final class VaultViewModel: ObservableObject {
 
     // MARK: - Project CRUD
 
-    func addProject(name: String) {
+    func addProject(name: String, icon: String? = nil) {
+        renewSession()
         do {
-            let project = try Vault.shared.addProject(name: name)
+            let project = try Vault.shared.addProject(name: name, icon: icon)
             projects.append(project)
             selectProject(project)
         } catch {
@@ -162,6 +181,7 @@ final class VaultViewModel: ObservableObject {
     }
 
     func deleteProject(_ project: Project) {
+        renewSession()
         do {
             try Vault.shared.deleteProject(id: project.id)
             projects.removeAll { $0.id == project.id }
@@ -175,10 +195,11 @@ final class VaultViewModel: ObservableObject {
 
     // MARK: - Environment CRUD
 
-    func addEnvironment(name: String) {
+    func addEnvironment(name: String, color: String? = nil) {
+        renewSession()
         guard let project = selectedProject else { return }
         do {
-            let env = try Vault.shared.addEnvironment(name: name, projectId: project.id)
+            let env = try Vault.shared.addEnvironment(name: name, projectId: project.id, color: color)
             environments.append(env)
         } catch {
             errorMessage = error.localizedDescription
@@ -186,6 +207,7 @@ final class VaultViewModel: ObservableObject {
     }
 
     func deleteEnvironment(_ env: VaultEnvironment) {
+        renewSession()
         do {
             try Vault.shared.deleteEnvironment(name: env.name, projectId: env.projectId)
             environments.removeAll { $0.id == env.id }
@@ -198,10 +220,11 @@ final class VaultViewModel: ObservableObject {
     }
 
     func renameProject(_ project: Project, newName: String) {
+        renewSession()
         do {
             try Vault.shared.renameProject(id: project.id, newName: newName)
             let renamed = Project(id: project.id, name: newName, path: project.path,
-                                  activeEnvironment: project.activeEnvironment)
+                                  activeEnvironment: project.activeEnvironment, icon: project.icon)
             if let idx = projects.firstIndex(where: { $0.id == project.id }) { projects[idx] = renamed }
             if selectedProject?.id == project.id { selectedProject = renamed }
         } catch {
@@ -210,9 +233,10 @@ final class VaultViewModel: ObservableObject {
     }
 
     func renameEnvironment(_ env: VaultEnvironment, newName: String) {
+        renewSession()
         do {
             try Vault.shared.renameEnvironment(id: env.id, newName: newName, projectId: env.projectId)
-            let renamed = VaultEnvironment(id: env.id, projectId: env.projectId, name: newName)
+            let renamed = VaultEnvironment(id: env.id, projectId: env.projectId, name: newName, color: env.color)
             if let idx = environments.firstIndex(where: { $0.id == env.id }) { environments[idx] = renamed }
             if selectedEnvironment?.id == env.id { selectedEnvironment = renamed }
         } catch {
@@ -221,6 +245,7 @@ final class VaultViewModel: ObservableObject {
     }
 
     func moveSecret(_ secret: Secret, toEnvironmentName: String?) {
+        renewSession()
         guard let project = selectedProject else { return }
         do {
             try Vault.shared.moveSecretToEnvironment(
@@ -234,6 +259,7 @@ final class VaultViewModel: ObservableObject {
     }
 
     func moveSecret(_ secret: Secret, toProjectId: String) {
+        renewSession()
         guard let project = selectedProject else { return }
         do {
             try Vault.shared.moveSecretToProject(
@@ -247,10 +273,41 @@ final class VaultViewModel: ObservableObject {
 
     // MARK: - Secret CRUD
 
-    func add(name: String, value: String, description: String?) {
+    func setProjectIcon(_ project: Project, icon: String?) {
+        renewSession()
+        do {
+            try Vault.shared.setProjectIcon(id: project.id, icon: icon)
+            let updated = Project(id: project.id, name: project.name, path: project.path,
+                                  activeEnvironment: project.activeEnvironment, icon: icon)
+            if let idx = projects.firstIndex(where: { $0.id == project.id }) { projects[idx] = updated }
+            if selectedProject?.id == project.id { selectedProject = updated }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func setEnvironmentColor(_ env: VaultEnvironment, color: String?) {
+        renewSession()
+        do {
+            try Vault.shared.setEnvironmentColor(id: env.id, color: color)
+            let updated = VaultEnvironment(id: env.id, projectId: env.projectId, name: env.name, color: color)
+            if let idx = environments.firstIndex(where: { $0.id == env.id }) { environments[idx] = updated }
+            if selectedEnvironment?.id == env.id { selectedEnvironment = updated }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func add(
+        name: String,
+        value: String,
+        description: String?,
+        category: SecretCategory? = nil
+    ) {
+        renewSession()
         guard let project = selectedProject else { return }
         do {
-            _ = try Vault.shared.add(name: name, value: value, description: description,
+            _ = try Vault.shared.add(name: name, value: value, description: description, category: category,
                                      projectId: project.id,
                                      environmentName: selectedEnvironment?.name)
             reloadSecrets()
@@ -259,13 +316,20 @@ final class VaultViewModel: ObservableObject {
         }
     }
 
-    func update(name: String, value: String, description: String?) {
+    func update(
+        name: String,
+        value: String,
+        description: String?,
+        category: SecretCategory
+    ) {
+        renewSession()
         guard let project = selectedProject else { return }
         do {
-            _ = try Vault.shared.set(name: name, value: value, projectId: project.id,
-                                     environmentName: selectedEnvironment?.name)
             let desc = description.flatMap { $0.isEmpty ? nil : $0 }
             try Vault.shared.setDescription(name: name, description: desc, projectId: project.id)
+            _ = try Vault.shared.set(name: name, value: value, projectId: project.id,
+                                     environmentName: selectedEnvironment?.name)
+            try Vault.shared.setSecretCategory(name: name, category: category, projectId: project.id)
             reloadSecrets()
         } catch {
             errorMessage = error.localizedDescription
@@ -273,6 +337,7 @@ final class VaultViewModel: ObservableObject {
     }
 
     func delete(_ secret: Secret) {
+        renewSession()
         guard let project = selectedProject else { return }
         do {
             try Vault.shared.delete(name: secret.name, projectId: project.id)
@@ -285,6 +350,7 @@ final class VaultViewModel: ObservableObject {
     // MARK: - Clipboard
 
     func copyToClipboard(_ secret: Secret) {
+        renewSession()
         let value = secret.value
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(value, forType: .string)
