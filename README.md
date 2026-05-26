@@ -38,7 +38,7 @@ Lokalite is a macOS menu bar app and CLI for managing developer secrets locally.
 ### CLI via Homebrew (recommended)
 
 ```bash
-brew tap RubenGlez/lokalite
+brew tap RubenGlez/lokalite https://github.com/RubenGlez/lokalite
 brew install lokalite
 ```
 

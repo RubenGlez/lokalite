@@ -112,20 +112,17 @@ jobs:
 
       - name: Update Homebrew formula
         env:
-          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${GITHUB_REF_NAME}"
           TARBALL_URL="https://github.com/RubenGlez/lokalite/archive/refs/tags/${VERSION}.tar.gz"
           SHA256=$(curl -sL "${TARBALL_URL}" | shasum -a 256 | awk '{print $1}')
 
-          git clone https://x-access-token:${TAP_TOKEN}@github.com/RubenGlez/homebrew-lokalite.git
-          cd homebrew-lokalite
-
-          sed -i '' "s|url \"https://github.com/RubenGlez/lokalite/archive/refs/tags/.*\"|url \"${TARBALL_URL}\"|" Formula/lokalite.rb
-          sed -i '' "s|sha256 \"[a-f0-9]*\"|sha256 \"${SHA256}\"|" Formula/lokalite.rb
+          sed -i '' "s|url \"https://github.com/RubenGlez/lokalite/archive/refs/tags/.*\"|url \"${TARBALL_URL}\"|" HomebrewFormula/lokalite.rb
+          sed -i '' "s|sha256 \"[a-f0-9]*\"|sha256 \"${SHA256}\"|" HomebrewFormula/lokalite.rb
 
           git config user.email "action@github.com"
           git config user.name "GitHub Actions"
-          git add Formula/lokalite.rb
-          git commit -m "Update lokalite to ${VERSION}"
+          git add HomebrewFormula/lokalite.rb
+          git commit -m "Update Homebrew formula to ${VERSION}"
           git push
