@@ -36,7 +36,7 @@ struct SecretRowView: View {
             }
         }
         .buttonStyle(.plain)
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 6)
         .padding(.vertical, 6)
         .contextMenu {
             Button("Copy") { copySecret() }

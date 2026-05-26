@@ -228,6 +228,8 @@ struct VaultPopover: View {
             SecretRowView(secret: secret)
                 .environment(vault)
                 .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
