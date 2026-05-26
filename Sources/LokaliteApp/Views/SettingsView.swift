@@ -294,7 +294,7 @@ struct SettingsView: View {
             }
             .listRowBackground(Color.clear)
         }
-        .listStyle(.sidebar)
+        .listStyle(.plain)
         .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
         .safeAreaInset(edge: .top, spacing: 0) {
             HStack {
