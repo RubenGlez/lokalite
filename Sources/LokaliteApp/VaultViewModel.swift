@@ -50,6 +50,18 @@ final class VaultViewModel {
         didSet { UserDefaults.standard.set(appearanceMode, forKey: "appearanceMode") }
     }
 
+    var hotkeyShortcutID: String = UserDefaults.standard.string(forKey: "hotkeyShortcutID") ?? "cmdShiftSpace" {
+        didSet {
+            UserDefaults.standard.set(hotkeyShortcutID, forKey: "hotkeyShortcutID")
+            NotificationCenter.default.post(name: .hotkeyShortcutChanged, object: hotkeyShortcutID)
+        }
+    }
+
+    var recentSecretNames: [String] {
+        get { UserDefaults.standard.stringArray(forKey: "recentSecretNames") ?? [] }
+        set { UserDefaults.standard.set(newValue, forKey: "recentSecretNames") }
+    }
+
     var colorScheme: ColorScheme? {
         switch appearanceMode {
         case "light": return .light
@@ -375,10 +387,24 @@ final class VaultViewModel {
         }
     }
 
+    func linkProject(_ project: Project, path: String?) {
+        renewSession()
+        do {
+            try Vault.shared.linkProject(id: project.id, path: path)
+            let updated = Project(id: project.id, name: project.name, path: path,
+                                  activeEnvironment: project.activeEnvironment, icon: project.icon)
+            if let idx = projects.firstIndex(where: { $0.id == project.id }) { projects[idx] = updated }
+            if selectedProject?.id == project.id { selectedProject = updated }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     // MARK: - Clipboard
 
     func copyToClipboard(_ secret: Secret) {
         renewSession()
+        recordRecent(secret)
         let value = secret.value
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(value, forType: .string)
@@ -390,5 +416,12 @@ final class VaultViewModel {
                 NSPasteboard.general.clearContents()
             }
         }
+    }
+
+    private func recordRecent(_ secret: Secret) {
+        var recents = recentSecretNames
+        recents.removeAll { $0 == secret.name }
+        recents.insert(secret.name, at: 0)
+        recentSecretNames = Array(recents.prefix(5))
     }
 }

@@ -19,6 +19,13 @@ struct VaultPopover: View {
         }
     }
 
+    private var recentSecrets: [Secret] {
+        guard searchText.isEmpty else { return [] }
+        return vault.recentSecretNames.compactMap { name in
+            vault.secrets.first { $0.name == name }
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             if vault.isLocked {
@@ -225,12 +232,44 @@ struct VaultPopover: View {
     }
 
     private var secretsList: some View {
-        List(filtered) { secret in
-            SecretRowView(secret: secret)
-                .environment(vault)
-                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
+        List {
+            if !recentSecrets.isEmpty {
+                Section {
+                    ForEach(recentSecrets) { secret in
+                        SecretRowView(secret: secret)
+                            .environment(vault)
+                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                    }
+                } header: {
+                    Text("Recent")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .textCase(nil)
+                        .padding(.leading, 6)
+                }
+                .listSectionSeparator(.hidden)
+            }
+
+            Section {
+                ForEach(filtered) { secret in
+                    SecretRowView(secret: secret)
+                        .environment(vault)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+            } header: {
+                if !recentSecrets.isEmpty {
+                    Text("All")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .textCase(nil)
+                        .padding(.leading, 6)
+                }
+            }
+            .listSectionSeparator(.hidden)
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)

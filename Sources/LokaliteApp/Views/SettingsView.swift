@@ -134,12 +134,18 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
-            sidebarColumn
-        } content: {
-            contentColumn
-        } detail: {
-            detailColumn
+        Group {
+            if !vault.isLocked && vault.projects.isEmpty {
+                onboardingView
+            } else {
+                NavigationSplitView {
+                    sidebarColumn
+                } content: {
+                    contentColumn
+                } detail: {
+                    detailColumn
+                }
+            }
         }
         .tint(Theme.brand)
         .preferredColorScheme(vault.colorScheme)
@@ -236,6 +242,44 @@ struct SettingsView: View {
             Button("OK") { vault.errorMessage = nil }
         } message: {
             Text(vault.errorMessage ?? "")
+        }
+    }
+
+    // MARK: - Onboarding
+
+    private var onboardingView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            ZStack {
+                Circle()
+                    .fill(Theme.brand.opacity(0.12))
+                    .frame(width: 72, height: 72)
+                Image(systemName: "lock.open.fill")
+                    .font(.system(size: 30))
+                    .foregroundStyle(Theme.brand)
+            }
+            VStack(spacing: 8) {
+                Text("Welcome to Lokalite")
+                    .font(.title2.weight(.semibold))
+                Text("Organise your secrets by project.\nCreate your first project to get started.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            Button("Create your first project") {
+                presentedSheet = .projectAppearance(nil)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Theme.brand)
+            .controlSize(.large)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .sheet(item: $presentedSheet) { sheet in
+            if case .projectAppearance(let project) = sheet {
+                ProjectAppearanceView(project: project)
+                    .environment(vault)
+            }
         }
     }
 
@@ -454,12 +498,14 @@ private struct ProjectAppearanceView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
     @State private var icon: String?
+    @State private var path: String
     @State private var isShowingSymbolPicker = false
 
     init(project: Project?) {
         self.project = project
         _name = State(initialValue: project?.name ?? "")
         _icon = State(initialValue: project?.icon)
+        _path = State(initialValue: project?.path ?? "")
     }
 
     private var isCreating: Bool { project == nil }
@@ -487,6 +533,28 @@ private struct ProjectAppearanceView: View {
                         .accessibilityLabel("Choose project icon")
                     }
                 }
+
+                if !isCreating {
+                    Section("Directory") {
+                        HStack {
+                            TextField("Path (optional)", text: $path)
+                                .font(.system(size: 12, design: .monospaced))
+                            Button {
+                                pickDirectory()
+                            } label: {
+                                Image(systemName: "folder")
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.secondary)
+                        }
+                        if !path.isEmpty {
+                            Button("Unlink") { path = "" }
+                                .foregroundStyle(Theme.red)
+                                .buttonStyle(.plain)
+                                .font(.caption)
+                        }
+                    }
+                }
             }
             .formStyle(.grouped)
             .navigationTitle(isCreating ? "New Project" : "Project")
@@ -512,6 +580,11 @@ private struct ProjectAppearanceView: View {
                                 icon: project.icon
                             )
                             vault.setProjectIcon(updated, icon: icon)
+                            let newPath = path.trimmingCharacters(in: .whitespacesAndNewlines)
+                            let pathChanged = newPath != (project.path ?? "")
+                            if pathChanged {
+                                vault.linkProject(updated, path: newPath.isEmpty ? nil : newPath)
+                            }
                             vault.refresh()
                         }
                         dismiss()
@@ -521,9 +594,20 @@ private struct ProjectAppearanceView: View {
                 }
             }
         }
-        .frame(width: 420, height: 220)
+        .frame(width: 420, height: isCreating ? 220 : 310)
         .sheet(isPresented: $isShowingSymbolPicker) {
             SymbolPicker(symbol: $icon)
+        }
+    }
+
+    private func pickDirectory() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Link"
+        if panel.runModal() == .OK, let url = panel.url {
+            path = url.path
         }
     }
 }
@@ -891,6 +975,15 @@ struct AppSettingsView: View {
                         Text("System").tag("system")
                         Text("Light").tag("light")
                         Text("Dark").tag("dark")
+                    }
+
+                    Picker("Global Shortcut", selection: Binding(
+                        get: { vault.hotkeyShortcutID },
+                        set: { vault.hotkeyShortcutID = $0 }
+                    )) {
+                        ForEach(GlobalHotkeyManager.Shortcut.allOptions, id: \.id) { shortcut in
+                            Text(shortcut.displayName).tag(shortcut.id)
+                        }
                     }
                 }
 
