@@ -133,20 +133,3 @@ These areas are intentionally out of scope.
 
 > Another password manager.
 
----
-
-## Taglines
-
-* **Your secrets. Your machine.**
-* **Developer secrets, stored locally.**
-* **The local-first vault for modern developers.**
-* **Encrypted secrets. Zero cloud.**
-* **A secret workspace built for builders.**
-* **Store once. Use everywhere.**
-* **The secret hub for AI-era development.**
-
----
-
-## One-line Pitch
-
-> Lokalite is an open-source, local-first secrets workspace that helps developers securely manage API keys, credentials, certificates, and environment variables without relying on cloud services or subscriptions.

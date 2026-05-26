@@ -265,10 +265,3 @@ Also compatible with `.env` format via `--format env`.
 | Plain export leaked | Requires `--plain` flag + explicit confirmation |
 | Backup exposure | vault.db is useless without the Keychain key |
 
----
-
-## Roadmap Items (not in MVP)
-
-- Secret references (`lokalite://KEY_NAME` in config files)
-- Cross-platform support (Windows Credential Manager, Linux Secret Service)
-- iCloud Keychain sync (optional, opt-in)

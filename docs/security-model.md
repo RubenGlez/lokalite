@@ -50,17 +50,6 @@ The better model: SQLite stores encrypted secret records, Keychain stores the en
 
 ---
 
-## Cross-platform key storage roadmap
-
-| Platform  | Key storage                          |
-|-----------|--------------------------------------|
-| macOS     | Apple Keychain                       |
-| Windows   | Credential Manager / DPAPI           |
-| Linux     | Secret Service / libsecret           |
-| Portable  | Master password + Argon2id           |
-
----
-
 ## Known risks and mitigations
 
 ### 1. Compromised Mac session
@@ -83,17 +72,3 @@ Exporting secrets in plain text is dangerous. Mitigation: encrypted exports only
 
 Over-frequent access prompts lead users to approve without thinking. Mitigation: session-based unlock with configurable timeout.
 
----
-
-## Best MVP security posture
-
-* macOS Keychain for vault key
-* Optional Touch ID / password prompt before revealing secrets
-* Clipboard auto-clear
-* No telemetry
-* Encrypted exports only
-* App sandboxing
-* Clear threat model in README
-* "Mac-only secure mode" as the default
-
-**Don't invent crypto.** Use Apple Keychain + CryptoKit/Security framework (or Rust equivalents via Tauri), and make Lokalite's value the developer workflow around secrets.
