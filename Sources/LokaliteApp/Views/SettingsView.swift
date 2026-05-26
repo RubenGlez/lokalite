@@ -146,6 +146,15 @@ struct SettingsView: View {
         .onAppear {
             if vault.isLocked { vault.unlock() }
         }
+        .onChange(of: vault.isLocked) { _, isLocked in
+            if isLocked {
+                presentedSheet = nil
+                showingAddEnv = false
+                deletingProject = nil
+                deletingEnv = nil
+                deletingSecret = nil
+            }
+        }
         .onChange(of: vault.secrets) { _, newSecrets in
             if let selected = selectedSecret {
                 selectedSecret = newSecrets.first { $0.id == selected.id }
@@ -640,6 +649,7 @@ private struct EnvironmentEditorRow: View {
     @Environment(VaultViewModel.self) private var vault
     @State private var name: String
     @State private var color: String
+    @State private var isDeleting = false
 
     init(environment: VaultEnvironment) {
         self.environment = environment
@@ -651,17 +661,9 @@ private struct EnvironmentEditorRow: View {
         HStack(spacing: 10) {
             TextField("Name", text: $name)
             ColorSwatches(selection: $color)
-            Button {
-                save()
-            } label: {
-                Image(systemName: "checkmark")
-                    .frame(width: 28, height: 24)
-            }
-            .buttonStyle(.plain)
-            .disabled(!hasChanges || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            .help("Save environment")
 
             Button(role: .destructive) {
+                isDeleting = true
                 vault.deleteEnvironment(environment)
             } label: {
                 Image(systemName: "trash")
@@ -669,6 +671,11 @@ private struct EnvironmentEditorRow: View {
             }
             .buttonStyle(.plain)
             .help("Delete environment")
+        }
+        .onDisappear {
+            if !isDeleting {
+                save()
+            }
         }
     }
 

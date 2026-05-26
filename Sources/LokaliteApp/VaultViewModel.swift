@@ -85,6 +85,21 @@ final class VaultViewModel {
         secrets = []
         environments = []
         isLocked = true
+        closeVisibleSurfaces()
+    }
+
+    private func closeVisibleSurfaces() {
+        DispatchQueue.main.async {
+            NSApp.windows
+                .filter(\.isVisible)
+                .forEach { window in
+                    if window.styleMask.contains(.titled) {
+                        window.close()
+                    } else {
+                        window.orderOut(nil)
+                    }
+                }
+        }
     }
 
     @MainActor
