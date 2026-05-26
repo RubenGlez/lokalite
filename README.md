@@ -35,14 +35,32 @@ Lokalite is a macOS menu bar app and CLI for managing developer secrets locally.
 
 ## Install
 
-### Quick install (recommended)
+### CLI via Homebrew (recommended)
 
-Download the latest release from the [Releases page](https://github.com/RubenGlez/lokalite/releases):
+```bash
+brew tap RubenGlez/lokalite
+brew install lokalite
+```
 
-- **`Lokalite-vX.Y.Z.dmg`**: drag-and-drop app bundle for the menu bar app
-- **`lokalite-cli-vX.Y.Z.pkg`**: installer for the CLI
+Then register it as an MCP server:
 
-After installing the CLI, register it as an MCP server:
+```bash
+lokalite install
+```
+
+### Menu bar app
+
+Download `Lokalite-vX.Y.Z.dmg` from the [Releases page](https://github.com/RubenGlez/lokalite/releases), drag the app to Applications, then run this once to clear the macOS quarantine flag:
+
+```bash
+xattr -cr /Applications/Lokalite.app
+```
+
+The app is open source and unsigned. macOS blocks unsigned apps by default; the command above removes that restriction.
+
+### CLI via PKG installer
+
+Download `lokalite-cli-vX.Y.Z.pkg` from the [Releases page](https://github.com/RubenGlez/lokalite/releases) and run the installer. Then:
 
 ```bash
 lokalite install
