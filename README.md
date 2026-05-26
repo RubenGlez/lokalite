@@ -79,9 +79,6 @@ lokalite copy OPENAI_API_KEY
 # List all secrets
 lokalite list
 
-# List by tag
-lokalite list --tag ai
-
 # Update a secret
 lokalite set OPENAI_API_KEY sk-new-...
 

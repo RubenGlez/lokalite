@@ -46,6 +46,18 @@ final class VaultViewModel {
         set { UserDefaults.standard.set(newValue, forKey: "clipboardClearSeconds") }
     }
 
+    var appearanceMode: String = UserDefaults.standard.string(forKey: "appearanceMode") ?? "system" {
+        didSet { UserDefaults.standard.set(appearanceMode, forKey: "appearanceMode") }
+    }
+
+    var colorScheme: ColorScheme? {
+        switch appearanceMode {
+        case "light": return .light
+        case "dark": return .dark
+        default: return nil
+        }
+    }
+
     private var lockTimer: Timer?
 
     // MARK: - Lock / Unlock

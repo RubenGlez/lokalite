@@ -28,6 +28,7 @@ struct VaultPopover: View {
             }
         }
         .frame(minWidth: 340, maxWidth: 340, minHeight: 230)
+        .preferredColorScheme(vault.colorScheme)
         .animation(.easeInOut(duration: 0.2), value: vault.isLocked)
         .onAppear {
             vault.unlock()

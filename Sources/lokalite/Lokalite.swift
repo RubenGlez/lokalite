@@ -20,6 +20,8 @@ struct LokaliteCLI: ParsableCommand {
             EnvCommand.self,
             MCPCommand.self,
             InstallCommand.self,
+            StatusCommand.self,
+            InitCommand.self,
         ]
     )
 }

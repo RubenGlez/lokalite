@@ -142,7 +142,7 @@ struct SettingsView: View {
             detailColumn
         }
         .tint(Theme.brand)
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(vault.colorScheme)
         .onAppear {
             if vault.isLocked { vault.unlock() }
         }
@@ -522,7 +522,6 @@ private struct ProjectAppearanceView: View {
             }
         }
         .frame(width: 420, height: 220)
-        .preferredColorScheme(.dark)
         .sheet(isPresented: $isShowingSymbolPicker) {
             SymbolPicker(symbol: $icon)
         }
@@ -585,7 +584,6 @@ private struct EnvironmentAppearanceView: View {
             }
         }
         .frame(width: 420, height: 190)
-        .preferredColorScheme(.dark)
     }
 }
 
@@ -640,7 +638,6 @@ private struct EnvironmentManagerView: View {
             }
         }
         .frame(width: 560, height: 420)
-        .preferredColorScheme(.dark)
     }
 }
 
@@ -886,6 +883,15 @@ struct AppSettingsView: View {
                         get: { vault.launchAtLogin },
                         set: { vault.launchAtLogin = $0 }
                     ))
+
+                    Picker("Appearance", selection: Binding(
+                        get: { vault.appearanceMode },
+                        set: { vault.appearanceMode = $0 }
+                    )) {
+                        Text("System").tag("system")
+                        Text("Light").tag("light")
+                        Text("Dark").tag("dark")
+                    }
                 }
 
                 Section("Security") {
@@ -925,8 +931,7 @@ struct AppSettingsView: View {
                 }
             }
         }
-        .frame(width: 440, height: 340)
-        .preferredColorScheme(.dark)
+        .frame(width: 440, height: 360)
     }
 }
 
@@ -1115,7 +1120,6 @@ struct EditSecretView: View {
             }
         }
         .frame(width: 440, height: 340)
-        .preferredColorScheme(.dark)
         .confirmationDialog(
             "Delete \(secret.name)?",
             isPresented: $confirmDelete,
@@ -1188,7 +1192,6 @@ struct MoveSecretView: View {
             }
         }
         .frame(width: 380, height: 260)
-        .preferredColorScheme(.dark)
         .onAppear {
             destProjectId = vault.selectedProject?.id ?? ""
             destEnvironmentName = vault.selectedEnvironment?.name
