@@ -275,12 +275,6 @@ struct SettingsView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .sheet(item: $presentedSheet) { sheet in
-            if case .projectAppearance(let project) = sheet {
-                ProjectAppearanceView(project: project)
-                    .environment(vault)
-            }
-        }
     }
 
     // MARK: - Sidebar Column

@@ -57,9 +57,8 @@ final class VaultViewModel {
         }
     }
 
-    var recentSecretNames: [String] {
-        get { UserDefaults.standard.stringArray(forKey: "recentSecretNames") ?? [] }
-        set { UserDefaults.standard.set(newValue, forKey: "recentSecretNames") }
+    var recentSecretNames: [String] = UserDefaults.standard.stringArray(forKey: "recentSecretNames") ?? [] {
+        didSet { UserDefaults.standard.set(recentSecretNames, forKey: "recentSecretNames") }
     }
 
     var colorScheme: ColorScheme? {

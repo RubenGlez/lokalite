@@ -42,7 +42,7 @@ final class GlobalHotkeyManager {
             eventKind: OSType(kEventHotKeyPressed)
         )
 
-        let selfPtr = Unmanaged.passRetained(self).toOpaque()
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
 
         InstallEventHandler(
             GetApplicationEventTarget(),
