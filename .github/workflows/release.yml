@@ -99,11 +99,13 @@ jobs:
           zip -j "lokalite-cli-${VERSION}.zip" .build/release/lokalite
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          generate_release_notes: true
-          files: |
-            Lokalite-${{ github.ref_name }}.dmg
-            lokalite-cli-${{ github.ref_name }}.pkg
-            Lokalite-${{ github.ref_name }}.zip
-            lokalite-cli-${{ github.ref_name }}.zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          gh release create "${VERSION}" \
+            --generate-notes \
+            "Lokalite-${VERSION}.dmg" \
+            "lokalite-cli-${VERSION}.pkg" \
+            "Lokalite-${VERSION}.zip" \
+            "lokalite-cli-${VERSION}.zip"
