@@ -11,26 +11,43 @@
 
 ---
 
-Lokalite is a macOS menu bar app and CLI for managing developer secrets locally. API keys, tokens, certificates, database passwords, all stored in an encrypted vault on your machine, protected by Apple Keychain.
+Lokalite is a macOS menu bar app and CLI for managing developer secrets locally. API keys, tokens, certificates, database passwords — all stored in an encrypted vault on your machine, protected by Apple Keychain.
 
 ## Features
 
-- **Encrypted vault**: AES-256-GCM via CryptoKit, vault key stored in Apple Keychain
-- **Touch ID unlock**: biometric authentication before accessing secrets
-- **Menu bar app**: search, copy, and reveal secrets without leaving your workflow
-- **Full CLI**: read, write, and inject secrets from the terminal
-- **Projects**: group secrets by project; each project is an isolated namespace
-- **Environments**: per-project environment profiles (e.g. dev, staging, production) with per-environment secret values; Default values serve as fallback for all environments
-- **Clipboard auto-clear**: copied values are wiped after 30 seconds
-- **Session timeout**: vault auto-locks after inactivity
-- **Zero dependencies at runtime**: no cloud, no telemetry, no vendor lock-in
+- **Encrypted vault** — AES-256-GCM via CryptoKit, vault key stored in Apple Keychain
+- **Touch ID unlock** — biometric authentication before accessing any secret
+- **Menu bar app** — search, copy, and reveal secrets without leaving your workflow
+- **Full CLI** — read, write, and inject secrets from the terminal
+- **Projects** — group secrets by project; each project is an isolated namespace
+- **Environments** — per-project environment profiles (dev, staging, production) with per-environment values; Default falls back across all environments
+- **Clipboard auto-clear** — copied values are wiped after 30 seconds
+- **Session timeout** — vault auto-locks after inactivity
+- **MCP integration** — expose your vault as tools to Claude Code, Cursor, Windsurf, and any other MCP-compatible agent
+- **Zero runtime dependencies** — no cloud, no telemetry, no vendor lock-in
 
 ## Requirements
 
 - macOS 13 or later
-- Swift 5.9 or later
 
 ## Install
+
+### Quick install (recommended)
+
+Download the latest release from the [Releases page](https://github.com/RubenGlez/lokalite/releases):
+
+- **`Lokalite-vX.Y.Z.dmg`** — drag-and-drop app bundle for the menu bar app
+- **`lokalite-cli-vX.Y.Z.pkg`** — installer for the CLI
+
+After installing the CLI, register it as an MCP server:
+
+```bash
+lokalite install
+```
+
+### Build from source
+
+Requires Swift 5.9 or later.
 
 ```bash
 git clone https://github.com/RubenGlez/lokalite
@@ -82,42 +99,14 @@ lokalite export --plain --output secrets.json
 
 ## Menu Bar App
 
-```bash
-swift run LokaliteApp
-```
-
 Click the dial icon in your menu bar to open the vault popover. Use **Manage Secrets** to open the full secrets manager window.
 
-The secrets manager is a three-column view:
+The secrets manager is a three-column layout:
 - **Left sidebar** — project list; create and switch between projects
-- **Centre column** — environment switcher + searchable secrets list for the selected project
-- **Right detail** — edit the selected secret's value; save or delete
+- **Centre column** — environment switcher and searchable secrets list for the selected project
+- **Right panel** — edit the selected secret's value; save or delete
 
-## Security Model
-
-```
-Secrets stored in encrypted SQLite vault
-        ↓
-Each value encrypted with AES-256-GCM (CryptoKit)
-        ↓
-Vault key stored in Apple Keychain
-        ↓
-Keychain access gated by Touch ID / device password
-```
-
-See [docs/security-model.md](docs/security-model.md) for full details.
-
-## Project Structure
-
-```
-Sources/
-  LokaliteCore/    # vault logic, crypto, storage (shared library)
-  lokalite/        # CLI (swift-argument-parser)
-  LokaliteApp/     # menu bar app (SwiftUI)
-docs/              # architecture, decisions, roadmap
-```
-
-## Claude Code / MCP Integration
+## MCP Integration
 
 `lokalite install` registers the MCP server automatically. You can also add it manually to `~/.claude.json`:
 
@@ -132,7 +121,7 @@ docs/              # architecture, decisions, roadmap
 }
 ```
 
-The same config works for Codex, Cursor, Windsurf, and any other MCP-compatible agent.
+The same config works for Cursor, Windsurf, and any other MCP-compatible agent.
 
 By default the server is **read-only** and exposes two tools:
 
@@ -153,17 +142,11 @@ Pass `--read-write` to also expose write tools:
 | `set_secret` | Update an existing secret's value |
 | `delete_secret` | Permanently delete a secret |
 
-## Roadmap
+## Security
 
-- Secret references (`lokalite://KEY_NAME` in config files)
-- Cross-platform (Windows, Linux)
+All secret values are encrypted with AES-256-GCM before being written to disk. The vault key lives exclusively in Apple Keychain and is gated behind Touch ID or your device password. Nothing leaves your machine.
 
-Recently completed:
-
-- Environment profiles
-- Command injection (`lokalite run <cmd>`)
-- Project linking (associate secrets with a directory)
-- Agent & MCP integration
+See [docs/security-model.md](docs/security-model.md) for full details.
 
 ## License
 
