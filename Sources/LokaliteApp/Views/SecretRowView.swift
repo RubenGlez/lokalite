@@ -3,7 +3,7 @@ import LokaliteCore
 
 struct SecretRowView: View {
     let secret: Secret
-    @EnvironmentObject private var vault: VaultViewModel
+    @Environment(VaultViewModel.self) private var vault
     @State private var copied = false
 
     var body: some View {
@@ -13,7 +13,7 @@ struct SecretRowView: View {
             HStack(spacing: 8) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.accentColor.opacity(0.14))
+                        .fill(Color.white.opacity(0.12))
                     let icon = secret.category.defaultIcon
                     if !icon.isEmpty {
                         Text(icon)
@@ -55,7 +55,8 @@ struct SecretRowView: View {
     private func copySecret() {
         vault.copyToClipboard(secret)
         withAnimation { copied = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
             withAnimation { copied = false }
         }
     }

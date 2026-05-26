@@ -4,12 +4,12 @@ import AppKit
 @main
 struct LokaliteApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var vault = VaultViewModel()
+    @State private var vault = VaultViewModel()
 
     var body: some Scene {
         MenuBarExtra {
             VaultPopover()
-                .environmentObject(vault)
+                .environment(vault)
         } label: {
             DialMenuBarIcon()
         }
@@ -17,7 +17,7 @@ struct LokaliteApp: App {
 
         Window("Manage Secrets", id: "settings") {
             SettingsView()
-                .environmentObject(vault)
+                .environment(vault)
                 .frame(minWidth: 580, minHeight: 460)
         }
         .defaultSize(width: 800, height: 540)

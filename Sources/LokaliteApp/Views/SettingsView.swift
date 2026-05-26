@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import LokaliteCore
+import SymbolPicker
 
 // MARK: - Identifiable
 
@@ -10,7 +11,7 @@ extension VaultEnvironment: Identifiable {}
 
 // MARK: - Theme
 
-private enum Theme {
+enum Theme {
     static let gold       = Color(red: 0.910, green: 0.627, blue: 0.118)
     static let goldSubtle = Color(red: 0.910, green: 0.627, blue: 0.118).opacity(0.15)
     static let neutralSubtle = Color.white.opacity(0.08)
@@ -43,18 +44,6 @@ private enum Theme {
     }
 }
 
-private let projectEmojiOptions = [
-    "🚀", "🧪", "⚙️", "🧰", "🔐", "🔑", "🛡️", "📦", "☁️", "🗄️", "🔌", "💳",
-    "📱", "💻", "🖥️", "⌨️", "🧠", "✨", "🔥", "⚡️", "🌐", "📡", "🛰️", "🧭",
-    "🏗️", "🏢", "🏷️", "📊", "📈", "📉", "🧾", "📝", "📚", "🗂️", "📁", "🗃️",
-    "🧬", "🧿", "🎛️", "🎯", "🪄", "🪪", "🧑‍💻", "🤖", "💎", "🧱", "🪙", "🧲"
-]
-
-private func firstEmoji(_ value: String) -> String {
-    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard let first = trimmed.first else { return "" }
-    return String(first)
-}
 
 private extension View {
     func toolbarSearch(text: Binding<String>, isPresented: Binding<Bool>) -> some View {
@@ -70,7 +59,7 @@ private extension View {
 // MARK: - Root
 
 struct SettingsView: View {
-    @EnvironmentObject private var vault: VaultViewModel
+    @Environment(VaultViewModel.self) private var vault
     @State private var selectedSecret: Secret?
 
     private enum PresentedSheet: Identifiable {
@@ -184,19 +173,19 @@ struct SettingsView: View {
         .sheet(item: $presentedSheet) { sheet in
             switch sheet {
             case .addSecret:
-                AddSecretView().environmentObject(vault)
+                AddSecretView().environment(vault)
             case .appSettings:
-                AppSettingsView().environmentObject(vault)
+                AppSettingsView().environment(vault)
             case .environmentManager:
-                EnvironmentManagerView().environmentObject(vault)
+                EnvironmentManagerView().environment(vault)
             case .editSecret(let secret):
-                EditSecretView(secret: secret).environmentObject(vault)
+                EditSecretView(secret: secret).environment(vault)
             case .moveSecret(let secret):
-                MoveSecretView(secret: secret).environmentObject(vault)
+                MoveSecretView(secret: secret).environment(vault)
             case .projectAppearance(let project):
-                ProjectAppearanceView(project: project).environmentObject(vault)
+                ProjectAppearanceView(project: project).environment(vault)
             case .environmentAppearance(let environment):
-                EnvironmentAppearanceView(environment: environment).environmentObject(vault)
+                EnvironmentAppearanceView(environment: environment).environment(vault)
             }
         }
         .alert("New Project", isPresented: $showingAddProject) {
@@ -449,7 +438,7 @@ struct SettingsView: View {
     private var detailColumn: some View {
         if let secret = selectedSecret {
             SecretDetailView(secret: secret)
-                .environmentObject(vault)
+                .environment(vault)
                 .id(secret.id)
         } else {
             ContentUnavailableView("Select a Secret", systemImage: "lock.shield")
@@ -504,15 +493,16 @@ private struct CategoryPill: View {
 
 private struct ProjectAppearanceView: View {
     let project: Project
-    @EnvironmentObject private var vault: VaultViewModel
+    @Environment(VaultViewModel.self) private var vault
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
-    @State private var icon: String
+    @State private var icon: String?
+    @State private var isShowingSymbolPicker = false
 
     init(project: Project) {
         self.project = project
         _name = State(initialValue: project.name)
-        _icon = State(initialValue: project.icon ?? "")
+        _icon = State(initialValue: project.icon)
     }
 
     var body: some View {
@@ -522,7 +512,20 @@ private struct ProjectAppearanceView: View {
                     TextField("Name", text: $name)
 
                     LabeledContent("Icon") {
-                        EmojiPicker(selection: $icon)
+                        Button {
+                            isShowingSymbolPicker = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: icon ?? "folder")
+                                    .font(.system(size: 16))
+                                    .frame(width: 22, height: 22)
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Choose project icon")
                     }
                 }
             }
@@ -546,8 +549,8 @@ private struct ProjectAppearanceView: View {
                             activeEnvironment: project.activeEnvironment,
                             icon: project.icon
                         )
-                        let normalizedIcon = firstEmoji(icon)
-                        vault.setProjectIcon(updated, icon: normalizedIcon.isEmpty ? nil : normalizedIcon)
+                        vault.setProjectIcon(updated, icon: icon)
+                        vault.refresh()
                         dismiss()
                     }
                     .keyboardShortcut(.defaultAction)
@@ -557,64 +560,16 @@ private struct ProjectAppearanceView: View {
         }
         .frame(width: 420, height: 220)
         .preferredColorScheme(.dark)
-        .onChange(of: icon) { _, newIcon in icon = firstEmoji(newIcon) }
+        .sheet(isPresented: $isShowingSymbolPicker) {
+            SymbolPicker(symbol: $icon)
+        }
     }
 }
 
-private struct EmojiPicker: View {
-    @Binding var selection: String
-    @State private var isShowingPicker = false
-
-    var body: some View {
-        Button {
-            isShowingPicker.toggle()
-        } label: {
-            HStack(spacing: 6) {
-                Text(selection.isEmpty ? "📁" : selection)
-                    .font(.system(size: 16))
-                    .frame(width: 22)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.secondary)
-            }
-            .frame(width: 58, height: 26)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(selection.isEmpty ? "Choose project icon" : "Project icon \(selection)")
-        .popover(isPresented: $isShowingPicker, arrowEdge: .bottom) {
-            VStack(alignment: .leading, spacing: 8) {
-                Button("Default") {
-                    selection = ""
-                    isShowingPicker = false
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-
-                LazyVGrid(columns: Array(repeating: GridItem(.fixed(28), spacing: 4), count: 6), spacing: 4) {
-                    ForEach(projectEmojiOptions, id: \.self) { emoji in
-                        Button {
-                            selection = emoji
-                            isShowingPicker = false
-                        } label: {
-                            Text(emoji)
-                                .font(.system(size: 17))
-                                .frame(width: 28, height: 28)
-                        }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Use \(emoji) as project icon")
-                        }
-                    }
-                }
-            .padding(10)
-            .frame(width: 206)
-        }
-        .fixedSize()
-    }
-}
 
 private struct EnvironmentAppearanceView: View {
     let environment: VaultEnvironment
-    @EnvironmentObject private var vault: VaultViewModel
+    @Environment(VaultViewModel.self) private var vault
     @Environment(\.dismiss) private var dismiss
     @State private var color: String
 
@@ -672,7 +627,7 @@ private struct EnvironmentAppearanceView: View {
 }
 
 private struct EnvironmentManagerView: View {
-    @EnvironmentObject private var vault: VaultViewModel
+    @Environment(VaultViewModel.self) private var vault
     @Environment(\.dismiss) private var dismiss
     @State private var newName = ""
     @State private var newColor = Theme.environmentPalette[0]
@@ -687,7 +642,7 @@ private struct EnvironmentManagerView: View {
                     } else {
                         ForEach(vault.environments, id: \.id) { environment in
                             EnvironmentEditorRow(environment: environment)
-                                .environmentObject(vault)
+                                .environment(vault)
                         }
                     }
                 }
@@ -728,7 +683,7 @@ private struct EnvironmentManagerView: View {
 
 private struct EnvironmentEditorRow: View {
     let environment: VaultEnvironment
-    @EnvironmentObject private var vault: VaultViewModel
+    @Environment(VaultViewModel.self) private var vault
     @State private var name: String
     @State private var color: String
 
@@ -820,9 +775,16 @@ private struct SidebarProjectRow: View {
         HStack(spacing: 0) {
             HStack(spacing: 8) {
                 if let icon = project.icon, !icon.isEmpty {
-                    Text(icon)
-                        .font(.system(size: 18))
-                        .frame(width: 24, height: 24)
+                    if icon.unicodeScalars.allSatisfy({ $0.value < 128 }) {
+                        Image(systemName: icon)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(.primary)
+                            .frame(width: 24, height: 24)
+                    } else {
+                        Text(icon)
+                            .font(.system(size: 18))
+                            .frame(width: 24, height: 24)
+                    }
                 } else {
                     Image(systemName: "folder.fill")
                         .font(.system(size: 17, weight: .medium))
@@ -873,15 +835,15 @@ private struct SecretRow: View {
 
     var body: some View {
         HStack(spacing: 9) {
-            IdentityBadge(icon: secret.category.defaultIcon, fallbackSystemImage: secret.category.systemImage, color: Theme.gold, size: 26)
+            IdentityBadge(icon: secret.category.defaultIcon, fallbackSystemImage: secret.category.systemImage, color: .white, size: 26)
             VStack(alignment: .leading, spacing: 2) {
                 Text(secret.name)
                     .font(.system(size: 12, design: .monospaced).weight(.medium))
                     .foregroundStyle(Theme.text)
                     .lineLimit(1)
-                Text(secret.category.label)
+                Text(secret.description?.isEmpty == false ? secret.description! : secret.category.label)
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(Theme.textDim)
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
             Spacer()
@@ -915,7 +877,7 @@ private struct SecretRow: View {
 // MARK: - App Settings
 
 struct AppSettingsView: View {
-    @EnvironmentObject private var vault: VaultViewModel
+    @Environment(VaultViewModel.self) private var vault
     @Environment(\.dismiss) private var dismiss
     @State private var sessionTimeoutSeconds: Double = 300
     @State private var clipboardClearSeconds: Double = 30
@@ -976,13 +938,14 @@ struct AppSettingsView: View {
 
 struct SecretDetailView: View {
     let secret: Secret
-    @EnvironmentObject private var vault: VaultViewModel
+    @Environment(VaultViewModel.self) private var vault
     @State private var revealed = false
+    @State private var copied = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 12) {
-                IdentityBadge(icon: secret.category.defaultIcon, fallbackSystemImage: secret.category.systemImage, color: Theme.gold, size: 38)
+                IdentityBadge(icon: secret.category.defaultIcon, fallbackSystemImage: secret.category.systemImage, color: .white, size: 38)
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 8) {
                         Text(secret.name)
@@ -1009,6 +972,12 @@ struct SecretDetailView: View {
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(Theme.textDim)
                         .kerning(1.0)
+                    if copied {
+                        Label("Copied", systemImage: "checkmark")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(.green)
+                            .transition(.scale.combined(with: .opacity))
+                    }
                     Spacer()
                     Button {
                         revealed.toggle()
@@ -1019,37 +988,38 @@ struct SecretDetailView: View {
                             Text(revealed ? "Hide" : "Reveal")
                                 .font(.system(size: 11))
                         }
-                    .foregroundStyle(Theme.textMuted)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(revealed ? "Hide secret value" : "Reveal secret value")
-        }
+                        .foregroundStyle(Theme.textMuted)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(revealed ? "Hide secret value" : "Reveal secret value")
+                }
 
-                ZStack(alignment: .topLeading) {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(NSColor.controlBackgroundColor))
-                    RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(Theme.sep, lineWidth: 1)
-
+                Button {
+                    vault.copyToClipboard(secret)
+                    withAnimation { copied = true }
+                    Task {
+                        try? await Task.sleep(for: .seconds(1.5))
+                        withAnimation { copied = false }
+                    }
+                } label: {
                     if revealed {
                         Text(secret.value)
                             .font(.system(size: 13, design: .monospaced))
                             .foregroundStyle(Theme.text)
-                            .textSelection(.enabled)
-                            .padding(12)
                             .frame(maxWidth: .infinity, alignment: .topLeading)
                     } else {
                         Text(String(repeating: "•", count: min(secret.value.count, 24)))
                             .font(.system(size: 18, design: .monospaced))
                             .foregroundStyle(Theme.text)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 9)
                     }
                 }
-                .frame(height: 44, alignment: .topLeading)
+                .buttonStyle(.plain)
+                .help("Click to copy")
+                .accessibilityLabel("Copy \(secret.name)")
             }
             .padding(.horizontal, 24)
             .padding(.top, 20)
+            .animation(.easeInOut(duration: 0.15), value: copied)
 
             Spacer()
         }
@@ -1061,7 +1031,7 @@ struct SecretDetailView: View {
 
 struct EditSecretView: View {
     let secret: Secret
-    @EnvironmentObject private var vault: VaultViewModel
+    @Environment(VaultViewModel.self) private var vault
     @Environment(\.dismiss) private var dismiss
 
     @State private var value: String
@@ -1168,7 +1138,7 @@ struct EditSecretView: View {
 
 struct MoveSecretView: View {
     let secret: Secret
-    @EnvironmentObject private var vault: VaultViewModel
+    @Environment(VaultViewModel.self) private var vault
     @Environment(\.dismiss) private var dismiss
 
     @State private var destProjectId: String = ""

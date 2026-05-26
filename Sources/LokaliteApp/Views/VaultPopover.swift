@@ -3,7 +3,7 @@ import SwiftUI
 import LokaliteCore
 
 struct VaultPopover: View {
-    @EnvironmentObject private var vault: VaultViewModel
+    @Environment(VaultViewModel.self) private var vault
     @Environment(\.openWindow) private var openWindow
     @State private var searchText = ""
     @State private var showingAddSecret = false
@@ -32,7 +32,7 @@ struct VaultPopover: View {
         .onDisappear { showingAddSecret = false }
         .sheet(isPresented: $showingAddSecret) {
             AddSecretView()
-                .environmentObject(vault)
+                .environment(vault)
         }
     }
 
@@ -42,13 +42,13 @@ struct VaultPopover: View {
             
             ZStack {
                 Circle()
-                    .fill(Color(red: 0.910, green: 0.627, blue: 0.118).opacity(0.12))
+                    .fill(Theme.gold.opacity(0.12))
                     .frame(width: 56, height: 56)
                 Image(systemName: "lock.fill")
                     .font(.system(size: 24))
-                    .foregroundStyle(Color(red: 0.910, green: 0.627, blue: 0.118))
+                    .foregroundStyle(Theme.gold)
             }
-            
+
             VStack(spacing: 6) {
                 Text("Vault is Locked")
                     .font(.system(size: 14, weight: .semibold))
@@ -57,21 +57,13 @@ struct VaultPopover: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
-            
-            Button {
+
+            Button("Unlock") {
                 vault.unlock()
-            } label: {
-                Text("Unlock")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.black)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color(red: 0.910, green: 0.627, blue: 0.118))
-                    )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderedProminent)
+            .tint(Theme.gold)
+            .controlSize(.small)
             
             Spacer()
         }
@@ -131,15 +123,7 @@ struct VaultPopover: View {
     }
 
     private var environmentColor: Color {
-        switch vault.selectedEnvironment?.color {
-        case "#57A2FF": return Color(red: 0.341, green: 0.635, blue: 1.000)
-        case "#51DBC1": return Color(red: 0.318, green: 0.859, blue: 0.757)
-        case "#A885FF": return Color(red: 0.659, green: 0.522, blue: 1.000)
-        case "#FF749F": return Color(red: 1.000, green: 0.455, blue: 0.647)
-        case "#FF9A49": return Color(red: 1.000, green: 0.604, blue: 0.286)
-        case "#4CD964": return Color(red: 0.302, green: 0.847, blue: 0.569)
-        default: return Color(red: 0.910, green: 0.627, blue: 0.118)
-        }
+        Theme.color(hex: vault.selectedEnvironment?.color)
     }
 
     private var searchBar: some View {
@@ -177,7 +161,7 @@ struct VaultPopover: View {
     private var secretsList: some View {
         List(filtered) { secret in
             SecretRowView(secret: secret)
-                .environmentObject(vault)
+                .environment(vault)
                 .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
         }
         .listStyle(.plain)

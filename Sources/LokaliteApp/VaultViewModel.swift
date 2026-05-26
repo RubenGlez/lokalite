@@ -4,15 +4,16 @@ import ServiceManagement
 import SwiftUI
 import LokaliteCore
 
+@Observable
 @MainActor
-final class VaultViewModel: ObservableObject {
-    @Published var projects: [Project] = []
-    @Published var selectedProject: Project?
-    @Published var environments: [VaultEnvironment] = []
-    @Published var selectedEnvironment: VaultEnvironment?  // nil = default values
-    @Published var secrets: [Secret] = []
-    @Published var isLocked = true
-    @Published var errorMessage: String?
+final class VaultViewModel {
+    var projects: [Project] = []
+    var selectedProject: Project?
+    var environments: [VaultEnvironment] = []
+    var selectedEnvironment: VaultEnvironment?  // nil = default values
+    var secrets: [Secret] = []
+    var isLocked = true
+    var errorMessage: String?
 
     var sessionTimeoutSeconds: Double {
         get {

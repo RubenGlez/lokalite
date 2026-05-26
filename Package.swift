@@ -13,6 +13,7 @@ let package = Package(
         .package(url: "https://github.com/groue/GRDB.swift", from: "6.0.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.3.0"),
         .package(url: "https://github.com/P-H-C/phc-winner-argon2.git", branch: "master"),
+        .package(url: "https://github.com/xnth97/SymbolPicker.git", .upToNextMajor(from: "1.6.0")),
     ],
     targets: [
         .target(
@@ -35,7 +36,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "LokaliteApp",
-            dependencies: ["LokaliteCore"],
+            dependencies: [
+                "LokaliteCore",
+                .product(name: "SymbolPicker", package: "SymbolPicker"),
+            ],
             path: "Sources/LokaliteApp",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),

@@ -2,7 +2,7 @@ import SwiftUI
 import LokaliteCore
 
 struct AddSecretView: View {
-    @EnvironmentObject private var vault: VaultViewModel
+    @Environment(VaultViewModel.self) private var vault
     @Environment(\.dismiss) private var dismiss
 
     @State private var name = ""
