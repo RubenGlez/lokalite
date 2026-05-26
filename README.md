@@ -31,7 +31,7 @@ Lokalite is a macOS menu bar app and CLI for managing developer secrets locally.
 
 ## Requirements
 
-- macOS 13 or later
+- macOS 14 or later
 
 ## Install
 
