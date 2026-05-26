@@ -89,10 +89,22 @@ lokalite delete OPENAI_API_KEY
 lokalite run -- npm start
 lokalite run --keys OPENAI_API_KEY,ANTHROPIC_API_KEY -- claude
 
+# Import from a .env file
+lokalite import .env
+lokalite import .env --overwrite        # overwrite existing secrets
+
 # Export (encrypted by default)
 lokalite export --output backup.lk
 lokalite export --plain --output secrets.json
+lokalite export --format env            # .env format, stdout
+lokalite export --format env --output .env
+
+# Inject secrets into the current shell session (see security note below)
+eval $(lokalite shell)
+eval $(lokalite shell --keys OPENAI_API_KEY,ANTHROPIC_API_KEY)
 ```
+
+> **Shell injection note:** `eval $(lokalite shell)` makes secrets visible to all child processes and shows up in `env` output for the duration of your session. Use `lokalite run` to scope secrets to a single subprocess instead.
 
 ## Menu Bar App
 

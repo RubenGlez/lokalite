@@ -20,8 +20,26 @@ struct ExportCommand: ParsableCommand {
     @Flag(help: "Export as plaintext JSON. Requires confirmation.")
     var plain: Bool = false
 
+    @Option(name: .long, help: "Output format: json (default) or env.")
+    var format: String = "json"
+
     func run() throws {
         let ctx = try resolveContext(projectFlag: project, envFlag: env)
+
+        if format == "env" {
+            let secrets = try withVault {
+                try $0.list(projectId: ctx.project.id, environmentName: ctx.environmentName)
+            }
+            let lines = secrets.map { envLine($0.name, $0.value) }.joined(separator: "\n")
+            if let outputPath = output {
+                try (lines + "\n").write(toFile: outputPath, atomically: true, encoding: .utf8)
+                print("Exported to \(outputPath).")
+            } else {
+                print(lines)
+            }
+            return
+        }
+
         let data: Data
 
         if plain {
@@ -52,6 +70,13 @@ struct ExportCommand: ParsableCommand {
                 print(data.base64EncodedString())
             }
         }
+    }
+
+    private func envLine(_ key: String, _ value: String) -> String {
+        let escaped = value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        return "\(key)=\"\(escaped)\""
     }
 
     private func readPassphrase() -> String {

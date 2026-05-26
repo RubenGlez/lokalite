@@ -1,4 +1,5 @@
 import ArgumentParser
+import Foundation
 import LokaliteCore
 
 struct ProjectCommand: ParsableCommand {
@@ -64,21 +65,28 @@ struct ProjectCommand: ParsableCommand {
     struct Link: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: "Link a project to a directory path.")
 
-        @Argument(help: "Project name.")
-        var name: String
+        @Argument(help: "Project name. Defaults to the current directory name.")
+        var name: String?
 
-        @Option(name: .long, help: "Directory path to link. Omit to unlink.")
+        @Option(name: .long, help: "Directory path to link. Defaults to the current directory. Omit with --unlink to unlink.")
         var path: String?
 
+        @Flag(name: .long, help: "Remove the directory link from the project.")
+        var unlink = false
+
         func run() throws {
+            let cwd = FileManager.default.currentDirectoryPath
+            let projectName = name ?? URL(fileURLWithPath: cwd).lastPathComponent
+            let linkPath: String? = unlink ? nil : (path ?? cwd)
+
             try withVault { vault in
-                guard let project = try vault.project(name: name) else {
-                    throw VaultError.projectNotFound(name)
+                guard let project = try vault.project(name: projectName) else {
+                    throw VaultError.projectNotFound(projectName)
                 }
-                try vault.linkProject(id: project.id, path: path)
+                try vault.linkProject(id: project.id, path: linkPath)
             }
-            if let path { print("Linked '\(name)' to \(path).") }
-            else { print("Unlinked '\(name)'.") }
+            if let linkPath { print("Linked '\(projectName)' to \(linkPath).") }
+            else { print("Unlinked '\(projectName)'.") }
         }
     }
 
