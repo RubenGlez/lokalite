@@ -16,15 +16,8 @@ struct SecretRowView: View {
                         .fill(Color.white.opacity(0.16))
                     RoundedRectangle(cornerRadius: 6)
                         .strokeBorder(Color.white.opacity(0.22), lineWidth: 1)
-                    let icon = secret.category.defaultIcon
-                    if !icon.isEmpty {
-                        Text(icon)
-                            .font(.system(size: 13))
-                    } else {
-                        Image(systemName: secret.category.systemImage)
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.7))
-                    }
+                    Text(secret.category.defaultIcon)
+                        .font(.system(size: 13))
                 }
                 .frame(width: 22, height: 22)
 

@@ -14,6 +14,8 @@ extension VaultEnvironment: Identifiable {}
 enum Theme {
     static let gold       = Color(red: 0.910, green: 0.627, blue: 0.118)
     static let goldSubtle = Color(red: 0.910, green: 0.627, blue: 0.118).opacity(0.15)
+    static let brand      = gold
+    static let brandSubtle = goldSubtle
     static let neutralSubtle = Color.white.opacity(0.08)
     static let sep        = Color.white.opacity(0.08)
     static let text       = Color(red: 0.929, green: 0.929, blue: 0.941)
@@ -42,7 +44,7 @@ enum Theme {
     }
 
     static func color(hex: String?) -> Color {
-        guard let hex else { return gold }
+        guard let hex else { return brand }
         switch hex {
         case "#57A2FF": return blue
         case "#51DBC1": return mint
@@ -50,7 +52,7 @@ enum Theme {
         case "#FF749F": return pink
         case "#FF9A49": return orange
         case "#4CD964": return green
-        default: return gold
+        default: return brand
         }
     }
 }
@@ -131,30 +133,6 @@ struct SettingsView: View {
         return "\(n) secret\(n == 1 ? "" : "s")"
     }
 
-    private var projectSelection: Binding<String?> {
-        Binding(
-            get: { vault.selectedProject?.id },
-            set: { id in
-                guard let id else {
-                    vault.selectProject(nil)
-                    return
-                }
-                vault.selectProject(vault.projects.first { $0.id == id })
-            }
-        )
-    }
-
-    private var secretSelection: Binding<String?> {
-        Binding(
-            get: { selectedSecret?.id },
-            set: { id in
-                selectedSecret = id.flatMap { selectedId in
-                    filteredSecrets.first { $0.id == selectedId }
-                }
-            }
-        )
-    }
-
     var body: some View {
         NavigationSplitView {
             sidebarColumn
@@ -163,7 +141,7 @@ struct SettingsView: View {
         } detail: {
             detailColumn
         }
-        .tint(Theme.gold)
+        .tint(Theme.brand)
         .preferredColorScheme(.dark)
         .onAppear {
             if vault.isLocked { vault.unlock() }
@@ -255,13 +233,19 @@ struct SettingsView: View {
     // MARK: - Sidebar Column
 
     private var sidebarColumn: some View {
-        List(vault.projects, selection: projectSelection) { project in
+        List(vault.projects) { project in
             SidebarProjectRow(
                 project: project,
+                isSelected: vault.selectedProject?.id == project.id,
                 onEdit: { presentedSheet = .projectAppearance(project) },
                 onDelete: { deletingProject = project }
             )
-            .tag(project.id)
+            .contentShape(.rect)
+            .onTapGesture {
+                selectedSecret = nil
+                vault.selectProject(project)
+            }
+            .listRowBackground(Color.clear)
         }
         .listStyle(.sidebar)
         .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
@@ -361,16 +345,21 @@ struct SettingsView: View {
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            List(filteredSecrets, selection: secretSelection) { secret in
+            List(filteredSecrets) { secret in
                 SecretRow(
                     secret: secret,
+                    isSelected: selectedSecret?.id == secret.id,
                     onEdit: { presentedSheet = .editSecret(secret) },
                     onMove: { presentedSheet = .moveSecret(secret) },
                     onDelete: { deletingSecret = secret }
                 )
                 .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0))
+                .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                .tag(secret.id)
+                .contentShape(.rect)
+                .onTapGesture {
+                    selectedSecret = secret
+                }
                 .contextMenu {
                     Button("Copy") { vault.copyToClipboard(secret) }
                     Divider()
@@ -416,8 +405,7 @@ struct SettingsView: View {
 // MARK: - Identity
 
 private struct IdentityBadge: View {
-    let icon: String?
-    let fallbackSystemImage: String
+    let icon: String
     let color: Color
     let size: CGFloat
 
@@ -427,14 +415,8 @@ private struct IdentityBadge: View {
                 .fill(color.opacity(0.16))
             RoundedRectangle(cornerRadius: min(8, size * 0.24))
                 .strokeBorder(color.opacity(0.22), lineWidth: 1)
-            if let icon, !icon.isEmpty {
-                Text(icon)
-                    .font(.system(size: size * 0.5))
-            } else {
-                Image(systemName: fallbackSystemImage)
-                    .font(.system(size: size * 0.42, weight: .semibold))
-                    .foregroundStyle(color)
-            }
+            Text(icon)
+                .font(.system(size: size * 0.5))
         }
         .frame(width: size, height: size)
     }
@@ -447,12 +429,12 @@ private struct CategoryPill: View {
         Label(category.label, systemImage: category.systemImage)
             .font(.system(size: 10, weight: .semibold))
             .labelStyle(.titleAndIcon)
-            .foregroundStyle(Theme.gold)
+            .foregroundStyle(Theme.brand)
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
             .background(
                 Capsule()
-                    .fill(Theme.gold.opacity(0.12))
+                    .fill(Theme.brand.opacity(0.12))
             )
     }
 }
@@ -739,6 +721,7 @@ private struct ColorSwatches: View {
 
 private struct SidebarProjectRow: View {
     let project: Project
+    let isSelected: Bool
     let onEdit: () -> Void
     let onDelete: () -> Void
     @State private var isHovered = false
@@ -779,6 +762,10 @@ private struct SidebarProjectRow: View {
                 .transition(.opacity)
             }
         }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(rowBackground)
+        .clipShape(.rect(cornerRadius: 7))
         .onHover { h in
             withAnimation(.easeInOut(duration: 0.12)) { isHovered = h }
         }
@@ -787,6 +774,17 @@ private struct SidebarProjectRow: View {
             Divider()
             Button("Delete", role: .destructive, action: onDelete)
         }
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var rowBackground: some ShapeStyle {
+        if isSelected {
+            return Color.white.opacity(0.10)
+        }
+        if isHovered {
+            return Color.white.opacity(0.05)
+        }
+        return Color.clear
     }
 }
 
@@ -794,6 +792,7 @@ private struct SidebarProjectRow: View {
 
 private struct SecretRow: View {
     let secret: Secret
+    let isSelected: Bool
     let onEdit: () -> Void
     let onMove: () -> Void
     let onDelete: () -> Void
@@ -802,7 +801,7 @@ private struct SecretRow: View {
 
     var body: some View {
         HStack(spacing: 9) {
-            IdentityBadge(icon: secret.category.defaultIcon, fallbackSystemImage: secret.category.systemImage, color: .white, size: 26)
+            IdentityBadge(icon: secret.category.defaultIcon, color: .white, size: 26)
             VStack(alignment: .leading, spacing: 2) {
                 Text(secret.name)
                     .font(.system(size: 12, design: .monospaced).weight(.medium))
@@ -837,6 +836,8 @@ private struct SecretRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
+        .background(rowBackground)
+        .clipShape(.rect(cornerRadius: 7))
         .onHover { h in
             withAnimation(.easeInOut(duration: 0.12)) { isHovered = h }
         }
@@ -848,6 +849,17 @@ private struct SecretRow: View {
             Divider()
             Button("Delete", role: .destructive, action: onDelete)
         }
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var rowBackground: some ShapeStyle {
+        if isSelected {
+            return Color.white.opacity(0.10)
+        }
+        if isHovered {
+            return Color.white.opacity(0.05)
+        }
+        return Color.clear
     }
 }
 
@@ -923,7 +935,7 @@ struct SecretDetailView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 12) {
-                IdentityBadge(icon: secret.category.defaultIcon, fallbackSystemImage: secret.category.systemImage, color: .white, size: 38)
+                IdentityBadge(icon: secret.category.defaultIcon, color: .white, size: 38)
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 8) {
                         Text(secret.name)
@@ -953,7 +965,7 @@ struct SecretDetailView: View {
                     if copied {
                         Label("Copied", systemImage: "checkmark")
                             .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(.green)
+                            .foregroundStyle(Theme.brand)
                             .transition(.scale.combined(with: .opacity))
                     }
                     Spacer()

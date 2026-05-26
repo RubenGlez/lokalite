@@ -57,11 +57,11 @@ struct VaultPopover: View {
             
             ZStack {
                 Circle()
-                    .fill(Theme.gold.opacity(0.12))
+                    .fill(Theme.brand.opacity(0.12))
                     .frame(width: 56, height: 56)
                 Image(systemName: "lock.fill")
                     .font(.system(size: 24))
-                    .foregroundStyle(Theme.gold)
+                    .foregroundStyle(Theme.brand)
             }
 
             VStack(spacing: 6) {
@@ -77,7 +77,7 @@ struct VaultPopover: View {
                 vault.unlock()
             }
             .buttonStyle(.borderedProminent)
-            .tint(Theme.gold)
+            .tint(Theme.brand)
             .controlSize(.small)
             
             Spacer()
@@ -177,6 +177,7 @@ struct VaultPopover: View {
                     .frame(width: 24, height: 22)
             }
             .buttonStyle(.plain)
+            .foregroundStyle(Theme.brand)
             .disabled(vault.selectedProject == nil)
             .keyboardShortcut("n", modifiers: .command)
             .help("New secret")
@@ -186,8 +187,7 @@ struct VaultPopover: View {
     }
 
     private var environmentColor: Color {
-        guard let env = vault.selectedEnvironment else { return .white.opacity(0.7) }
-        return Theme.color(hex: env.color)
+        vault.selectedEnvironment.map { Theme.color(hex: $0.color) } ?? .white.opacity(0.7)
     }
 
     private var searchBar: some View {
