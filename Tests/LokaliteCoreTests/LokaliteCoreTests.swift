@@ -100,6 +100,17 @@ final class SecretCategoryTests: XCTestCase {
     }
 }
 
+final class ProjectModelTests: XCTestCase {
+    func testProjectEqualityIncludesVisibleProperties() {
+        let base = Project(id: "project-id", name: "App", icon: "folder")
+        let changedIcon = Project(id: "project-id", name: "App", icon: "shippingbox")
+        let changedName = Project(id: "project-id", name: "Renamed", icon: "folder")
+
+        XCTAssertNotEqual(base, changedIcon)
+        XCTAssertNotEqual(base, changedName)
+    }
+}
+
 final class VaultStoreDeletionTests: XCTestCase {
     func testDeletingProjectWithSecretsFails() throws {
         let store = try makeStore()

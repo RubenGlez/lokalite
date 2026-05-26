@@ -14,7 +14,4 @@ public struct Project: Equatable, Hashable {
         self.activeEnvironment = activeEnvironment
         self.icon = icon
     }
-
-    public static func == (lhs: Project, rhs: Project) -> Bool { lhs.id == rhs.id }
-    public func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
