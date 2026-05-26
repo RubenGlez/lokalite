@@ -235,9 +235,9 @@ The menu bar app uses `NSStatusItem` + `NSPopover` rather than SwiftUI's `MenuBa
 
 Full CRUD, three-column `NavigationSplitView`:
 
-- **Left sidebar** — project list. Create, rename, and delete projects; set emoji/SF Symbol icon and link to a local directory path for automatic project resolution.
-- **Centre column** — environment picker (dropdown, per project) + searchable secrets list. Secrets show name (monospaced) and optional description. Hover reveals a copy button. The Default environment's values serve as fallback for named environments.
-- **Right detail** — selected secret's name, description, category, and value (masked by default with a reveal toggle). Inline Save button; Delete at the bottom as a destructive link.
+- **Left sidebar**: project list. Create, rename, and delete projects; set emoji/SF Symbol icon and link to a local directory path for automatic project resolution.
+- **Centre column**: environment picker (dropdown, per project) + searchable secrets list. Secrets show name (monospaced) and optional description. Hover reveals a copy button. The Default environment's values serve as fallback for named environments.
+- **Right detail**: selected secret's name, description, category, and value (masked by default with a reveal toggle). Inline Save button; Delete at the bottom as a destructive link.
 
 App-wide preferences are in the Settings tab (gear icon): session timeout, clipboard clear timeout, appearance (System / Light / Dark), global hotkey shortcut, and launch at login.
 

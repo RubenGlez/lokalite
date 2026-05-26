@@ -11,23 +11,23 @@
 
 ---
 
-Lokalite is a macOS menu bar app and CLI for managing developer secrets locally. API keys, tokens, certificates, database passwords — all stored in an encrypted vault on your machine, protected by Apple Keychain.
+Lokalite is a macOS menu bar app and CLI for managing developer secrets locally. API keys, tokens, certificates, database passwords, all stored in an encrypted vault on your machine, protected by Apple Keychain.
 
 ## Features
 
-- **Encrypted vault** — AES-256-GCM via CryptoKit, vault key stored in Apple Keychain
-- **Touch ID unlock** — biometric authentication before accessing any secret
-- **Menu bar app** — search, copy, and reveal secrets without leaving your workflow; recent secrets surfaced at the top
-- **Global keyboard shortcut** — open the popover from anywhere, configurable in Settings (default `⌘⇧Space`)
-- **Full CLI** — read, write, and inject secrets from the terminal
-- **Projects** — group secrets by project; link to a local directory for automatic resolution
-- **Environments** — per-project environment profiles (dev, staging, production) with per-environment values; Default falls back across all environments
-- **`.env` import/export** — pull from an existing `.env` file or export back to one
-- **Shell injection** — `eval $(lokalite shell)` exports secrets into the current session
-- **Clipboard auto-clear** — copied values are wiped after 30 seconds
-- **Session timeout** — vault auto-locks after inactivity
-- **MCP integration** — expose your vault as tools to Claude Code, Cursor, Windsurf, and any other MCP-compatible agent
-- **Zero runtime dependencies** — no cloud, no telemetry, no vendor lock-in
+- **Encrypted vault**: AES-256-GCM via CryptoKit, vault key stored in Apple Keychain
+- **Touch ID unlock**: biometric authentication before accessing any secret
+- **Menu bar app**: search, copy, and reveal secrets without leaving your workflow; recent secrets surfaced at the top
+- **Global keyboard shortcut**: open the popover from anywhere, configurable in Settings (default `⌘⇧Space`)
+- **Full CLI**: read, write, and inject secrets from the terminal
+- **Projects**: group secrets by project; link to a local directory for automatic resolution
+- **Environments**: per-project environment profiles (dev, staging, production) with per-environment values; Default falls back across all environments
+- **`.env` import/export**: pull from an existing `.env` file or export back to one
+- **Shell injection**: `eval $(lokalite shell)` exports secrets into the current session
+- **Clipboard auto-clear**: copied values are wiped after 30 seconds
+- **Session timeout**: vault auto-locks after inactivity
+- **MCP integration**: expose your vault as tools to Claude Code, Cursor, Windsurf, and any other MCP-compatible agent
+- **Zero runtime dependencies**: no cloud, no telemetry, no vendor lock-in
 
 ## Requirements
 
@@ -39,8 +39,8 @@ Lokalite is a macOS menu bar app and CLI for managing developer secrets locally.
 
 Download the latest release from the [Releases page](https://github.com/RubenGlez/lokalite/releases):
 
-- **`Lokalite-vX.Y.Z.dmg`** — drag-and-drop app bundle for the menu bar app
-- **`lokalite-cli-vX.Y.Z.pkg`** — installer for the CLI
+- **`Lokalite-vX.Y.Z.dmg`**: drag-and-drop app bundle for the menu bar app
+- **`lokalite-cli-vX.Y.Z.pkg`**: installer for the CLI
 
 After installing the CLI, register it as an MCP server:
 
@@ -121,9 +121,9 @@ eval $(lokalite shell --keys OPENAI_API_KEY,ANTHROPIC_API_KEY)
 Click the dial icon in your menu bar (or press the global shortcut, default `⌘⇧Space`) to open the vault popover. The popover shows recently copied secrets at the top, then all secrets for the active project and environment. Use the project and environment menus in the header to switch context, and click **Manage** in the footer to open the full secrets manager window.
 
 The secrets manager is a three-column layout:
-- **Left sidebar** — project list; create, rename, and delete projects; set icon and link to a local directory
-- **Centre column** — environment switcher and searchable secrets list for the selected project
-- **Right panel** — edit the selected secret's value; save or delete
+- **Left sidebar**: project list; create, rename, and delete projects; set icon and link to a local directory
+- **Centre column**: environment switcher and searchable secrets list for the selected project
+- **Right panel**: edit the selected secret's value; save or delete
 
 On first launch, an onboarding screen guides you through creating your first project.
 

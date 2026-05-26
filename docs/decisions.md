@@ -6,7 +6,7 @@ A record of the key decisions made during design and implementation, with ration
 
 ## D1: Storage encryption approach
 
-Plain SQLite (GRDB.swift) + CryptoKit AES-256-GCM on the `encrypted_value` column. Secret values are encrypted before being written. Metadata (name, tags, description) stays plaintext for fast search and filtering. Vault key stored in Keychain. No SQLCipher dependency.
+Plain SQLite (GRDB.swift) + CryptoKit AES-256-GCM on the `encrypted_value` column. Secret values are encrypted before being written. Metadata (name, description, category) stays plaintext for fast search and filtering. Vault key stored in Keychain. No SQLCipher dependency.
 
 ---
 
@@ -36,7 +36,7 @@ CLI built first. Menu bar app is a native SwiftUI popover (no dock icon, `LSUIEl
 
 ## D6: CLI scope
 
-Full CRUD from the CLI. Commands: `add`, `set`, `delete`, `get`, `copy`, `list`, `export`, `run`. The desktop app is a convenience layer, not a requirement.
+Full CRUD from the CLI. Commands: `add`, `set`, `delete`, `get`, `copy`, `list`, `export`, `import`, `shell`, `run`, `status`, `init`, `project`. The desktop app is a convenience layer, not a requirement.
 
 ---
 
@@ -62,4 +62,4 @@ Search-first popover anchored to status bar icon. Click to copy. Separate settin
 
 ## D10: Export format
 
-`lokalite export` produces an encrypted file (Argon2id + AES-256-GCM, passphrase entered at export time). `lokalite export --plain` produces unencrypted JSON after explicit confirmation. `--plain` output is `.env`-compatible.
+`lokalite export` produces an encrypted file (Argon2id + AES-256-GCM, passphrase entered at export time). `lokalite export --plain` produces unencrypted JSON after explicit confirmation. `lokalite export --format env` produces `KEY="value"` lines for `.env` compatibility without a passphrase.
