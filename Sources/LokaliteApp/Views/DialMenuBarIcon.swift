@@ -21,61 +21,62 @@ struct DialMenuBarIcon: View {
     }
 
     private static func drawTemplateIcon(in rect: CGRect) {
-        let center = CGPoint(x: rect.midX, y: rect.midY)
-        let outerRadius = min(rect.width, rect.height) / 2 - 1.25
+        let c = CGPoint(x: rect.midX, y: rect.midY)
+        let R = min(rect.width, rect.height) / 2 - 0.5
 
-        NSColor.black.setStroke()
         NSColor.black.setFill()
+        NSColor.black.setStroke()
 
-        drawRing(center: center, radius: outerRadius, lineWidth: 2.0)
-        drawTicks(center: center, radius: outerRadius)
-        drawRing(center: center, radius: outerRadius * 0.46, lineWidth: 1.5)
-        drawDot(center: center, radius: 2.25)
-    }
+        // Outer ring with 8 rounded notches cut from the inner edge
+        let outerR = R
+        let innerR = R * 0.65
+        let notchCount = 8
+        let notchW = R * 0.18
+        let notchLen = R * 0.30
 
-    private static func drawRing(center: CGPoint, radius: CGFloat, lineWidth: CGFloat) {
-        let diameter = radius * 2
-        let rect = CGRect(
-            x: center.x - radius,
-            y: center.y - radius,
-            width: diameter,
-            height: diameter
-        )
-        let path = NSBezierPath(ovalIn: rect)
-        path.lineWidth = lineWidth
-        path.stroke()
-    }
+        let ringPath = NSBezierPath()
+        ringPath.windingRule = .evenOdd
 
-    private static func drawTicks(center: CGPoint, radius: CGFloat) {
-        for index in 0..<12 {
-            let angle = CGFloat(index) * (.pi * 2 / 12) - .pi / 2
-            let isMajorTick = index % 3 == 0
-            let outerTickRadius = radius - 1.0
-            let innerTickRadius = outerTickRadius - (isMajorTick ? 4.0 : 2.5)
-            let tick = NSBezierPath()
+        // Outer filled disk
+        ringPath.appendOval(in: CGRect(x: c.x - outerR, y: c.y - outerR,
+                                       width: outerR * 2, height: outerR * 2))
 
-            tick.move(to: point(on: center, radius: outerTickRadius, angle: angle))
-            tick.line(to: point(on: center, radius: innerTickRadius, angle: angle))
-            tick.lineWidth = isMajorTick ? 1.5 : 1.1
-            tick.stroke()
+        // Inner hole of ring
+        ringPath.appendOval(in: CGRect(x: c.x - innerR, y: c.y - innerR,
+                                       width: innerR * 2, height: innerR * 2))
+
+        // Notches: capsule shapes placed at inner edge, pointing radially inward
+        for i in 0..<notchCount {
+            let angle = CGFloat(i) * (2 * .pi / CGFloat(notchCount))
+            let notchCenterDist = innerR + notchLen * 0.30
+
+            // Rotation: unrotated capsule points along +Y; rotate so it points in `angle` direction
+            let cosR = cos(angle - .pi / 2)
+            let sinR = sin(angle - .pi / 2)
+
+            let unrotated = CGRect(x: -notchW / 2, y: -notchLen * 0.15,
+                                   width: notchW, height: notchLen)
+            let notchPath = NSBezierPath(roundedRect: unrotated,
+                                         xRadius: notchW / 2, yRadius: notchW / 2)
+            let xform = AffineTransform(
+                m11: cosR, m12: sinR,
+                m21: -sinR, m22: cosR,
+                tX: c.x + notchCenterDist * cos(angle),
+                tY: c.y + notchCenterDist * sin(angle)
+            )
+            notchPath.transform(using: xform)
+            ringPath.append(notchPath)
         }
-    }
 
-    private static func drawDot(center: CGPoint, radius: CGFloat) {
-        let diameter = radius * 2
-        let rect = CGRect(
-            x: center.x - radius,
-            y: center.y - radius,
-            width: diameter,
-            height: diameter
-        )
-        NSBezierPath(ovalIn: rect).fill()
-    }
+        ringPath.fill()
 
-    private static func point(on center: CGPoint, radius: CGFloat, angle: CGFloat) -> CGPoint {
-        CGPoint(
-            x: center.x + radius * cos(angle),
-            y: center.y + radius * sin(angle)
-        )
+        // Inner concentric ring (stroke only, hollow center)
+        let innerRingR = R * 0.36
+        let innerRingPath = NSBezierPath(ovalIn: CGRect(
+            x: c.x - innerRingR, y: c.y - innerRingR,
+            width: innerRingR * 2, height: innerRingR * 2
+        ))
+        innerRingPath.lineWidth = R * 0.18
+        innerRingPath.stroke()
     }
 }
