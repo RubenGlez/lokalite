@@ -7,6 +7,7 @@ struct VaultPopover: View {
     @Environment(\.openWindow) private var openWindow
     @State private var searchText = ""
     @State private var showingAddSecret = false
+    @FocusState private var searchFocused: Bool
 
     private var filtered: [Secret] {
         guard !searchText.isEmpty else { return vault.secrets }
@@ -28,8 +29,22 @@ struct VaultPopover: View {
         }
         .frame(minWidth: 340, maxWidth: 340, minHeight: 230)
         .animation(.easeInOut(duration: 0.2), value: vault.isLocked)
-        .onAppear { vault.unlock() }
+        .onAppear {
+            vault.unlock()
+            if !vault.isLocked { Task { @MainActor in searchFocused = true } }
+        }
+        .onChange(of: vault.isLocked) { _, locked in
+            if !locked { Task { @MainActor in searchFocused = true } }
+        }
         .onDisappear { showingAddSecret = false }
+        .alert("Error", isPresented: Binding(
+            get: { vault.errorMessage != nil },
+            set: { if !$0 { vault.errorMessage = nil } }
+        )) {
+            Button("OK") { vault.errorMessage = nil }
+        } message: {
+            Text(vault.errorMessage ?? "")
+        }
         .sheet(isPresented: $showingAddSecret) {
             AddSecretView()
                 .environment(vault)
@@ -82,27 +97,75 @@ struct VaultPopover: View {
     }
 
     private var contextHeader: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "folder.fill")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.secondary)
-
-            HStack(spacing: 5) {
-                Text(vault.selectedProject?.name ?? "No project")
-                    .font(.system(size: 12, weight: .semibold))
-                    .lineLimit(1)
-                Image(systemName: "chevron.forward")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(.tertiary)
-                Circle()
-                    .fill(environmentColor)
-                    .frame(width: 6, height: 6)
-                Text(vault.selectedEnvironment?.name ?? "Default")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+        HStack(spacing: 5) {
+            // Project switcher
+            Menu {
+                ForEach(vault.projects) { project in
+                    Button { vault.selectProject(project) } label: {
+                        let icon = project.icon ?? "folder"
+                        if icon.unicodeScalars.allSatisfy({ $0.value < 128 }) {
+                            Label(project.name, systemImage: icon)
+                        } else {
+                            Text("\(icon)  \(project.name)")
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 5) {
+                    let projectIcon = vault.selectedProject?.icon ?? "folder"
+                    if projectIcon.unicodeScalars.allSatisfy({ $0.value < 128 }) {
+                        Image(systemName: projectIcon)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text(projectIcon)
+                            .font(.system(size: 13))
+                    }
+                    Text(vault.selectedProject?.name ?? "No project")
+                        .font(.system(size: 12, weight: .semibold))
+                        .lineLimit(1)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .disabled(vault.projects.isEmpty)
+
+            Image(systemName: "chevron.forward")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(.tertiary)
+
+            // Environment switcher
+            Menu {
+                Button {
+                    vault.selectEnvironment(nil)
+                } label: {
+                    Label { Text("Default") } icon: { Theme.envCircle(.white.opacity(0.7)) }
+                }
+                if !vault.environments.isEmpty {
+                    Divider()
+                    ForEach(vault.environments, id: \.id) { env in
+                        Button { vault.selectEnvironment(env) } label: {
+                            Label { Text(env.name) } icon: { Theme.envCircle(Theme.color(hex: env.color)) }
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Theme.envCircle(environmentColor)
+                    Text(vault.selectedEnvironment?.name ?? "Default")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .disabled(vault.selectedProject == nil)
 
             Spacer()
 
@@ -123,7 +186,8 @@ struct VaultPopover: View {
     }
 
     private var environmentColor: Color {
-        Theme.color(hex: vault.selectedEnvironment?.color)
+        guard let env = vault.selectedEnvironment else { return .white.opacity(0.7) }
+        return Theme.color(hex: env.color)
     }
 
     private var searchBar: some View {
@@ -133,6 +197,7 @@ struct VaultPopover: View {
             TextField("Search secrets…", text: $searchText)
                 .textFieldStyle(.plain)
                 .font(.body)
+                .focused($searchFocused)
             if !searchText.isEmpty {
                 Button {
                     searchText = ""

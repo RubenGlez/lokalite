@@ -13,7 +13,9 @@ struct SecretRowView: View {
             HStack(spacing: 8) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.white.opacity(0.12))
+                        .fill(Color.white.opacity(0.16))
+                    RoundedRectangle(cornerRadius: 6)
+                        .strokeBorder(Color.white.opacity(0.22), lineWidth: 1)
                     let icon = secret.category.defaultIcon
                     if !icon.isEmpty {
                         Text(icon)
@@ -21,7 +23,7 @@ struct SecretRowView: View {
                     } else {
                         Image(systemName: secret.category.systemImage)
                             .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.7))
                     }
                 }
                 .frame(width: 22, height: 22)

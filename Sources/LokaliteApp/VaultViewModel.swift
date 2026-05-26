@@ -170,7 +170,7 @@ final class VaultViewModel {
 
     // MARK: - Project CRUD
 
-    func addProject(name: String, icon: String? = nil) {
+    func addProject(name: String, icon: String? = "folder") {
         renewSession()
         do {
             let project = try Vault.shared.addProject(name: name, icon: icon)

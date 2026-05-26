@@ -30,6 +30,17 @@ enum Theme {
 
     static let environmentPalette = ["#E8A01E", "#57A2FF", "#51DBC1", "#A885FF", "#FF749F", "#FF9A49", "#4CD964"]
 
+    static func envCircle(_ color: Color) -> Image {
+        let size: CGFloat = 10
+        let nsImage = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
+            NSColor(color).setFill()
+            NSBezierPath(ovalIn: rect).fill()
+            return true
+        }
+        nsImage.isTemplate = false
+        return Image(nsImage: nsImage)
+    }
+
     static func color(hex: String?) -> Color {
         guard let hex else { return gold }
         switch hex {
@@ -68,7 +79,7 @@ struct SettingsView: View {
         case environmentManager
         case editSecret(Secret)
         case moveSecret(Secret)
-        case projectAppearance(Project)
+        case projectAppearance(Project?)
         case environmentAppearance(VaultEnvironment)
 
         var id: String {
@@ -78,7 +89,7 @@ struct SettingsView: View {
             case .environmentManager: "environment-manager"
             case .editSecret(let secret): "edit-secret-\(secret.id)"
             case .moveSecret(let secret): "move-secret-\(secret.id)"
-            case .projectAppearance(let project): "project-\(project.id)"
+            case .projectAppearance(let project): "project-\(project?.id ?? "new")"
             case .environmentAppearance(let environment): "environment-\(environment.id)"
             }
         }
@@ -86,17 +97,10 @@ struct SettingsView: View {
 
     // Presentation
     @State private var presentedSheet: PresentedSheet?
-    @State private var showingAddProject = false
     @State private var showingAddEnv = false
 
     // Search
     @State private var searchExpanded = false
-
-    // Rename
-    @State private var renamingProject: Project?
-    @State private var renameProjectText = ""
-    @State private var renamingEnv: VaultEnvironment?
-    @State private var renameEnvText = ""
 
     // Delete confirmations
     @State private var deletingProject: Project?
@@ -104,7 +108,6 @@ struct SettingsView: View {
     @State private var deletingSecret: Secret?
 
     // Inline input
-    @State private var newProjectName = ""
     @State private var newEnvName = ""
     @State private var searchText = ""
 
@@ -188,15 +191,6 @@ struct SettingsView: View {
                 EnvironmentAppearanceView(environment: environment).environment(vault)
             }
         }
-        .alert("New Project", isPresented: $showingAddProject) {
-            TextField("Name", text: $newProjectName)
-            Button("Create") {
-                guard !newProjectName.isEmpty else { return }
-                vault.addProject(name: newProjectName)
-                newProjectName = ""
-            }
-            Button("Cancel", role: .cancel) { newProjectName = "" }
-        }
         .alert("New Environment", isPresented: $showingAddEnv) {
             TextField("Name (e.g. staging)", text: $newEnvName)
             Button("Create") {
@@ -205,32 +199,6 @@ struct SettingsView: View {
                 newEnvName = ""
             }
             Button("Cancel", role: .cancel) { newEnvName = "" }
-        }
-        .alert("Rename Project", isPresented: Binding(
-            get: { renamingProject != nil },
-            set: { if !$0 { renamingProject = nil } }
-        )) {
-            TextField("Name", text: $renameProjectText)
-            Button("Rename") {
-                if let p = renamingProject, !renameProjectText.isEmpty {
-                    vault.renameProject(p, newName: renameProjectText)
-                }
-                renamingProject = nil
-            }
-            Button("Cancel", role: .cancel) { renamingProject = nil }
-        }
-        .alert("Rename Environment", isPresented: Binding(
-            get: { renamingEnv != nil },
-            set: { if !$0 { renamingEnv = nil } }
-        )) {
-            TextField("Name", text: $renameEnvText)
-            Button("Rename") {
-                if let e = renamingEnv, !renameEnvText.isEmpty {
-                    vault.renameEnvironment(e, newName: renameEnvText)
-                }
-                renamingEnv = nil
-            }
-            Button("Cancel", role: .cancel) { renamingEnv = nil }
         }
         .confirmationDialog(
             "Delete \"\(deletingProject?.name ?? "")\"?",
@@ -274,6 +242,14 @@ struct SettingsView: View {
             }
             Button("Cancel", role: .cancel) { deletingSecret = nil }
         } message: { Text("This cannot be undone.") }
+        .alert("Error", isPresented: Binding(
+            get: { vault.errorMessage != nil },
+            set: { if !$0 { vault.errorMessage = nil } }
+        )) {
+            Button("OK") { vault.errorMessage = nil }
+        } message: {
+            Text(vault.errorMessage ?? "")
+        }
     }
 
     // MARK: - Sidebar Column
@@ -296,7 +272,7 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
                 Spacer()
-                Button { showingAddProject = true } label: {
+                Button { presentedSheet = .projectAppearance(nil) } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 12, weight: .medium))
                 }
@@ -323,19 +299,16 @@ struct SettingsView: View {
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Menu {
-                    Button("Default") {
+                    Button {
                         vault.selectEnvironment(nil)
+                    } label: {
+                        Label { Text("Default") } icon: { Theme.envCircle(.white.opacity(0.7)) }
                     }
                     ForEach(vault.environments, id: \.id) { env in
                         Button {
                             vault.selectEnvironment(env)
                         } label: {
-                            Label {
-                                Text(env.name)
-                            } icon: {
-                                Image(systemName: "circle.fill")
-                                    .foregroundStyle(Theme.color(hex: env.color))
-                            }
+                            Label { Text(env.name) } icon: { Theme.envCircle(Theme.color(hex: env.color)) }
                         }
                     }
                     if vault.selectedProject != nil {
@@ -345,18 +318,9 @@ struct SettingsView: View {
                         }
                     }
                 } label: {
-                    HStack(spacing: 5) {
-                        if let env = vault.selectedEnvironment {
-                            Circle()
-                                .fill(Theme.color(hex: env.color))
-                                .frame(width: 5, height: 5)
-                            Text(env.name)
-                        } else {
-                            Circle()
-                                .fill(Theme.gold)
-                                .frame(width: 5, height: 5)
-                            Text("Default")
-                        }
+                    HStack(spacing: 8) {
+                        Theme.envCircle(vault.selectedEnvironment.map { Theme.color(hex: $0.color) } ?? .white.opacity(0.7))
+                        Text(vault.selectedEnvironment?.name ?? "Default")
                     }
                     .font(.system(size: 12, weight: .medium))
                 }
@@ -408,6 +372,8 @@ struct SettingsView: View {
                 .listRowSeparator(.hidden)
                 .tag(secret.id)
                 .contextMenu {
+                    Button("Copy") { vault.copyToClipboard(secret) }
+                    Divider()
                     Button("Edit\u{2026}") { presentedSheet = .editSecret(secret) }
                     Button("Move\u{2026}") { presentedSheet = .moveSecret(secret) }
                     Divider()
@@ -426,7 +392,7 @@ struct SettingsView: View {
             Text(vault.projects.isEmpty ? "Create a project to start storing secrets." : "Choose a project from the sidebar.")
         } actions: {
             if vault.projects.isEmpty {
-                Button("New Project") { showingAddProject = true }
+                Button("New Project") { presentedSheet = .projectAppearance(nil) }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -437,7 +403,7 @@ struct SettingsView: View {
     @ViewBuilder
     private var detailColumn: some View {
         if let secret = selectedSecret {
-            SecretDetailView(secret: secret)
+            SecretDetailView(secret: secret, onEdit: { presentedSheet = .editSecret(secret) })
                 .environment(vault)
                 .id(secret.id)
         } else {
@@ -492,18 +458,20 @@ private struct CategoryPill: View {
 }
 
 private struct ProjectAppearanceView: View {
-    let project: Project
+    let project: Project?
     @Environment(VaultViewModel.self) private var vault
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
     @State private var icon: String?
     @State private var isShowingSymbolPicker = false
 
-    init(project: Project) {
+    init(project: Project?) {
         self.project = project
-        _name = State(initialValue: project.name)
-        _icon = State(initialValue: project.icon)
+        _name = State(initialValue: project?.name ?? "")
+        _icon = State(initialValue: project?.icon)
     }
+
+    private var isCreating: Bool { project == nil }
 
     var body: some View {
         NavigationStack {
@@ -530,27 +498,31 @@ private struct ProjectAppearanceView: View {
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle("Project")
+            .navigationTitle(isCreating ? "New Project" : "Project")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                         .keyboardShortcut(.cancelAction)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button(isCreating ? "Create" : "Save") {
                         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                        if !trimmedName.isEmpty, trimmedName != project.name {
-                            vault.renameProject(project, newName: trimmedName)
+                        if isCreating {
+                            vault.addProject(name: trimmedName, icon: icon ?? "folder")
+                        } else if let project {
+                            if !trimmedName.isEmpty, trimmedName != project.name {
+                                vault.renameProject(project, newName: trimmedName)
+                            }
+                            let updated = Project(
+                                id: project.id,
+                                name: trimmedName.isEmpty ? project.name : trimmedName,
+                                path: project.path,
+                                activeEnvironment: project.activeEnvironment,
+                                icon: project.icon
+                            )
+                            vault.setProjectIcon(updated, icon: icon)
+                            vault.refresh()
                         }
-                        let updated = Project(
-                            id: project.id,
-                            name: trimmedName.isEmpty ? project.name : trimmedName,
-                            path: project.path,
-                            activeEnvironment: project.activeEnvironment,
-                            icon: project.icon
-                        )
-                        vault.setProjectIcon(updated, icon: icon)
-                        vault.refresh()
                         dismiss()
                     }
                     .keyboardShortcut(.defaultAction)
@@ -774,21 +746,15 @@ private struct SidebarProjectRow: View {
     var body: some View {
         HStack(spacing: 0) {
             HStack(spacing: 8) {
-                if let icon = project.icon, !icon.isEmpty {
-                    if icon.unicodeScalars.allSatisfy({ $0.value < 128 }) {
-                        Image(systemName: icon)
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(.primary)
-                            .frame(width: 24, height: 24)
-                    } else {
-                        Text(icon)
-                            .font(.system(size: 18))
-                            .frame(width: 24, height: 24)
-                    }
+                let icon = project.icon ?? "folder"
+                if icon.unicodeScalars.allSatisfy({ $0.value < 128 }) {
+                    Image(systemName: icon)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(.primary)
+                        .frame(width: 24, height: 24)
                 } else {
-                    Image(systemName: "folder.fill")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(.secondary)
+                    Text(icon)
+                        .font(.system(size: 18))
                         .frame(width: 24, height: 24)
                 }
                 Text(project.name)
@@ -832,6 +798,7 @@ private struct SecretRow: View {
     let onMove: () -> Void
     let onDelete: () -> Void
     @State private var isHovered = false
+    @Environment(VaultViewModel.self) private var vault
 
     var body: some View {
         HStack(spacing: 9) {
@@ -850,6 +817,8 @@ private struct SecretRow: View {
 
             if isHovered {
                 Menu {
+                    Button("Copy") { vault.copyToClipboard(secret) }
+                    Divider()
                     Button("Edit\u{2026}", action: onEdit)
                     Button("Move\u{2026}", action: onMove)
                     Divider()
@@ -870,6 +839,14 @@ private struct SecretRow: View {
         .padding(.vertical, 9)
         .onHover { h in
             withAnimation(.easeInOut(duration: 0.12)) { isHovered = h }
+        }
+        .contextMenu {
+            Button("Copy") { vault.copyToClipboard(secret) }
+            Divider()
+            Button("Edit\u{2026}", action: onEdit)
+            Button("Move\u{2026}", action: onMove)
+            Divider()
+            Button("Delete", role: .destructive, action: onDelete)
         }
     }
 }
@@ -938,6 +915,7 @@ struct AppSettingsView: View {
 
 struct SecretDetailView: View {
     let secret: Secret
+    var onEdit: (() -> Void)? = nil
     @Environment(VaultViewModel.self) private var vault
     @State private var revealed = false
     @State private var copied = false
@@ -1014,7 +992,8 @@ struct SecretDetailView: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .help("Click to copy")
+                .keyboardShortcut("c", modifiers: .command)
+                .help("Click to copy (⌘C)")
                 .accessibilityLabel("Copy \(secret.name)")
             }
             .padding(.horizontal, 24)
