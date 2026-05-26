@@ -17,10 +17,13 @@ Lokalite is a macOS menu bar app and CLI for managing developer secrets locally.
 
 - **Encrypted vault** — AES-256-GCM via CryptoKit, vault key stored in Apple Keychain
 - **Touch ID unlock** — biometric authentication before accessing any secret
-- **Menu bar app** — search, copy, and reveal secrets without leaving your workflow
+- **Menu bar app** — search, copy, and reveal secrets without leaving your workflow; recent secrets surfaced at the top
+- **Global keyboard shortcut** — open the popover from anywhere, configurable in Settings (default `⌘⇧Space`)
 - **Full CLI** — read, write, and inject secrets from the terminal
-- **Projects** — group secrets by project; each project is an isolated namespace
+- **Projects** — group secrets by project; link to a local directory for automatic resolution
 - **Environments** — per-project environment profiles (dev, staging, production) with per-environment values; Default falls back across all environments
+- **`.env` import/export** — pull from an existing `.env` file or export back to one
+- **Shell injection** — `eval $(lokalite shell)` exports secrets into the current session
 - **Clipboard auto-clear** — copied values are wiped after 30 seconds
 - **Session timeout** — vault auto-locks after inactivity
 - **MCP integration** — expose your vault as tools to Claude Code, Cursor, Windsurf, and any other MCP-compatible agent
@@ -67,6 +70,13 @@ sudo .build/release/lokalite install
 ## CLI
 
 ```bash
+# Initialise a project from the current directory
+lokalite init
+
+# Check vault state (active project, env, secret count, MCP status)
+lokalite status
+lokalite status --json
+
 # Add a secret
 lokalite add OPENAI_API_KEY sk-...
 
@@ -93,10 +103,10 @@ lokalite run --keys OPENAI_API_KEY,ANTHROPIC_API_KEY -- claude
 lokalite import .env
 lokalite import .env --overwrite        # overwrite existing secrets
 
-# Export (encrypted by default)
-lokalite export --output backup.lk
+# Export
+lokalite export --output backup.lk          # encrypted (default)
 lokalite export --plain --output secrets.json
-lokalite export --format env            # .env format, stdout
+lokalite export --format env                # .env format, stdout
 lokalite export --format env --output .env
 
 # Inject secrets into the current shell session (see security note below)
@@ -108,12 +118,14 @@ eval $(lokalite shell --keys OPENAI_API_KEY,ANTHROPIC_API_KEY)
 
 ## Menu Bar App
 
-Click the dial icon in your menu bar to open the vault popover. Use **Manage Secrets** to open the full secrets manager window.
+Click the dial icon in your menu bar (or press the global shortcut, default `⌘⇧Space`) to open the vault popover. The popover shows recently copied secrets at the top, then all secrets for the active project and environment. Use the project and environment menus in the header to switch context, and click **Manage** in the footer to open the full secrets manager window.
 
 The secrets manager is a three-column layout:
-- **Left sidebar** — project list; create and switch between projects
+- **Left sidebar** — project list; create, rename, and delete projects; set icon and link to a local directory
 - **Centre column** — environment switcher and searchable secrets list for the selected project
 - **Right panel** — edit the selected secret's value; save or delete
+
+On first launch, an onboarding screen guides you through creating your first project.
 
 ## MCP Integration
 
@@ -136,7 +148,7 @@ By default the server is **read-only** and exposes two tools:
 
 | Tool | Description |
 |---|---|
-| `list_secrets` | List secret names, tags, and descriptions (values never exposed) |
+| `list_secrets` | List secret names, categories, and descriptions (values never exposed) |
 | `get_secret` | Retrieve a secret value by name |
 
 Pass `--read-write` to also expose write tools:

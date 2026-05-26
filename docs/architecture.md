@@ -156,68 +156,92 @@ kSecAttrAccessControl: Touch ID / device passcode (biometryCurrentSet or deviceP
 ## CLI Commands
 
 ```bash
-lokalite add <name> <value> [--description <text>] [--tags <tag,...>]
+lokalite init                              # create project from current directory name, set as active
+lokalite status [--json]                   # active project/env, lock state, secret count, vault path, MCP status
+
+lokalite add <name> <value> [--description <text>]
 lokalite set <name> <value>
 lokalite delete <name>
 
 lokalite get <name>              # prints value to stdout
 lokalite copy <name>             # copies to clipboard, auto-clears after 30s
-lokalite list [--tag <tag>]      # lists secret names (never values)
+lokalite list                    # lists secret names (never values)
 
-lokalite export [--output <file>]           # encrypted JSON (default)
-lokalite export --plain [--output <file>]   # plaintext JSON, requires confirmation
+lokalite import <file>                     # parse .env file, skip existing by default
+lokalite import <file> --overwrite         # overwrite existing secrets
 
-lokalite run <command> [args...]  # injects secrets as env vars into subprocess
+lokalite export [--output <file>]          # encrypted (default)
+lokalite export --plain [--output <file>]  # plaintext JSON, requires confirmation
+lokalite export --format env               # KEY="value" lines, stdout
+lokalite export --format env --output .env
+
+lokalite shell                             # export KEY='value' lines for eval
+lokalite shell --keys KEY1,KEY2            # limit to specific keys
+
+lokalite run <command> [args...]           # injects secrets as env vars into subprocess
+lokalite run --keys KEY1,KEY2 -- <cmd>
+
+lokalite project link [<name>] [--path <dir>]   # link project to directory; defaults to cwd
+lokalite project link --unlink <name>            # remove path association
 ```
 
-### `lokalite run` detail
+### Project and environment resolution
 
-Lokalite resolves the current project from `--project`, `LOKALITE_PROJECT`, a linked working directory, or the active project. It resolves the environment from `--env`, `LOKALITE_ENV`, or the project's active environment.
+All read/write commands resolve context in this order: `--project` flag → `LOKALITE_PROJECT` env var → linked working directory match → active project. Environment resolves via `--env` flag → `LOKALITE_ENV` → project's active environment.
 
-By default, `lokalite run` injects all secrets from that resolved project/environment. Use `--keys` to limit injection:
+### `lokalite run` and `lokalite shell`
 
-```bash
-lokalite run -- npm start
-lokalite run --keys OPENAI_API_KEY,ANTHROPIC_API_KEY -- claude
-```
+`lokalite run` injects secrets into a subprocess's environment only. They never appear in the parent shell or `env` output.
 
-The subprocess receives secrets in its environment. They never appear in the parent shell.
+`lokalite shell` outputs `export KEY='value'` lines intended for `eval`. Single-quotes are used; embedded single quotes are escaped as `'\''`. This makes secrets visible to all child processes for the duration of the session.
 
 ---
 
 ## Menu Bar App
 
+### Architecture
+
+The menu bar app uses `NSStatusItem` + `NSPopover` rather than SwiftUI's `MenuBarExtra`. This allows the popover to be shown and hidden programmatically in response to the global keyboard shortcut registered via Carbon's `RegisterEventHotKey`. `GlobalHotkeyManager` wraps the Carbon API and fires `onActivate` on the main thread when the hotkey is pressed.
+
+`VaultViewModel` is an `@Observable @MainActor` class shared between the popover and settings window via SwiftUI's environment. It owns the session timer, clipboard auto-clear, and all vault I/O. It also persists user preferences (appearance mode, hotkey shortcut ID, recent secret names) in `UserDefaults`.
+
 ### Popover (`VaultPopover`)
 
 ```
 ┌─────────────────────────────┐
+│ MyProject › Default      [+]│
+├─────────────────────────────┤
 │ 🔍 Search secrets...        │
 ├─────────────────────────────┤
+│ Recent                      │
 │ OPENAI_API_KEY          [⎘] │
+│ All                         │
 │ ANTHROPIC_API_KEY       [⎘] │
 │ SUPABASE_URL            [⎘] │
 │ ...                         │
 ├─────────────────────────────┤
-│ [Manage Secrets]  [Lock] 🔒 │
+│ [Manage]              [⏻]   │
 └─────────────────────────────┘
 ```
 
-- Search filters by name and tags in real time
-- Click row → copies value to clipboard (shows "Copied!" feedback)
-- Click [⎘] → same as clicking row
-- Long-press or secondary click → reveal value temporarily
-- [Manage Secrets] opens the settings window
-- [Lock] invalidates the session immediately
+- Header shows active project and environment as menus; switch context without leaving the popover
+- Recent section shows the last 5 copied secrets (persisted in `UserDefaults`)
+- Search filters by name, description, and category in real time
+- Click a row → copies value to clipboard (auto-clears after configured timeout)
+- `[+]` button opens the Add Secret sheet
+- Manage opens the settings window; power button quits the app
 
 ### Settings Window (`SettingsView`)
 
 Full CRUD, three-column `NavigationSplitView`:
 
-- **Left sidebar** — project list. Each project is a folder-like namespace. Create and delete projects; selected project highlighted in amber.
+- **Left sidebar** — project list. Create, rename, and delete projects; set emoji/SF Symbol icon and link to a local directory path for automatic project resolution.
 - **Centre column** — environment picker (dropdown, per project) + searchable secrets list. Secrets show name (monospaced) and optional description. Hover reveals a copy button. The Default environment's values serve as fallback for named environments.
-- **Right detail** — selected secret's name, description, and value (masked by default with a reveal toggle). Inline Save button; Delete at the bottom as a destructive link.
+- **Right detail** — selected secret's name, description, category, and value (masked by default with a reveal toggle). Inline Save button; Delete at the bottom as a destructive link.
 
-Settings (session timeout, launch at login) are accessible via the gear icon in the toolbar.
+App-wide preferences are in the Settings tab (gear icon): session timeout, clipboard clear timeout, appearance (System / Light / Dark), global hotkey shortcut, and launch at login.
+
+On first launch with no projects, an onboarding screen replaces the three-column layout with a single "Create your first project" CTA.
 
 ---
 
@@ -249,7 +273,14 @@ The plaintext being encrypted is a JSON object: `{ "NAME": "value", ... }`.
 }
 ```
 
-Also compatible with `.env` format via `--format env`.
+**Env** (`--format env`):
+
+```
+OPENAI_API_KEY="sk-..."
+ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+Key=double-quoted-value lines, one per secret. Values are not encrypted. Suitable for writing back to a `.env` file.
 
 ---
 
