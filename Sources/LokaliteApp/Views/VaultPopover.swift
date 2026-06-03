@@ -20,10 +20,10 @@ struct VaultPopover: View {
     }
 
     private var recentSecrets: [Secret] {
-        guard searchText.isEmpty else { return [] }
-        return vault.recentSecretNames.compactMap { name in
+        let recents = vault.recentSecretNames.compactMap { name in
             vault.secrets.first { $0.name == name }
         }
+        return recents.isEmpty ? Array(vault.secrets.prefix(4)) : recents
     }
 
     var body: some View {
@@ -34,7 +34,7 @@ struct VaultPopover: View {
                 unlockedStateView
             }
         }
-        .frame(minWidth: 340, maxWidth: 340, minHeight: 230)
+        .frame(minWidth: 360, maxWidth: 360, minHeight: 230)
         .preferredColorScheme(vault.colorScheme)
         .animation(.easeInOut(duration: 0.2), value: vault.isLocked)
         .onAppear {
@@ -65,18 +65,18 @@ struct VaultPopover: View {
             
             ZStack {
                 Circle()
-                    .fill(Theme.brand.opacity(0.12))
-                    .frame(width: 56, height: 56)
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 24))
-                    .foregroundStyle(Theme.brand)
+                    .fill(Theme.panelBackground)
+                    .frame(width: 48, height: 48)
+                Text("L")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(Theme.text)
             }
 
             VStack(spacing: 6) {
-                Text("Vault is Locked")
+                Text("Workspace locked")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.primary)
-                Text("Unlock to view your secrets")
+                Text("Unlock to search projects and environments")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
@@ -94,14 +94,13 @@ struct VaultPopover: View {
 
     private var unlockedStateView: some View {
         VStack(spacing: 0) {
-            contextHeader
-            Divider()
             searchBar
             Divider()
             content
             Divider()
             footer
         }
+        .background(Theme.panelBackground)
     }
 
     private var contextHeader: some View {
@@ -202,7 +201,7 @@ struct VaultPopover: View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
-            TextField("Search secrets…", text: $searchText)
+            TextField("Search projects, envs, secrets...", text: $searchText)
                 .textFieldStyle(.plain)
                 .font(.body)
                 .focused($searchFocused)
@@ -215,9 +214,15 @@ struct VaultPopover: View {
                 }
                 .buttonStyle(.plain)
             }
+
+            Text("⌘K")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Theme.textDim)
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
+        .background(Color.white.opacity(0.035), in: .rect(cornerRadius: 7))
+        .padding(12)
     }
 
     @ViewBuilder
@@ -227,8 +232,33 @@ struct VaultPopover: View {
         } else if filtered.isEmpty {
             noResultsView
         } else {
-            secretsList
+            recentsList
         }
+    }
+
+    private var recentsList: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(searchText.isEmpty ? "Recent" : "Results")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Theme.textMuted)
+                .textCase(.uppercase)
+                .padding(.horizontal, 18)
+
+            VStack(spacing: 0) {
+                ForEach(searchText.isEmpty ? recentSecrets : filtered) { secret in
+                    PopoverRecentSecretRow(
+                        project: vault.selectedProject?.name ?? "Lokalite",
+                        environment: vault.selectedEnvironment?.name ?? vault.selectedProject?.activeEnvironment ?? "default",
+                        secret: secret
+                    ) {
+                        vault.copyToClipboard(secret)
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 10)
+        }
+        .frame(minHeight: 210, maxHeight: 330, alignment: .top)
     }
 
     private var secretsList: some View {
@@ -301,32 +331,79 @@ struct VaultPopover: View {
             Button {
                 openManageWindow()
             } label: {
-                Label("Manage", systemImage: "slider.horizontal.3")
-                    .font(.caption)
-                    .frame(minWidth: 56, minHeight: 20)
+                Text("Open Lokalite")
+                    .font(.system(size: 13, weight: .medium))
+                    .frame(minHeight: 24)
             }
             .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Theme.text)
 
             Spacer()
 
-            Button {
-                NSApp.terminate(nil)
-            } label: {
-                Image(systemName: "power")
-                    .font(.caption)
-                    .frame(width: 24, height: 20)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-            .help("Quit Lokalite")
+            Text("⌘O")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Theme.textMuted)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(Color.white.opacity(0.05), in: .rect(cornerRadius: 6))
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 4)
+        .padding(.vertical, 10)
     }
 
     private func openManageWindow() {
         NSApp.activate(ignoringOtherApps: true)
         openWindow(id: "settings")
+    }
+}
+
+private struct PopoverRecentSecretRow: View {
+    let project: String
+    let environment: String
+    let secret: Secret
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 11) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(rowColor.opacity(0.20))
+                    Circle()
+                        .fill(rowColor)
+                        .frame(width: 7, height: 7)
+                }
+                .frame(width: 28, height: 28)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("\(project) / \(environment)")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Theme.text)
+                        .lineLimit(1)
+                    Text(secret.name)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.textMuted)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 7)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button("Copy", action: action)
+        }
+    }
+
+    private var rowColor: Color {
+        switch environment.lowercased() {
+        case "production": return Theme.blue
+        case "staging": return Theme.violet
+        case "local", "default": return Theme.green
+        default: return Theme.mint
+        }
     }
 }

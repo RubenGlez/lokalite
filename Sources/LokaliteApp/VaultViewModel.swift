@@ -12,8 +12,12 @@ final class VaultViewModel {
     var environments: [VaultEnvironment] = []
     var selectedEnvironment: VaultEnvironment?  // nil = default values
     var secrets: [Secret] = []
+    var environmentSecretCounts: [String: Int] = [:]
+    var secretEnvironmentNames: [String: [String]] = [:]
+    var projectSecretCount = 0
     var isLocked = true
     var errorMessage: String?
+    var activityEntries: [ActivityLogEntry] = []
 
     var sessionTimeoutSeconds: Double {
         get {
@@ -107,6 +111,10 @@ final class VaultViewModel {
         selectedEnvironment = nil
         secrets = []
         environments = []
+        environmentSecretCounts = [:]
+        secretEnvironmentNames = [:]
+        projectSecretCount = 0
+        activityEntries = []
         isLocked = true
         closeVisibleSurfaces()
     }
@@ -157,6 +165,7 @@ final class VaultViewModel {
         selectedEnvironment = nil
         reloadEnvironments()
         reloadSecrets()
+        reloadDashboardSummaries()
     }
 
     func selectEnvironment(_ env: VaultEnvironment?) {
@@ -182,6 +191,8 @@ final class VaultViewModel {
             }
             reloadEnvironments()
             reloadSecrets()
+            reloadDashboardSummaries()
+            reloadActivity()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -201,6 +212,30 @@ final class VaultViewModel {
         do {
             secrets = try Vault.shared.list(projectId: project.id,
                                             environmentName: selectedEnvironment?.name)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func reloadDashboardSummaries() {
+        guard let project = selectedProject else {
+            projectSecretCount = 0
+            environmentSecretCounts = [:]
+            secretEnvironmentNames = [:]
+            return
+        }
+
+        do {
+            projectSecretCount = try Vault.shared.secretCount(projectId: project.id)
+            var counts = ["default": try Vault.shared.secretCount(projectId: project.id, environmentName: nil)]
+            for environment in environments {
+                counts[environment.id] = try Vault.shared.secretCount(
+                    projectId: project.id,
+                    environmentName: environment.name
+                )
+            }
+            environmentSecretCounts = counts
+            secretEnvironmentNames = try Vault.shared.secretEnvironmentNames(projectId: project.id)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -240,6 +275,7 @@ final class VaultViewModel {
         do {
             let env = try Vault.shared.addEnvironment(name: name, projectId: project.id, color: color)
             environments.append(env)
+            reloadDashboardSummaries()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -253,6 +289,7 @@ final class VaultViewModel {
             if selectedEnvironment?.id == env.id {
                 selectEnvironment(nil)
             }
+            reloadDashboardSummaries()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -278,6 +315,7 @@ final class VaultViewModel {
             let renamed = VaultEnvironment(id: env.id, projectId: env.projectId, name: newName, color: env.color)
             if let idx = environments.firstIndex(where: { $0.id == env.id }) { environments[idx] = renamed }
             if selectedEnvironment?.id == env.id { selectedEnvironment = renamed }
+            reloadDashboardSummaries()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -292,6 +330,7 @@ final class VaultViewModel {
                 fromEnvironmentName: selectedEnvironment?.name,
                 toEnvironmentName: toEnvironmentName)
             reloadSecrets()
+            reloadDashboardSummaries()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -305,6 +344,7 @@ final class VaultViewModel {
                 name: secret.name, fromProjectId: project.id, toProjectId: toProjectId,
                 fromEnvironmentName: selectedEnvironment?.name)
             reloadSecrets()
+            reloadDashboardSummaries()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -332,6 +372,7 @@ final class VaultViewModel {
             let updated = VaultEnvironment(id: env.id, projectId: env.projectId, name: env.name, color: color)
             if let idx = environments.firstIndex(where: { $0.id == env.id }) { environments[idx] = updated }
             if selectedEnvironment?.id == env.id { selectedEnvironment = updated }
+            reloadDashboardSummaries()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -350,6 +391,7 @@ final class VaultViewModel {
                                      projectId: project.id,
                                      environmentName: selectedEnvironment?.name)
             reloadSecrets()
+            reloadDashboardSummaries()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -370,6 +412,7 @@ final class VaultViewModel {
                                      environmentName: selectedEnvironment?.name)
             try Vault.shared.setSecretCategory(name: name, category: category, projectId: project.id)
             reloadSecrets()
+            reloadDashboardSummaries()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -381,6 +424,7 @@ final class VaultViewModel {
         do {
             try Vault.shared.delete(name: secret.name, projectId: project.id)
             secrets.removeAll { $0.id == secret.id }
+            reloadDashboardSummaries()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -404,6 +448,13 @@ final class VaultViewModel {
     func copyToClipboard(_ secret: Secret) {
         renewSession()
         recordRecent(secret)
+        Vault.shared.logAccess(
+            secretName: secret.name,
+            projectName: selectedProject?.name ?? "unknown",
+            environmentName: selectedEnvironment?.name ?? "default",
+            source: .app
+        )
+        reloadActivity()
         let value = secret.value
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(value, forType: .string)
@@ -415,6 +466,10 @@ final class VaultViewModel {
                 NSPasteboard.general.clearContents()
             }
         }
+    }
+
+    private func reloadActivity() {
+        activityEntries = (try? Vault.shared.listActivity()) ?? []
     }
 
     private func recordRecent(_ secret: Secret) {

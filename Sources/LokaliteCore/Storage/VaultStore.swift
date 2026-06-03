@@ -80,6 +80,25 @@ struct SecretValueRecord: Codable, FetchableRecord, PersistableRecord {
     }
 }
 
+struct ActivityLogRecord: Codable, FetchableRecord, PersistableRecord {
+    static let databaseTableName = "activity_log"
+    var id: String
+    var secretName: String
+    var projectName: String
+    var environmentName: String
+    var source: String
+    var accessedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case secretName = "secret_name"
+        case projectName = "project_name"
+        case environmentName = "environment_name"
+        case source
+        case accessedAt = "accessed_at"
+    }
+}
+
 // MARK: - Store
 
 final class VaultStore {
@@ -96,21 +115,8 @@ final class VaultStore {
         var migrator = DatabaseMigrator()
 
         migrator.registerMigration("v1") { db in
-            try db.create(table: "secrets") { t in
-                t.column("id", .text).primaryKey()
-                t.column("name", .text).notNull().unique()
-                t.column("description", .text)
-                t.column("tags", .text).notNull().defaults(to: "[]")
-                t.column("encrypted_value", .blob).notNull()
-                t.column("created_at", .text).notNull()
-                t.column("updated_at", .text).notNull()
-            }
-        }
-
-        migrator.registerMigration("v2") { db in
             let now = iso8601()
 
-            // New supporting tables
             try db.create(table: "config") { t in
                 t.column("key", .text).primaryKey()
                 t.column("value", .text).notNull()
@@ -121,6 +127,7 @@ final class VaultStore {
                 t.column("name", .text).notNull().unique()
                 t.column("path", .text)
                 t.column("active_environment", .text)
+                t.column("icon", .text)
                 t.column("created_at", .text).notNull()
                 t.column("updated_at", .text).notNull()
             }
@@ -129,18 +136,18 @@ final class VaultStore {
                 t.column("id", .text).primaryKey()
                 t.column("project_id", .text).notNull().references("projects", onDelete: .cascade)
                 t.column("name", .text).notNull()
+                t.column("color", .text)
                 t.column("created_at", .text).notNull()
                 t.uniqueKey(["project_id", "name"])
             }
-
-            // Snapshot old secrets before dropping
-            try db.execute(sql: "ALTER TABLE secrets RENAME TO secrets_v1")
 
             try db.create(table: "secrets") { t in
                 t.column("id", .text).primaryKey()
                 t.column("project_id", .text).notNull().references("projects", onDelete: .cascade)
                 t.column("name", .text).notNull()
                 t.column("description", .text)
+                t.column("icon", .text)
+                t.column("category", .text).notNull().defaults(to: SecretCategory.secret.rawValue)
                 t.column("created_at", .text).notNull()
                 t.column("updated_at", .text).notNull()
                 t.uniqueKey(["project_id", "name"])
@@ -155,80 +162,31 @@ final class VaultStore {
                 t.uniqueKey(["secret_id", "environment_id"])
             }
 
-            // Create the Default project
+            try db.execute(sql: """
+                CREATE UNIQUE INDEX IF NOT EXISTS secret_values_unique_default_environment
+                ON secret_values(secret_id)
+                WHERE environment_id IS NULL
+            """)
+
             let defaultProjectId = UUID().uuidString
             try db.execute(sql: """
-                INSERT INTO projects (id, name, path, active_environment, created_at, updated_at)
-                VALUES (?, 'Default', NULL, NULL, ?, ?)
+                INSERT INTO projects (id, name, path, active_environment, icon, created_at, updated_at)
+                VALUES (?, 'Default', NULL, NULL, 'folder', ?, ?)
             """, arguments: [defaultProjectId, now, now])
 
-            // Migrate secret records
-            try db.execute(sql: """
-                INSERT INTO secrets (id, project_id, name, description, created_at, updated_at)
-                SELECT id, ?, name, description, created_at, updated_at
-                FROM secrets_v1
-            """, arguments: [defaultProjectId])
-
-            // Migrate encrypted values as default (NULL environment)
-            let rows = try Row.fetchAll(db, sql: "SELECT id, encrypted_value, updated_at FROM secrets_v1")
-            for row in rows {
-                let secretId: String = row["id"]
-                let encryptedValue: Data = row["encrypted_value"]
-                let updatedAt: String = row["updated_at"]
-                try db.execute(sql: """
-                    INSERT INTO secret_values (id, secret_id, environment_id, encrypted_value, updated_at)
-                    VALUES (?, ?, NULL, ?, ?)
-                """, arguments: [UUID().uuidString, secretId, encryptedValue, updatedAt])
-            }
-
-            try db.execute(sql: "DROP TABLE secrets_v1")
-
-            // Set active project
             try db.execute(sql: "INSERT INTO config (key, value) VALUES ('active_project_id', ?)",
                            arguments: [defaultProjectId])
         }
 
-        migrator.registerMigration("v3") { db in
-            try db.alter(table: "projects") { t in
-                t.add(column: "icon", .text)
+        migrator.registerMigration("v2") { db in
+            try db.create(table: "activity_log") { t in
+                t.column("id", .text).primaryKey()
+                t.column("secret_name", .text).notNull()
+                t.column("project_name", .text).notNull()
+                t.column("environment_name", .text).notNull()
+                t.column("source", .text).notNull()
+                t.column("accessed_at", .text).notNull()
             }
-            try db.alter(table: "environments") { t in
-                t.add(column: "color", .text)
-            }
-            try db.alter(table: "secrets") { t in
-                t.add(column: "icon", .text)
-            }
-        }
-
-        migrator.registerMigration("v4") { db in
-            try db.alter(table: "secrets") { t in
-                t.add(column: "category", .text).notNull().defaults(to: SecretCategory.secret.rawValue)
-            }
-        }
-
-        migrator.registerMigration("v5") { db in
-            try db.execute(sql: """
-                UPDATE secrets
-                SET category = CASE
-                    WHEN lower(name) LIKE '%cert%' OR lower(name) LIKE '%certificate%' THEN 'certificate'
-                    WHEN lower(name) LIKE '%password%' OR lower(name) LIKE '%passwd%' OR lower(name) LIKE '%pwd%' THEN 'password'
-                    WHEN lower(name) LIKE '%database%' OR lower(name) LIKE '%db_%' OR lower(name) LIKE '%postgres%' OR lower(name) LIKE '%mysql%' OR lower(name) LIKE '%mongodb%' OR lower(name) LIKE '%redis%' THEN 'database'
-                    WHEN lower(name) LIKE '%webhook%' OR lower(name) LIKE '%callback%' THEN 'webhook'
-                    WHEN lower(name) LIKE '%api_key%' OR lower(name) LIKE '%apikey%' OR lower(name) LIKE '%secret_key%' OR lower(name) LIKE '%public_key%' OR lower(name) LIKE '%publishable_key%' OR lower(name) LIKE '%client_key%' THEN 'api_key'
-                    WHEN lower(name) LIKE '%token%' OR lower(name) LIKE '%access_token%' OR lower(name) LIKE '%refresh_token%' THEN 'token'
-                    ELSE category
-                END
-                WHERE category = 'secret'
-            """)
-        }
-
-        migrator.registerMigration("v6") { db in
-            try db.execute(sql: """
-                UPDATE secrets
-                SET category = 'other'
-                WHERE category = 'secret'
-                  AND lower(name) NOT LIKE '%secret%'
-            """)
         }
 
         try migrator.migrate(db)
@@ -489,7 +447,18 @@ final class VaultStore {
     // MARK: - Secret Values
 
     func upsertSecretValue(_ record: SecretValueRecord) throws {
-        try db.write { db in try record.save(db) }
+        try db.write { db in
+            if let environmentId = record.environmentId {
+                try SecretValueRecord
+                    .filter(Column("secret_id") == record.secretId && Column("environment_id") == environmentId)
+                    .deleteAll(db)
+            } else {
+                try SecretValueRecord
+                    .filter(Column("secret_id") == record.secretId && Column("environment_id") == nil)
+                    .deleteAll(db)
+            }
+            try record.insert(db)
+        }
     }
 
     func fetchSecretValue(secretId: String, environmentId: String?) throws -> SecretValueRecord? {
@@ -508,6 +477,27 @@ final class VaultStore {
     func fetchAllSecretValues(secretId: String) throws -> [SecretValueRecord] {
         try db.read { db in
             try SecretValueRecord.filter(Column("secret_id") == secretId).fetchAll(db)
+        }
+    }
+
+    #if DEBUG
+    func insertSecretValueForTesting(_ record: SecretValueRecord) throws {
+        try db.write { db in try record.insert(db) }
+    }
+    #endif
+
+    // MARK: - Activity Log
+
+    func insertActivityLog(_ record: ActivityLogRecord) throws {
+        try db.write { db in try record.insert(db) }
+    }
+
+    func fetchActivityLogs(limit: Int = 100) throws -> [ActivityLogRecord] {
+        try db.read { db in
+            try ActivityLogRecord
+                .order(Column("accessed_at").desc)
+                .limit(limit)
+                .fetchAll(db)
         }
     }
 }

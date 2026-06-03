@@ -73,6 +73,8 @@ final class MCPServer {
                 let ctx = try resolveContext(projectFlag: projectName, envFlag: envName)
                 let secret = try vault.get(name: secretName, projectId: ctx.project.id,
                                            environmentName: ctx.environmentName)
+                vault.logAccess(secretName: secret.name, projectName: ctx.project.name,
+                                environmentName: ctx.environmentName ?? "default", source: .mcp)
                 return ok(id, content(secret.value))
             } catch {
                 return ok(id, contentError(error.localizedDescription))

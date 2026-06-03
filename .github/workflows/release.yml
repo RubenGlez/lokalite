@@ -110,19 +110,26 @@ jobs:
             "Lokalite-${VERSION}.zip" \
             "lokalite-cli-${VERSION}.zip"
 
-      - name: Update Homebrew formula
+      - name: Update Homebrew formula and cask
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${GITHUB_REF_NAME}"
+          SHORT_VERSION="${VERSION#v}"
           TARBALL_URL="https://github.com/RubenGlez/lokalite/archive/refs/tags/${VERSION}.tar.gz"
-          SHA256=$(curl -sL "${TARBALL_URL}" | shasum -a 256 | awk '{print $1}')
+          DMG_URL="https://github.com/RubenGlez/lokalite/releases/download/${VERSION}/Lokalite-${VERSION}.dmg"
 
-          sed -i '' "s|url \"https://github.com/RubenGlez/lokalite/archive/refs/tags/.*\"|url \"${TARBALL_URL}\"|" HomebrewFormula/lokalite.rb
-          sed -i '' "s|sha256 \"[a-f0-9]*\"|sha256 \"${SHA256}\"|" HomebrewFormula/lokalite.rb
+          FORMULA_SHA=$(curl -sL "${TARBALL_URL}" | shasum -a 256 | awk '{print $1}')
+          CASK_SHA=$(curl -sL "${DMG_URL}" | shasum -a 256 | awk '{print $1}')
+
+          sed -i '' "s|url \"https://github.com/RubenGlez/lokalite/archive/refs/tags/.*\"|url \"${TARBALL_URL}\"|" Formula/lokalite.rb
+          sed -i '' "s|sha256 \"[a-f0-9]*\"|sha256 \"${FORMULA_SHA}\"|" Formula/lokalite.rb
+
+          sed -i '' "s|version \".*\"|version \"${SHORT_VERSION}\"|" Casks/lokalite.rb
+          sed -i '' "s|sha256 \"[a-f0-9]*\"|sha256 \"${CASK_SHA}\"|" Casks/lokalite.rb
 
           git config user.email "action@github.com"
           git config user.name "GitHub Actions"
-          git add HomebrewFormula/lokalite.rb
-          git commit -m "Update Homebrew formula to ${VERSION}"
+          git add Formula/lokalite.rb Casks/lokalite.rb
+          git commit -m "Update Homebrew formula and cask to ${VERSION}"
           git push

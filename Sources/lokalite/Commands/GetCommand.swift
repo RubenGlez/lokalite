@@ -19,7 +19,10 @@ struct GetCommand: ParsableCommand {
     func run() throws {
         let ctx = try resolveContext(projectFlag: project, envFlag: env)
         let secret = try withVault { vault in
-            try vault.get(name: name, projectId: ctx.project.id, environmentName: ctx.environmentName)
+            let s = try vault.get(name: name, projectId: ctx.project.id, environmentName: ctx.environmentName)
+            vault.logAccess(secretName: s.name, projectName: ctx.project.name,
+                            environmentName: ctx.environmentName ?? "default", source: .cli)
+            return s
         }
         print(secret.value, terminator: "")
     }
