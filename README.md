@@ -1,12 +1,5 @@
 <p align="center">
-  <img src="assets/AppIcon.png" alt="Lokalite" width="120"/>
-</p>
-
-<h1 align="center">Lokalite</h1>
-
-<p align="center">
-  An open-source, local-first secrets workspace for developers.<br/>
-  No cloud. No account. No subscription.
+  <img src="assets/banner.png" alt="Lokalite" width="100%"/>
 </p>
 
 ---
