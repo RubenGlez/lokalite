@@ -20,10 +20,9 @@ struct VaultPopover: View {
     }
 
     private var recentSecrets: [Secret] {
-        let recents = vault.recentSecretNames.compactMap { name in
+        vault.recentSecretNames.compactMap { name in
             vault.secrets.first { $0.name == name }
         }
-        return recents.isEmpty ? Array(vault.secrets.prefix(4)) : recents
     }
 
     var body: some View {

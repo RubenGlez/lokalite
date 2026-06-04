@@ -262,6 +262,9 @@ public final class Vault {
         guard let secretRecord = try store.fetchSecret(name: name, projectId: fromProjectId) else {
             throw VaultError.secretNotFound(name)
         }
+        if try store.fetchSecret(name: name, projectId: toProjectId) != nil {
+            throw VaultError.secretAlreadyExists(name)
+        }
         let fromEnvId = try resolveEnvironmentId(name: fromEnvironmentName, projectId: fromProjectId)
         guard let valueRecord = try store.fetchSecretValue(secretId: secretRecord.id,
                                                            environmentId: fromEnvId) else {
@@ -298,15 +301,12 @@ public final class Vault {
     }
 
     public func secretCount(projectId: String, environmentName: String? = nil) throws -> Int {
-        if environmentName == nil {
-            return try store.secretCount(projectId: projectId)
-        }
-
         let environmentId = try resolveEnvironmentId(name: environmentName, projectId: projectId)
-        return try store.fetchAllSecrets(projectId: projectId).reduce(0) { count, secret in
-            let value = try store.fetchSecretValue(secretId: secret.id, environmentId: environmentId)
-            return count + (value == nil ? 0 : 1)
-        }
+        return try store.countSecretValuesInEnvironment(projectId: projectId, environmentId: environmentId)
+    }
+
+    public func totalSecretCount(projectId: String) throws -> Int {
+        try store.secretCount(projectId: projectId)
     }
 
     public func secretEnvironmentNames(projectId: String) throws -> [String: [String]] {
@@ -367,7 +367,6 @@ public final class Vault {
     }
 
     public func listActivity(limit: Int = 100) throws -> [ActivityLogEntry] {
-        let formatter = ISO8601DateFormatter()
         return try store.fetchActivityLogs(limit: limit).map { record in
             ActivityLogEntry(
                 id: record.id,
@@ -375,7 +374,7 @@ public final class Vault {
                 projectName: record.projectName,
                 environmentName: record.environmentName,
                 source: ActivityLogEntry.AccessSource(rawValue: record.source) ?? .app,
-                accessedAt: formatter.date(from: record.accessedAt) ?? Date()
+                accessedAt: Self.dateFormatter.date(from: record.accessedAt) ?? Date()
             )
         }
     }
@@ -431,8 +430,10 @@ public final class Vault {
         return env.id
     }
 
+    private static let dateFormatter = ISO8601DateFormatter()
+
     private func projectFromRecord(_ record: ProjectRecord) -> Project {
-        let createdAt = ISO8601DateFormatter().date(from: record.createdAt)
+        let createdAt = Self.dateFormatter.date(from: record.createdAt)
         return Project(id: record.id, name: record.name, path: record.path,
                        activeEnvironment: record.activeEnvironment, icon: record.icon,
                        createdAt: createdAt)

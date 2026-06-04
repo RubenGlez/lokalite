@@ -178,7 +178,7 @@ final class VaultStore {
                            arguments: [defaultProjectId])
         }
 
-        migrator.registerMigration("v2") { db in
+        migrator.registerMigration("v3") { db in
             try db.create(table: "activity_log") { t in
                 t.column("id", .text).primaryKey()
                 t.column("secret_name", .text).notNull()
@@ -485,6 +485,24 @@ final class VaultStore {
         try db.write { db in try record.insert(db) }
     }
     #endif
+
+    func countSecretValuesInEnvironment(projectId: String, environmentId: String?) throws -> Int {
+        try db.read { db in
+            if let environmentId {
+                return try Int.fetchOne(db, sql: """
+                    SELECT COUNT(*) FROM secret_values sv
+                    JOIN secrets s ON s.id = sv.secret_id
+                    WHERE s.project_id = ? AND sv.environment_id = ?
+                """, arguments: [projectId, environmentId]) ?? 0
+            } else {
+                return try Int.fetchOne(db, sql: """
+                    SELECT COUNT(*) FROM secret_values sv
+                    JOIN secrets s ON s.id = sv.secret_id
+                    WHERE s.project_id = ? AND sv.environment_id IS NULL
+                """, arguments: [projectId]) ?? 0
+            }
+        }
+    }
 
     // MARK: - Activity Log
 

@@ -193,6 +193,9 @@ final class VaultViewModel {
                 selectedEnvironment = nil
             }
             reloadEnvironments()
+            if selectedEnvironment == nil {
+                selectedEnvironment = environments.first
+            }
             reloadSecrets()
             reloadDashboardSummaries()
             reloadActivity()
@@ -229,7 +232,7 @@ final class VaultViewModel {
         }
 
         do {
-            projectSecretCount = try Vault.shared.secretCount(projectId: project.id)
+            projectSecretCount = try Vault.shared.totalSecretCount(projectId: project.id)
             var counts = ["default": try Vault.shared.secretCount(projectId: project.id, environmentName: nil)]
             for environment in environments {
                 counts[environment.id] = try Vault.shared.secretCount(

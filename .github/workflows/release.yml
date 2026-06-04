@@ -120,7 +120,20 @@ jobs:
           DMG_URL="https://github.com/RubenGlez/lokalite/releases/download/${VERSION}/Lokalite-${VERSION}.dmg"
 
           FORMULA_SHA=$(curl -sL "${TARBALL_URL}" | shasum -a 256 | awk '{print $1}')
-          CASK_SHA=$(curl -sL "${DMG_URL}" | shasum -a 256 | awk '{print $1}')
+          CASK_SHA=""
+          for i in 1 2 3 4 5; do
+            SHA=$(curl -sL --fail "${DMG_URL}" | shasum -a 256 | awk '{print $1}')
+            if [ "${#SHA}" -eq 64 ]; then
+              CASK_SHA="${SHA}"
+              break
+            fi
+            echo "DMG not ready yet, retrying in 15s (attempt $i/5)..."
+            sleep 15
+          done
+          if [ -z "${CASK_SHA}" ]; then
+            echo "Failed to fetch DMG SHA after 5 attempts"
+            exit 1
+          fi
 
           sed -i '' "s|url \"https://github.com/RubenGlez/lokalite/archive/refs/tags/.*\"|url \"${TARBALL_URL}\"|" Formula/lokalite.rb
           sed -i '' "s|sha256 \"[a-f0-9]*\"|sha256 \"${FORMULA_SHA}\"|" Formula/lokalite.rb
