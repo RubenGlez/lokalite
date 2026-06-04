@@ -17,7 +17,7 @@ struct ExportCommand: ParsableCommand {
     @Option(name: .shortAndLong, help: "Environment name. Defaults to the active environment.")
     var env: String?
 
-    @Flag(help: "Export as plaintext JSON. Requires confirmation.")
+    @Flag(help: "Export as plaintext. Requires confirmation.")
     var plain: Bool = false
 
     @Option(name: .long, help: "Output format: json (default) or env.")
@@ -27,6 +27,12 @@ struct ExportCommand: ParsableCommand {
         let ctx = try resolveContext(projectFlag: project, envFlag: env)
 
         if format == "env" {
+            print("Warning: env format writes secret values unencrypted.")
+            print("Type 'yes' to confirm: ", terminator: "")
+            guard readLine() == "yes" else {
+                print("Cancelled.")
+                return
+            }
             let secrets = try withWorkspace { workspace in
                 try workspace.list(context: ctx)
             }

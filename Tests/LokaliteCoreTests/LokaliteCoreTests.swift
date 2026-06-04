@@ -267,6 +267,68 @@ final class VaultStoreDeletionTests: XCTestCase {
         XCTAssertNil(try store.fetchSecret(name: secret.name, projectId: project.id))
     }
 
+    func testFetchingProjectByPathPrefersMostSpecificMatch() throws {
+        let store = try makeStore()
+        let broadProject = ProjectRecord(
+            id: UUID().uuidString,
+            name: "Broad",
+            path: "/Users/ruben/workspace",
+            activeEnvironment: nil,
+            icon: nil,
+            createdAt: timestamp,
+            updatedAt: timestamp
+        )
+        let specificProject = ProjectRecord(
+            id: UUID().uuidString,
+            name: "Specific",
+            path: "/Users/ruben/workspace/lokalite",
+            activeEnvironment: nil,
+            icon: nil,
+            createdAt: timestamp,
+            updatedAt: timestamp
+        )
+        try store.insertProject(broadProject)
+        try store.insertProject(specificProject)
+
+        let matched = try XCTUnwrap(try store.fetchProject(matchingPath: "/Users/ruben/workspace/lokalite/Sources"))
+        XCTAssertEqual(matched.id, specificProject.id)
+    }
+
+    func testMovingSecretToSameEnvironmentIsNoOp() throws {
+        let store = try makeStore()
+        let project = try XCTUnwrap(store.fetchProject(name: "Default"))
+        let environment = EnvironmentRecord(
+            id: UUID().uuidString,
+            projectId: project.id,
+            name: "Production",
+            color: nil,
+            createdAt: timestamp
+        )
+        let secret = secretRecord(projectId: project.id, name: "DATABASE_URL")
+        let value = SecretValueRecord(
+            id: UUID().uuidString,
+            secretId: secret.id,
+            environmentId: environment.id,
+            encryptedValue: Data([0x01, 0x02, 0x03]),
+            updatedAt: timestamp
+        )
+        try store.insertEnvironment(environment)
+        try store.insertSecret(secret)
+        try store.upsertSecretValue(value)
+
+        try store.moveSecretValue(
+            secretId: secret.id,
+            fromEnvironmentId: environment.id,
+            toEnvironmentId: environment.id
+        )
+
+        let values = try store.fetchAllSecretValues(secretId: secret.id)
+        XCTAssertEqual(values.count, 1)
+        XCTAssertEqual(values.first?.id, value.id)
+        XCTAssertEqual(values.first?.environmentId, environment.id)
+        XCTAssertEqual(values.first?.encryptedValue, value.encryptedValue)
+    }
+
     func testUpsertingDefaultSecretValueReplacesExistingValue() throws {
         let store = try makeStore()
         let project = try XCTUnwrap(store.fetchProject(name: "Default"))

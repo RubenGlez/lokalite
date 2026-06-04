@@ -23,6 +23,7 @@ struct CopyCommand: ParsableCommand {
             return try workspace.get(name: name, context: ctx, accessSource: .cli)
         }
         try copyToPasteboard(secret.value)
+        try clearClipboardLater(value: secret.value)
         print("Copied \(name) to clipboard.")
     }
 
@@ -35,5 +36,18 @@ struct CopyCommand: ParsableCommand {
         pipe.fileHandleForWriting.write(Data(value.utf8))
         pipe.fileHandleForWriting.closeFile()
         process.waitUntilExit()
+    }
+
+    private func clearClipboardLater(value: String) throws {
+        let escaped = value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "$", with: "\\$")
+            .replacingOccurrences(of: "`", with: "\\`")
+        let script = "sleep 30 && [ \"$(pbpaste)\" = \"\(escaped)\" ] && pbcopy < /dev/null"
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = ["-c", script]
+        try process.run()
     }
 }

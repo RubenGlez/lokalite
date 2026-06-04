@@ -100,21 +100,30 @@ struct ProjectCommand: ParsableCommand {
         var force = false
 
         func run() throws {
-            if !force {
-                print("Delete empty project '\(name)'? This cannot be undone. [y/N] ",
-                      terminator: "")
-                guard readLine()?.lowercased() == "y" else {
-                    print("Cancelled.")
-                    return
-                }
-            }
             try withVault { vault in
                 guard let project = try vault.project(name: name) else {
                     throw VaultError.projectNotFound(name)
                 }
-                try vault.deleteProject(id: project.id)
+
+                let secretCount = try vault.totalSecretCount(projectId: project.id)
+                let environments = try vault.listEnvironments(projectId: project.id)
+                let hasCustomEnvs = environments.contains { $0.name != "Default" }
+                let isNonEmpty = secretCount > 0 || hasCustomEnvs
+
+                if !force {
+                    let prompt = isNonEmpty
+                        ? "Project '\(name)' contains secrets/environments. Delete anyway? [y/N] "
+                        : "Delete empty project '\(name)'? This cannot be undone. [y/N] "
+                    print(prompt, terminator: "")
+                    guard readLine()?.lowercased() == "y" else {
+                        print("Cancelled.")
+                        return
+                    }
+                }
+
+                try vault.deleteProjectIncludingContents(id: project.id)
+                print("Deleted project '\(name)'.")
             }
-            print("Deleted project '\(name)'.")
         }
     }
 }

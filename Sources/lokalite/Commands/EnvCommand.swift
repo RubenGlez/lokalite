@@ -78,16 +78,21 @@ struct EnvCommand: ParsableCommand {
 
         func run() throws {
             let ctx = try resolveContext(projectFlag: project, envFlag: nil)
-            if !force {
-                print("Delete empty environment '\(name)' from '\(ctx.project.name)'? This cannot be undone. [y/N] ",
-                      terminator: "")
-                guard readLine()?.lowercased() == "y" else {
-                    print("Cancelled.")
-                    return
-                }
-            }
             try withVault { vault in
-                try vault.deleteEnvironment(name: name, projectId: ctx.project.id)
+                let count = (try? vault.secretCount(projectId: ctx.project.id, environmentName: name)) ?? 0
+                let isNonEmpty = count > 0
+
+                if !force {
+                    let prompt = isNonEmpty
+                        ? "Environment '\(name)' contains secrets. Delete anyway? [y/N] "
+                        : "Delete empty environment '\(name)' from '\(ctx.project.name)'? This cannot be undone. [y/N] "
+                    print(prompt, terminator: "")
+                    guard readLine()?.lowercased() == "y" else {
+                        print("Cancelled.")
+                        return
+                    }
+                }
+                try vault.deleteEnvironmentIncludingContents(name: name, projectId: ctx.project.id)
             }
             print("Deleted environment '\(name)'.")
         }

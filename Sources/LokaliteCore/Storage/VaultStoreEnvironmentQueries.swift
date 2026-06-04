@@ -130,6 +130,7 @@ extension VaultStore {
     }
 
     func moveSecretValue(secretId: String, fromEnvironmentId: String?, toEnvironmentId: String?) throws {
+        guard fromEnvironmentId != toEnvironmentId else { return }
         try db.write { db in
             let source: SecretValueRecord?
             if let fromId = fromEnvironmentId {

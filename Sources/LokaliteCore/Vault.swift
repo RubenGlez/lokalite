@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import Security
 
 public final class Vault {
     public static let shared = Vault()
@@ -15,13 +16,15 @@ public final class Vault {
     // MARK: - Setup
 
     public func unlock() throws {
-        if KeychainStore.exists() {
+        do {
             let keyData = try KeychainStore.load()
             key = VaultCrypto.keyFromData(keyData)
-        } else {
+        } catch VaultError.keychainReadFailed(let status) where status == errSecItemNotFound {
             let newKey = VaultCrypto.generateKey()
             try KeychainStore.save(VaultCrypto.keyToData(newKey))
             key = newKey
+        } catch {
+            throw error
         }
         _ = store
     }

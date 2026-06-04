@@ -34,7 +34,8 @@ extension VaultStore {
     func fetchProject(matchingPath path: String) throws -> ProjectRecord? {
         try db.read { db in
             let projects = try ProjectRecord.filter(Column("path") != nil).fetchAll(db)
-            return projects.first { record in
+            let sortedProjects = projects.sorted { ($0.path?.count ?? 0) > ($1.path?.count ?? 0) }
+            return sortedProjects.first { record in
                 guard let recordPath = record.path else { return false }
                 return path == recordPath || path.hasPrefix(recordPath + "/")
             }

@@ -49,7 +49,7 @@ struct InstallCommand: ParsableCommand {
     }
 
     private func resolvedBinaryURL() -> URL {
-        URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL
+        Bundle.main.executableURL ?? URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL
     }
 
     // MARK: - MCP config

@@ -119,19 +119,25 @@ jobs:
           TARBALL_URL="https://github.com/RubenGlez/lokalite/archive/refs/tags/${VERSION}.tar.gz"
           DMG_URL="https://github.com/RubenGlez/lokalite/releases/download/${VERSION}/Lokalite-${VERSION}.dmg"
 
-          FORMULA_SHA=$(curl -sL "${TARBALL_URL}" | shasum -a 256 | awk '{print $1}')
+          FORMULA_SHA=$(curl -sL --fail "${TARBALL_URL}" | shasum -a 256 | awk '{print $1}')
+          EMPTY_SHA="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          if [ "${FORMULA_SHA}" = "${EMPTY_SHA}" ] || [ -z "${FORMULA_SHA}" ]; then
+            echo "Failed to fetch valid Formula tarball SHA"
+            exit 1
+          fi
+
           CASK_SHA=""
           for i in 1 2 3 4 5; do
             SHA=$(curl -sL --fail "${DMG_URL}" | shasum -a 256 | awk '{print $1}')
-            if [ "${#SHA}" -eq 64 ]; then
+            if [ "${#SHA}" -eq 64 ] && [ "${SHA}" != "${EMPTY_SHA}" ]; then
               CASK_SHA="${SHA}"
               break
             fi
             echo "DMG not ready yet, retrying in 15s (attempt $i/5)..."
             sleep 15
           done
-          if [ -z "${CASK_SHA}" ]; then
-            echo "Failed to fetch DMG SHA after 5 attempts"
+          if [ -z "${CASK_SHA}" ] || [ "${CASK_SHA}" = "${EMPTY_SHA}" ]; then
+            echo "Failed to fetch valid DMG SHA after 5 attempts"
             exit 1
           fi
 
