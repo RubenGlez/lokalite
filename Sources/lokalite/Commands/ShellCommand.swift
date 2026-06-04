@@ -22,20 +22,15 @@ struct ShellCommand: ParsableCommand {
     var env: String?
 
     func run() throws {
-        let ctx = try resolveContext(projectFlag: project, envFlag: env)
-        let secrets = try withVault { vault -> [Secret] in
+        let secrets = try withWorkspace { workspace -> [Secret] in
+            let ctx = try resolveContext(projectFlag: project, envFlag: env, using: workspace)
             if let keys {
                 let names = keys.split(separator: ",").map(String.init)
-                return try names.map {
-                    try vault.get(name: $0, projectId: ctx.project.id,
-                                  environmentName: ctx.environmentName)
-                }
+                return try workspace.secrets(named: names, context: ctx, accessSource: .cli)
             }
-            return try vault.list(projectId: ctx.project.id, environmentName: ctx.environmentName)
+            return try workspace.secrets(named: nil, context: ctx, accessSource: .cli)
         }
         for secret in secrets {
-            Vault.shared.logAccess(secretName: secret.name, projectName: ctx.project.name,
-                                   environmentName: ctx.environmentName ?? "default", source: .cli)
             let escaped = secret.value.replacingOccurrences(of: "'", with: "'\\''")
             print("export \(secret.name)='\(escaped)'")
         }

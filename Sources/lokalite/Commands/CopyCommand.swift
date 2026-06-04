@@ -18,12 +18,9 @@ struct CopyCommand: ParsableCommand {
     var env: String?
 
     func run() throws {
-        let ctx = try resolveContext(projectFlag: project, envFlag: env)
-        let secret = try withVault { vault in
-            let s = try vault.get(name: name, projectId: ctx.project.id, environmentName: ctx.environmentName)
-            vault.logAccess(secretName: s.name, projectName: ctx.project.name,
-                            environmentName: ctx.environmentName ?? "default", source: .cli)
-            return s
+        let secret = try withWorkspace { workspace in
+            let ctx = try resolveContext(projectFlag: project, envFlag: env, using: workspace)
+            return try workspace.get(name: name, context: ctx, accessSource: .cli)
         }
         try copyToPasteboard(secret.value)
         print("Copied \(name) to clipboard.")

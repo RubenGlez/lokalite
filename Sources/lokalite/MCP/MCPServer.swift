@@ -2,7 +2,7 @@ import Foundation
 import LokaliteCore
 
 final class MCPServer {
-    private let vault = Vault.shared
+    private let workspace = SecretWorkspace()
     private let allowWrites: Bool
 
     init(allowWrites: Bool = false) {
@@ -10,7 +10,7 @@ final class MCPServer {
     }
 
     func run() throws {
-        try vault.unlock()
+        try workspace.unlock()
 
         while let line = readLine(strippingNewline: true) {
             guard !line.isEmpty,
@@ -71,10 +71,7 @@ final class MCPServer {
             let envName = args["environment"] as? String
             do {
                 let ctx = try resolveContext(projectFlag: projectName, envFlag: envName)
-                let secret = try vault.get(name: secretName, projectId: ctx.project.id,
-                                           environmentName: ctx.environmentName)
-                vault.logAccess(secretName: secret.name, projectName: ctx.project.name,
-                                environmentName: ctx.environmentName ?? "default", source: .mcp)
+                let secret = try workspace.get(name: secretName, context: ctx, accessSource: .mcp)
                 return ok(id, content(secret.value))
             } catch {
                 return ok(id, contentError(error.localizedDescription))
@@ -85,7 +82,7 @@ final class MCPServer {
             let envName = args["environment"] as? String
             do {
                 let ctx = try resolveContext(projectFlag: projectName, envFlag: envName)
-                let secrets = try vault.listInfo(projectId: ctx.project.id)
+                let secrets = try workspace.listInfo(context: ctx)
                 if secrets.isEmpty {
                     return ok(id, content("No secrets found."))
                 }
@@ -114,8 +111,7 @@ final class MCPServer {
             let envName = args["environment"] as? String
             do {
                 let ctx = try resolveContext(projectFlag: projectName, envFlag: envName)
-                _ = try vault.add(name: secretName, value: value, description: description,
-                                  projectId: ctx.project.id, environmentName: ctx.environmentName)
+                _ = try workspace.add(name: secretName, value: value, description: description, context: ctx)
                 return ok(id, content("Secret '\(secretName)' created."))
             } catch {
                 return ok(id, contentError(error.localizedDescription))
@@ -135,8 +131,7 @@ final class MCPServer {
             let envName = args["environment"] as? String
             do {
                 let ctx = try resolveContext(projectFlag: projectName, envFlag: envName)
-                _ = try vault.set(name: secretName, value: value,
-                                  projectId: ctx.project.id, environmentName: ctx.environmentName)
+                _ = try workspace.set(name: secretName, value: value, context: ctx)
                 return ok(id, content("Secret '\(secretName)' updated."))
             } catch {
                 return ok(id, contentError(error.localizedDescription))
@@ -152,7 +147,7 @@ final class MCPServer {
             let projectName = args["project"] as? String
             do {
                 let ctx = try resolveContext(projectFlag: projectName, envFlag: nil)
-                try vault.delete(name: secretName, projectId: ctx.project.id)
+                try workspace.delete(name: secretName, context: ctx)
                 return ok(id, content("Secret '\(secretName)' deleted."))
             } catch {
                 return ok(id, contentError(error.localizedDescription))
@@ -244,12 +239,10 @@ final class MCPServer {
 
     // MARK: - Helpers
 
-    private func resolveContext(projectFlag: String?, envFlag: String?) throws -> VaultContext {
+    private func resolveContext(projectFlag: String?, envFlag: String?) throws -> SecretWorkspaceContext {
         let projectName = projectFlag ?? ProcessInfo.processInfo.environment["LOKALITE_PROJECT"]
         let envName = envFlag ?? ProcessInfo.processInfo.environment["LOKALITE_ENV"]
-        let project = try vault.resolveProject(name: projectName)
-        let resolvedEnv = envName ?? project.activeEnvironment
-        return VaultContext(project: project, environmentName: resolvedEnv)
+        return try workspace.resolveContext(projectName: projectName, environmentName: envName)
     }
 
     private func ok(_ id: Any?, _ result: [String: Any]) -> [String: Any] {

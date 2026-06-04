@@ -27,8 +27,8 @@ struct ExportCommand: ParsableCommand {
         let ctx = try resolveContext(projectFlag: project, envFlag: env)
 
         if format == "env" {
-            let secrets = try withVault {
-                try $0.list(projectId: ctx.project.id, environmentName: ctx.environmentName)
+            let secrets = try withWorkspace { workspace in
+                try workspace.list(context: ctx)
             }
             let lines = secrets.map { envLine($0.name, $0.value) }.joined(separator: "\n")
             if let outputPath = output {

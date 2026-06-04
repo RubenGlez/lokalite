@@ -20,10 +20,9 @@ struct SetCommand: ParsableCommand {
     var env: String?
 
     func run() throws {
-        let ctx = try resolveContext(projectFlag: project, envFlag: env)
-        try withVault { vault in
-            _ = try vault.set(name: name, value: value,
-                              projectId: ctx.project.id, environmentName: ctx.environmentName)
+        try withWorkspace { workspace in
+            let ctx = try resolveContext(projectFlag: project, envFlag: env, using: workspace)
+            _ = try workspace.set(name: name, value: value, context: ctx)
         }
         print("Updated \(name).")
     }

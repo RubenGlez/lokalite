@@ -34,19 +34,13 @@ struct RunCommand: ParsableCommand {
             throw ExitCode.failure
         }
 
-        let ctx = try resolveContext(projectFlag: project, envFlag: env)
-        let secrets = try withVault { vault -> [Secret] in
+        let secrets = try withWorkspace { workspace -> [Secret] in
+            let ctx = try resolveContext(projectFlag: project, envFlag: env, using: workspace)
             if let keys {
                 let names = keys.split(separator: ",").map(String.init)
-                return try names.map { try vault.get(name: $0, projectId: ctx.project.id,
-                                                      environmentName: ctx.environmentName) }
+                return try workspace.secrets(named: names, context: ctx, accessSource: .cli)
             }
-            return try vault.list(projectId: ctx.project.id, environmentName: ctx.environmentName)
-        }
-
-        for secret in secrets {
-            Vault.shared.logAccess(secretName: secret.name, projectName: ctx.project.name,
-                                   environmentName: ctx.environmentName ?? "default", source: .cli)
+            return try workspace.secrets(named: nil, context: ctx, accessSource: .cli)
         }
 
         var environment = ProcessInfo.processInfo.environment

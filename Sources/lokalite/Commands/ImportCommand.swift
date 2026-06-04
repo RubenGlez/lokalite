@@ -21,7 +21,6 @@ struct ImportCommand: ParsableCommand {
     var env: String?
 
     func run() throws {
-        let ctx = try resolveContext(projectFlag: project, envFlag: env)
         let content = try String(contentsOfFile: file, encoding: .utf8)
         let pairs = parseEnvFile(content)
 
@@ -32,18 +31,15 @@ struct ImportCommand: ParsableCommand {
 
         var added = 0, updated = 0, skipped = 0
 
-        try withVault { vault in
+        try withWorkspace { workspace in
+            let ctx = try resolveContext(projectFlag: project, envFlag: env, using: workspace)
             for (key, value) in pairs {
                 do {
-                    _ = try vault.add(name: key, value: value,
-                                      projectId: ctx.project.id,
-                                      environmentName: ctx.environmentName)
+                    _ = try workspace.add(name: key, value: value, context: ctx)
                     added += 1
                 } catch VaultError.secretAlreadyExists {
                     if overwrite {
-                        _ = try vault.set(name: key, value: value,
-                                          projectId: ctx.project.id,
-                                          environmentName: ctx.environmentName)
+                        _ = try workspace.set(name: key, value: value, context: ctx)
                         updated += 1
                     } else {
                         skipped += 1

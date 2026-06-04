@@ -78,6 +78,7 @@ final class VaultViewModel {
     }
 
     private var lockTimer: Timer?
+    private let workspace = SecretWorkspace()
 
     // MARK: - Lock / Unlock
 
@@ -465,12 +466,10 @@ final class VaultViewModel {
     func copyToClipboard(_ secret: Secret) {
         renewSession()
         recordRecent(secret)
-        Vault.shared.logAccess(
-            secretName: secret.name,
-            projectName: selectedProject?.name ?? "unknown",
-            environmentName: selectedEnvironment?.name ?? "Default",
-            source: .app
-        )
+        if let selectedProject {
+            let context = SecretWorkspaceContext(project: selectedProject, environmentName: selectedEnvironment?.name)
+            workspace.logAccess(secretName: secret.name, context: context, source: .app)
+        }
         reloadActivity()
         let value = secret.value
         NSPasteboard.general.clearContents()

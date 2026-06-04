@@ -23,10 +23,9 @@ struct AddCommand: ParsableCommand {
     var env: String?
 
     func run() throws {
-        let ctx = try resolveContext(projectFlag: project, envFlag: env)
-        let secret = try withVault { vault in
-            try vault.add(name: name, value: value, description: description,
-                          projectId: ctx.project.id, environmentName: ctx.environmentName)
+        let secret = try withWorkspace { workspace in
+            let ctx = try resolveContext(projectFlag: project, envFlag: env, using: workspace)
+            return try workspace.add(name: name, value: value, description: description, context: ctx)
         }
         print("Added \(secret.name).")
     }

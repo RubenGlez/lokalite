@@ -14,9 +14,9 @@ struct ListCommand: ParsableCommand {
     var env: String?
 
     func run() throws {
-        let ctx = try resolveContext(projectFlag: project, envFlag: env)
-        let secrets = try withVault { vault in
-            try vault.list(projectId: ctx.project.id, environmentName: ctx.environmentName)
+        let secrets = try withWorkspace { workspace in
+            let ctx = try resolveContext(projectFlag: project, envFlag: env, using: workspace)
+            return try workspace.list(context: ctx)
         }
         if secrets.isEmpty {
             print("No secrets found.")

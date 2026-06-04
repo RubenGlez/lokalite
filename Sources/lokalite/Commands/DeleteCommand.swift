@@ -25,7 +25,9 @@ struct DeleteCommand: ParsableCommand {
                 return
             }
         }
-        try withVault { try $0.delete(name: name, projectId: ctx.project.id) }
+        try withWorkspace { workspace in
+            try workspace.delete(name: name, context: ctx)
+        }
         print("Deleted \(name).")
     }
 }
