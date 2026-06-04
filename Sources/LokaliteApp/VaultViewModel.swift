@@ -1,6 +1,5 @@
 import AppKit
 import LocalAuthentication
-import ServiceManagement
 import SwiftUI
 import LokaliteCore
 
@@ -21,21 +20,19 @@ final class VaultViewModel {
 
     var sessionTimeoutSeconds: Double {
         get {
-            let v = UserDefaults.standard.double(forKey: "sessionTimeoutSeconds")
-            return v > 0 ? v : 300
+            preferences.sessionTimeoutSeconds
         }
         set {
-            UserDefaults.standard.set(newValue, forKey: "sessionTimeoutSeconds")
+            preferences.sessionTimeoutSeconds = newValue
             if !isLocked { renewSession() }
         }
     }
 
     var launchAtLogin: Bool {
-        get { SMAppService.mainApp.status == .enabled }
+        get { loginItem.isEnabled }
         set {
             do {
-                if newValue { try SMAppService.mainApp.register() }
-                else { try SMAppService.mainApp.unregister() }
+                try loginItem.setEnabled(newValue)
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -44,25 +41,24 @@ final class VaultViewModel {
 
     var clipboardClearSeconds: Double {
         get {
-            let v = UserDefaults.standard.double(forKey: "clipboardClearSeconds")
-            return v > 0 ? v : 30
+            preferences.clipboardClearSeconds
         }
-        set { UserDefaults.standard.set(newValue, forKey: "clipboardClearSeconds") }
+        set { preferences.clipboardClearSeconds = newValue }
     }
 
-    var appearanceMode: String = UserDefaults.standard.string(forKey: "appearanceMode") ?? "system" {
-        didSet { UserDefaults.standard.set(appearanceMode, forKey: "appearanceMode") }
+    var appearanceMode: String {
+        get { preferences.appearanceMode }
+        set { preferences.appearanceMode = newValue }
     }
 
-    var hotkeyShortcutID: String = UserDefaults.standard.string(forKey: "hotkeyShortcutID") ?? "cmdShiftSpace" {
-        didSet {
-            UserDefaults.standard.set(hotkeyShortcutID, forKey: "hotkeyShortcutID")
-            NotificationCenter.default.post(name: .hotkeyShortcutChanged, object: hotkeyShortcutID)
-        }
+    var hotkeyShortcutID: String {
+        get { preferences.hotkeyShortcutID }
+        set { preferences.hotkeyShortcutID = newValue }
     }
 
-    var recentSecretNames: [String] = UserDefaults.standard.stringArray(forKey: "recentSecretNames") ?? [] {
-        didSet { UserDefaults.standard.set(recentSecretNames, forKey: "recentSecretNames") }
+    var recentSecretNames: [String] {
+        get { preferences.recentSecretNames }
+        set { preferences.recentSecretNames = newValue }
     }
 
     var environmentColors: [String: Color] {
@@ -77,7 +73,10 @@ final class VaultViewModel {
         }
     }
 
-    private var lockTimer: Timer?
+    private let preferences = AppPreferences()
+    private let loginItem = LoginItemController()
+    private let sessionPolicy = SessionPolicy()
+    private let clipboard = ClipboardController()
     private let workspace = SecretWorkspace()
 
     // MARK: - Lock / Unlock
@@ -108,8 +107,7 @@ final class VaultViewModel {
     }
 
     func lock() {
-        lockTimer?.invalidate()
-        lockTimer = nil
+        sessionPolicy.cancel()
         Vault.shared.lock()
         projects = []
         selectedProject = nil
@@ -152,9 +150,8 @@ final class VaultViewModel {
 
     func renewSession() {
         guard !isLocked else { return }
-        lockTimer?.invalidate()
-        lockTimer = Timer.scheduledTimer(withTimeInterval: sessionTimeoutSeconds, repeats: false) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.lock() }
+        sessionPolicy.renew(timeout: sessionTimeoutSeconds) { [weak self] in
+            self?.lock()
         }
     }
 
@@ -471,17 +468,7 @@ final class VaultViewModel {
             workspace.logAccess(secretName: secret.name, context: context, source: .app)
         }
         reloadActivity()
-        let value = secret.value
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(value, forType: .string)
-
-        let delay = clipboardClearSeconds
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(delay))
-            if NSPasteboard.general.string(forType: .string) == value {
-                NSPasteboard.general.clearContents()
-            }
-        }
+        clipboard.copy(secret.value, clearAfter: clipboardClearSeconds)
     }
 
     private func reloadActivity() {

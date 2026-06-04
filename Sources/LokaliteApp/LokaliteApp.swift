@@ -138,9 +138,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupHotkey() {
         hotkeyManager.onActivate = { [weak self] in self?.togglePopover(nil) }
-        let shortcut = GlobalHotkeyManager.Shortcut.fromID(
-            UserDefaults.standard.string(forKey: "hotkeyShortcutID") ?? "cmdShiftSpace"
-        )
+        let shortcut = GlobalHotkeyManager.Shortcut.fromID(AppPreferences().hotkeyShortcutID)
         hotkeyManager.register(shortcut)
     }
 }
