@@ -38,7 +38,7 @@ enum Theme {
     static let environmentPalette = ["#6DAFF1", "#F2CC60", "#FF7B72", "#9B87F1", "#ED85B0", "#ECB15D", "#62D2C3", "#909FAF"]
 
     static func envCircle(_ color: Color) -> Image {
-        let size: CGFloat = 10
+        let size: CGFloat = 8
         let nsImage = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
             NSColor(color).setFill()
             NSBezierPath(ovalIn: rect).fill()
@@ -840,7 +840,7 @@ private struct EnvironmentSummaryCard: View {
                 HStack(spacing: 7) {
                     Circle()
                         .fill(environment.color)
-                        .frame(width: 6, height: 6)
+                        .frame(width: 8, height: 8)
                     Text(environment.name)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Theme.text)

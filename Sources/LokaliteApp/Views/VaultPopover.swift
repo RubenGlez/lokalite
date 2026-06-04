@@ -281,19 +281,19 @@ struct VaultPopover: View {
     private var footer: some View {
         HStack {
             Button {
-                openManageWindow()
+                NSApp.terminate(nil)
             } label: {
-                Text("Open Lokalite")
+                Text("Quit Lokalite")
                     .font(.system(size: 13, weight: .medium))
                     .frame(minHeight: 24)
             }
             .buttonStyle(.plain)
             .foregroundStyle(Theme.text)
-            .keyboardShortcut("o", modifiers: .command)
+            .keyboardShortcut("q", modifiers: .command)
 
             Spacer()
 
-            Text("⌘O")
+            Text("⌘Q")
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(Theme.textMuted)
                 .padding(.horizontal, 8)
