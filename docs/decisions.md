@@ -60,6 +60,16 @@ Search-first popover anchored to status bar icon. Click to copy. Separate settin
 
 ---
 
+## D11: Distribution approach
+
+CLI and MCP are distributed as a single binary via a Homebrew formula hosted in this repo (`Formula/lokalite.rb`). The macOS app is distributed as a signed DMG and as a Homebrew cask (`Casks/lokalite.rb`), both hosted in this repo. Users tap with `brew tap RubenGlez/lokalite https://github.com/RubenGlez/lokalite`.
+
+No separate tap repository. No Apple Developer account or notarization. The cask install path removes macOS quarantine automatically, so Gatekeeper is not an issue for Homebrew users. Direct DMG users must run `xattr -cr /Applications/Lokalite.app` once.
+
+The release workflow (`release.yml`) updates both the formula SHA (source tarball) and cask SHA (DMG) automatically on each version tag.
+
+---
+
 ## D10: Export format
 
 `lokalite export` produces an encrypted file (Argon2id + AES-256-GCM, passphrase entered at export time). `lokalite export --plain` produces unencrypted JSON after explicit confirmation. `lokalite export --format env` produces `KEY="value"` lines for `.env` compatibility without a passphrase.

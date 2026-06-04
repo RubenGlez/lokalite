@@ -35,36 +35,42 @@ Lokalite is a macOS menu bar app and CLI for managing developer secrets locally.
 
 ## Install
 
-### CLI via Homebrew (recommended)
+### Everything (recommended)
+
+CLI, MCP server, and menu bar app via Homebrew:
 
 ```bash
 brew tap RubenGlez/lokalite https://github.com/RubenGlez/lokalite
 brew install lokalite
+brew install --cask lokalite
+lokalite install   # registers the MCP server in ~/.claude.json
 ```
 
-Then register it as an MCP server:
+### CLI and MCP only
+
+If you don't need the menu bar app:
 
 ```bash
+brew tap RubenGlez/lokalite https://github.com/RubenGlez/lokalite
+brew install lokalite
 lokalite install
 ```
 
-### Menu bar app
+### Menu bar app only
 
-Download `Lokalite-vX.Y.Z.dmg` from the [Releases page](https://github.com/RubenGlez/lokalite/releases), drag the app to Applications, then run this once to clear the macOS quarantine flag:
-
-```bash
-xattr -cr /Applications/Lokalite.app
-```
-
-The app is open source and unsigned. macOS blocks unsigned apps by default; the command above removes that restriction.
-
-### CLI via PKG installer
-
-Download `lokalite-cli-vX.Y.Z.pkg` from the [Releases page](https://github.com/RubenGlez/lokalite/releases) and run the installer. Then:
+If you already have the CLI installed or don't need it:
 
 ```bash
-lokalite install
+brew tap RubenGlez/lokalite https://github.com/RubenGlez/lokalite
+brew install --cask lokalite
 ```
+
+### Without Homebrew
+
+Download from the [Releases page](https://github.com/RubenGlez/lokalite/releases):
+
+- **CLI**: run the `.pkg` installer, then `lokalite install`
+- **Menu bar app**: drag the `.dmg` to Applications, then run `xattr -cr /Applications/Lokalite.app` once to clear the macOS quarantine flag (the app is open source and unsigned)
 
 ### Build from source
 

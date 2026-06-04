@@ -6,14 +6,44 @@ struct LokaliteApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        Window("Manage Secrets", id: "settings") {
+        Window("Lokalite", id: "settings") {
             SettingsView()
                 .environment(appDelegate.vault)
-                .frame(minWidth: 580, minHeight: 460)
+                .frame(minWidth: 980, minHeight: 620)
+                .background(WindowButtonPositioner())
         }
-        .defaultSize(width: 800, height: 540)
-        .windowStyle(.titleBar)
-        .windowToolbarStyle(.unified)
+        .defaultSize(width: 1180, height: 720)
+        .windowStyle(.hiddenTitleBar)
+    }
+}
+
+private struct WindowButtonPositioner: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async { positionButtons(from: view) }
+        return view
+    }
+
+    func updateNSView(_ view: NSView, context: Context) {
+        DispatchQueue.main.async { positionButtons(from: view) }
+    }
+
+    private func positionButtons(from view: NSView) {
+        guard let window = view.window,
+              let close = window.standardWindowButton(.closeButton),
+              let minimize = window.standardWindowButton(.miniaturizeButton),
+              let zoom = window.standardWindowButton(.zoomButton),
+              let container = close.superview
+        else { return }
+
+        let topInset: CGFloat = 20
+        let leadingInset: CGFloat = 20
+        let spacing: CGFloat = 26
+        let y = container.bounds.height - topInset - close.frame.height
+
+        close.setFrameOrigin(NSPoint(x: leadingInset, y: y))
+        minimize.setFrameOrigin(NSPoint(x: leadingInset + spacing, y: y))
+        zoom.setFrameOrigin(NSPoint(x: leadingInset + spacing * 2, y: y))
     }
 }
 
@@ -28,6 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         setupStatusItem()
         setupHotkey()
+        setupWindowBehavior()
 
         NotificationCenter.default.addObserver(
             forName: .hotkeyShortcutChanged, object: nil, queue: .main
@@ -55,7 +86,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let controller = NSHostingController(
             rootView: VaultPopover().environment(vault)
         )
-        controller.view.frame.size = NSSize(width: 340, height: 450)
+        controller.view.frame.size = NSSize(width: 360, height: 420)
 
         let p = NSPopover()
         p.contentViewController = controller
@@ -70,6 +101,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             NSApp.activate(ignoringOtherApps: true)
+        }
+    }
+
+    private func setupWindowBehavior() {
+        NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { event in
+            guard event.clickCount == 2,
+                  let window = event.window,
+                  window.identifier?.rawValue == "settings" else { return event }
+
+            let location = event.locationInWindow
+            let windowHeight = window.frame.height
+            guard location.y > windowHeight - 54 else { return event }
+
+            if let hit = window.contentView?.hitTest(location), hit is NSControl {
+                return event
+            }
+
+            window.zoom(nil)
+            return nil
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            NSApp.windows.first { $0.identifier?.rawValue == "settings" }?
+                .isMovableByWindowBackground = true
         }
     }
 

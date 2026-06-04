@@ -187,6 +187,54 @@ final class VaultStoreDeletionTests: XCTestCase {
         XCTAssertNil(try store.fetchEnvironment(name: environment.name, projectId: project.id))
     }
 
+    func testUpsertingDefaultSecretValueReplacesExistingValue() throws {
+        let store = try makeStore()
+        let project = try XCTUnwrap(store.fetchProject(name: "Default"))
+        let secret = secretRecord(projectId: project.id, name: "OPENAI_API_KEY")
+        try store.insertSecret(secret)
+
+        try store.upsertSecretValue(SecretValueRecord(
+            id: UUID().uuidString,
+            secretId: secret.id,
+            environmentId: nil,
+            encryptedValue: Data([0x01]),
+            updatedAt: timestamp
+        ))
+        try store.upsertSecretValue(SecretValueRecord(
+            id: UUID().uuidString,
+            secretId: secret.id,
+            environmentId: nil,
+            encryptedValue: Data([0x02]),
+            updatedAt: timestamp
+        ))
+
+        let values = try store.fetchAllSecretValues(secretId: secret.id)
+        XCTAssertEqual(values.count, 1)
+        XCTAssertEqual(values.first?.encryptedValue, Data([0x02]))
+    }
+
+    func testDefaultSecretValueUniqueIndexRejectsDuplicates() throws {
+        let store = try makeStore()
+        let project = try XCTUnwrap(store.fetchProject(name: "Default"))
+        let secret = secretRecord(projectId: project.id, name: "OPENAI_API_KEY")
+        try store.insertSecret(secret)
+        try store.upsertSecretValue(SecretValueRecord(
+            id: UUID().uuidString,
+            secretId: secret.id,
+            environmentId: nil,
+            encryptedValue: Data([0x01]),
+            updatedAt: timestamp
+        ))
+
+        XCTAssertThrowsError(try store.insertSecretValueForTesting(SecretValueRecord(
+            id: UUID().uuidString,
+            secretId: secret.id,
+            environmentId: nil,
+            encryptedValue: Data([0x02]),
+            updatedAt: timestamp
+        )))
+    }
+
     private func makeStore() throws -> VaultStore {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)

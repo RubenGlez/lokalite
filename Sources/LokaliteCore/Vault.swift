@@ -168,14 +168,23 @@ public final class Vault {
         let encrypted = try VaultCrypto.encrypt(value, using: key)
         let now = iso8601()
         let category = category ?? SecretCategory.infer(name: name, value: value, description: description)
-
-        let secretRecord = SecretRecord(id: UUID().uuidString, projectId: projectId,
-                                        name: name, description: description, icon: icon,
-                                        category: category.rawValue,
-                                        createdAt: now, updatedAt: now)
-        try store.insertSecret(secretRecord)
-
         let environmentId = try resolveEnvironmentId(name: environmentName, projectId: projectId)
+
+        let secretRecord: SecretRecord
+        if let existing = try store.fetchSecret(name: name, projectId: projectId) {
+            if try store.fetchSecretValue(secretId: existing.id, environmentId: environmentId) != nil {
+                throw VaultError.secretAlreadyExists(name)
+            }
+            secretRecord = existing
+        } else {
+            let record = SecretRecord(id: UUID().uuidString, projectId: projectId,
+                                      name: name, description: description, icon: icon,
+                                      category: category.rawValue,
+                                      createdAt: now, updatedAt: now)
+            try store.insertSecret(record)
+            secretRecord = record
+        }
+
         let valueRecord = SecretValueRecord(id: UUID().uuidString, secretId: secretRecord.id,
                                             environmentId: environmentId, encryptedValue: encrypted,
                                             updatedAt: now)
@@ -253,6 +262,9 @@ public final class Vault {
         guard let secretRecord = try store.fetchSecret(name: name, projectId: fromProjectId) else {
             throw VaultError.secretNotFound(name)
         }
+        if try store.fetchSecret(name: name, projectId: toProjectId) != nil {
+            throw VaultError.secretAlreadyExists(name)
+        }
         let fromEnvId = try resolveEnvironmentId(name: fromEnvironmentName, projectId: fromProjectId)
         guard let valueRecord = try store.fetchSecretValue(secretId: secretRecord.id,
                                                            environmentId: fromEnvId) else {
@@ -288,6 +300,32 @@ public final class Vault {
         }
     }
 
+    public func secretCount(projectId: String, environmentName: String? = nil) throws -> Int {
+        let environmentId = try resolveEnvironmentId(name: environmentName, projectId: projectId)
+        return try store.countSecretValuesInEnvironment(projectId: projectId, environmentId: environmentId)
+    }
+
+    public func totalSecretCount(projectId: String) throws -> Int {
+        try store.secretCount(projectId: projectId)
+    }
+
+    public func secretEnvironmentNames(projectId: String) throws -> [String: [String]] {
+        let environments = try store.fetchAllEnvironments(projectId: projectId)
+        let environmentNamesById = Dictionary(uniqueKeysWithValues: environments.map { ($0.id, $0.name) })
+        let secrets = try store.fetchAllSecrets(projectId: projectId)
+
+        let orderedNames = ["Default"] + environments.map { $0.name }
+        var result: [String: [String]] = [:]
+        for secret in secrets {
+            let values = try store.fetchAllSecretValues(secretId: secret.id)
+            let names = Set(values.map { value in
+                value.environmentId.flatMap { environmentNamesById[$0] } ?? "Default"
+            })
+            result[secret.name] = names.sorted { orderedNames.firstIndex(of: $0) ?? Int.max < orderedNames.firstIndex(of: $1) ?? Int.max }
+        }
+        return result
+    }
+
     // MARK: - Project Resolution
 
     public func resolveProject(name: String? = nil, workingDirectory: String? = nil) throws -> Project {
@@ -312,6 +350,33 @@ public final class Vault {
         if all.count == 1 { return projectFromRecord(all[0]) }
 
         throw VaultError.noActiveProject
+    }
+
+    // MARK: - Activity Log
+
+    public func logAccess(secretName: String, projectName: String, environmentName: String, source: ActivityLogEntry.AccessSource) {
+        let record = ActivityLogRecord(
+            id: UUID().uuidString,
+            secretName: secretName,
+            projectName: projectName,
+            environmentName: environmentName,
+            source: source.rawValue,
+            accessedAt: iso8601()
+        )
+        try? store.insertActivityLog(record)
+    }
+
+    public func listActivity(limit: Int = 100) throws -> [ActivityLogEntry] {
+        return try store.fetchActivityLogs(limit: limit).map { record in
+            ActivityLogEntry(
+                id: record.id,
+                secretName: record.secretName,
+                projectName: record.projectName,
+                environmentName: record.environmentName,
+                source: ActivityLogEntry.AccessSource(rawValue: record.source) ?? .app,
+                accessedAt: Self.dateFormatter.date(from: record.accessedAt) ?? Date()
+            )
+        }
     }
 
     // MARK: - Export
@@ -365,9 +430,13 @@ public final class Vault {
         return env.id
     }
 
+    private static let dateFormatter = ISO8601DateFormatter()
+
     private func projectFromRecord(_ record: ProjectRecord) -> Project {
-        Project(id: record.id, name: record.name, path: record.path,
-                activeEnvironment: record.activeEnvironment, icon: record.icon)
+        let createdAt = Self.dateFormatter.date(from: record.createdAt)
+        return Project(id: record.id, name: record.name, path: record.path,
+                       activeEnvironment: record.activeEnvironment, icon: record.icon,
+                       createdAt: createdAt)
     }
 
     private func secretFromRecord(_ record: SecretRecord, value: String) -> Secret {
@@ -396,7 +465,7 @@ public final class Vault {
     }
 
     private func iso8601() -> String {
-        ISO8601DateFormatter().string(from: Date())
+        Self.dateFormatter.string(from: Date())
     }
 }
 
