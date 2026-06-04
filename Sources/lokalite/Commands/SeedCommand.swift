@@ -69,6 +69,10 @@ struct SeedCommand: ParsableCommand {
                       category: cat, projectId: project, environmentName: env)
     }
 
+    private func removeDefaultEnvironment(_ vault: Vault, project: Project) throws {
+        try vault.deleteEnvironmentIncludingContents(name: "Default", projectId: project.id)
+    }
+
     // MARK: - Projects
 
     private func seedFrontend(_ vault: Vault) throws -> Project {
@@ -78,9 +82,13 @@ struct SeedCommand: ParsableCommand {
 
         // Shared defaults
         try secret(vault, "NEXT_PUBLIC_APP_NAME",   "Lokalite",
-                   desc: "App display name", project: p.id)
+                   desc: "App display name", project: p.id, env: "staging")
+        try secret(vault, "NEXT_PUBLIC_APP_NAME",   "Lokalite",
+                   desc: "App display name", project: p.id, env: "production")
         try secret(vault, "NEXT_PUBLIC_SENTRY_DSN", "https://a1b2c3@o123456.ingest.sentry.io/456789",
-                   desc: "Error tracking DSN", project: p.id)
+                   desc: "Error tracking DSN", project: p.id, env: "staging")
+        try secret(vault, "NEXT_PUBLIC_SENTRY_DSN", "https://a1b2c3@o123456.ingest.sentry.io/456789",
+                   desc: "Error tracking DSN", project: p.id, env: "production")
 
         // Per-environment
         let envs: [(name: String, apiUrl: String, stripe: String, ga: String)] = [
@@ -98,6 +106,7 @@ struct SeedCommand: ParsableCommand {
             try secret(vault, "NEXT_PUBLIC_STRIPE_PK",    e.stripe,  cat: .apiKey, project: p.id, env: e.name)
             try secret(vault, "NEXT_PUBLIC_ANALYTICS_ID", e.ga,      project: p.id, env: e.name)
         }
+        try removeDefaultEnvironment(vault, project: p)
         return p
     }
 
@@ -110,19 +119,19 @@ struct SeedCommand: ParsableCommand {
         // Shared defaults
         try secret(vault, "JWT_SECRET",
                    "dev-jwt-secret-please-change-in-production-a1b2c3d4e5f6g7h8",
-                   desc: "HS256 signing secret", cat: .token, project: p.id)
+                   desc: "HS256 signing secret", cat: .token, project: p.id, env: "testing")
         try secret(vault, "JWT_REFRESH_SECRET",
                    "dev-refresh-secret-please-change-in-production-z9y8x7w6v5u4t3s2",
-                   cat: .token, project: p.id)
+                   cat: .token, project: p.id, env: "testing")
         try secret(vault, "OPENAI_API_KEY",
                    "sk-proj-fakeOpenAIKeyForLocalTestingDoNotUseInProduction1234567890",
-                   cat: .apiKey, project: p.id)
+                   cat: .apiKey, project: p.id, env: "testing")
         try secret(vault, "SENDGRID_API_KEY",
                    "SG.fakeApiKeyForTestingXXXXXXXXXXXX.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-                   cat: .apiKey, project: p.id)
+                   cat: .apiKey, project: p.id, env: "testing")
         try secret(vault, "STRIPE_WEBHOOK_SECRET",
                    "whsec_test_fakeWebhookSecretForLocalDevXXXXXXXXXXXXXXXXXXXX",
-                   project: p.id)
+                   project: p.id, env: "testing")
 
         // DATABASE_URL across three environments
         let dbUrls: [(env: String, url: String)] = [
@@ -156,6 +165,7 @@ struct SeedCommand: ParsableCommand {
         try secret(vault, "APP_URL", "https://staging.example.com", project: p.id, env: "staging")
         try secret(vault, "APP_URL", "https://example.com",          project: p.id, env: "production")
 
+        try removeDefaultEnvironment(vault, project: p)
         return p
     }
 
@@ -167,12 +177,20 @@ struct SeedCommand: ParsableCommand {
         // Shared defaults
         try secret(vault, "SENTRY_DSN",
                    "https://xyz789@o654321.ingest.sentry.io/123456",
-                   desc: "Mobile crash reporting", project: p.id)
+                   desc: "Mobile crash reporting", project: p.id, env: "staging")
+        try secret(vault, "SENTRY_DSN",
+                   "https://xyz789@o654321.ingest.sentry.io/123456",
+                   desc: "Mobile crash reporting", project: p.id, env: "production")
         try secret(vault, "GOOGLE_MAPS_API_KEY",
                    "AIzaSyFakeGoogleMapsKeyForLocalDevTesting12345",
-                   cat: .apiKey, project: p.id)
-        try secret(vault, "APPLE_TEAM_ID",          "ZYXWV98765", project: p.id)
-        try secret(vault, "APNS_KEY_ID",            "ABCDE12345", project: p.id)
+                   cat: .apiKey, project: p.id, env: "staging")
+        try secret(vault, "GOOGLE_MAPS_API_KEY",
+                   "AIzaSyFakeGoogleMapsKeyForLocalDevTesting12345",
+                   cat: .apiKey, project: p.id, env: "production")
+        try secret(vault, "APPLE_TEAM_ID",          "ZYXWV98765", project: p.id, env: "staging")
+        try secret(vault, "APPLE_TEAM_ID",          "ZYXWV98765", project: p.id, env: "production")
+        try secret(vault, "APNS_KEY_ID",            "ABCDE12345", project: p.id, env: "staging")
+        try secret(vault, "APNS_KEY_ID",            "ABCDE12345", project: p.id, env: "production")
 
         // Per-environment
         let envs: [(name: String, apiUrl: String, fbKey: String, fbProject: String)] = [
@@ -190,6 +208,7 @@ struct SeedCommand: ParsableCommand {
             try secret(vault, "FIREBASE_API_KEY",    e.fbKey,      cat: .apiKey, project: p.id, env: e.name)
             try secret(vault, "FIREBASE_PROJECT_ID", e.fbProject,  project: p.id, env: e.name)
         }
+        try removeDefaultEnvironment(vault, project: p)
         return p
     }
 
@@ -200,13 +219,13 @@ struct SeedCommand: ParsableCommand {
         // Shared defaults
         try secret(vault, "DATADOG_API_KEY",
                    "ddapiXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-                   cat: .apiKey, project: p.id)
+                   cat: .apiKey, project: p.id, env: "production")
         try secret(vault, "AWS_ACCESS_KEY_ID",     "AKIAIOSFODNN7EXAMPLE",
-                   cat: .secret, project: p.id)
+                   cat: .secret, project: p.id, env: "production")
         try secret(vault, "AWS_SECRET_ACCESS_KEY", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-                   cat: .secret, project: p.id)
-        try secret(vault, "AWS_REGION",            "us-east-1", project: p.id)
-        try secret(vault, "S3_BUCKET_NAME",        "myapp-data-lake-prod", project: p.id)
+                   cat: .secret, project: p.id, env: "production")
+        try secret(vault, "AWS_REGION",            "us-east-1", project: p.id, env: "production")
+        try secret(vault, "S3_BUCKET_NAME",        "myapp-data-lake-prod", project: p.id, env: "production")
 
         // Production
         let prod = "production"
@@ -223,6 +242,7 @@ struct SeedCommand: ParsableCommand {
         try secret(vault, "BIGQUERY_PROJECT_ID",
                    "myapp-analytics-prod", project: p.id, env: prod)
 
+        try removeDefaultEnvironment(vault, project: p)
         return p
     }
 }
