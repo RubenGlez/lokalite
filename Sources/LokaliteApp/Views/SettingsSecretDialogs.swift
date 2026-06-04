@@ -306,7 +306,6 @@ struct MoveSecretView: View {
                     }
 
                     Picker("Environment", selection: $destEnvironmentName) {
-                        Text("Default").tag(nil as String?)
                         ForEach(availableEnvironments, id: \.id) { env in
                             Text(env.name).tag(env.name as String?)
                         }
@@ -316,7 +315,7 @@ struct MoveSecretView: View {
             .formStyle(.grouped)
             .onChange(of: destProjectId) { _, projectId in
                 availableEnvironments = (try? Vault.shared.listEnvironments(projectId: projectId)) ?? []
-                destEnvironmentName = nil
+                destEnvironmentName = availableEnvironments.first?.name
             }
             .navigationTitle("Move Secret")
             .toolbar {
@@ -330,7 +329,7 @@ struct MoveSecretView: View {
                         dismiss()
                     }
                     .keyboardShortcut(.defaultAction)
-                    .disabled(isSameDestination)
+                    .disabled(isSameDestination || destEnvironmentName == nil)
                 }
             }
         }
@@ -340,12 +339,13 @@ struct MoveSecretView: View {
             destEnvironmentName = vault.selectedEnvironment?.name
             if let projectId = vault.selectedProject?.id {
                 availableEnvironments = (try? Vault.shared.listEnvironments(projectId: projectId)) ?? []
+                destEnvironmentName = destEnvironmentName ?? availableEnvironments.first?.name
             }
         }
     }
 
     private func performMove() {
-        guard let srcProject = vault.selectedProject else { return }
+        guard let srcProject = vault.selectedProject, let destEnvironmentName else { return }
         if destProjectId == srcProject.id {
             vault.moveSecret(secret, toEnvironmentName: destEnvironmentName)
         } else {

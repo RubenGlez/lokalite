@@ -148,23 +148,15 @@ struct VaultPopover: View {
 
             // Environment switcher
             Menu {
-                Button {
-                    vault.selectEnvironment(nil)
-                } label: {
-                    Label { Text("Default") } icon: { Theme.envCircle(.white.opacity(0.7)) }
-                }
-                if !vault.environments.isEmpty {
-                    Divider()
-                    ForEach(vault.environments, id: \.id) { env in
-                        Button { vault.selectEnvironment(env) } label: {
-                            Label { Text(env.name) } icon: { Theme.envCircle(Theme.color(hex: env.color)) }
-                        }
+                ForEach(vault.environments, id: \.id) { env in
+                    Button { vault.selectEnvironment(env) } label: {
+                        Label { Text(env.name) } icon: { Theme.envCircle(Theme.color(hex: env.color)) }
                     }
                 }
             } label: {
                 HStack(spacing: 4) {
                     Theme.envCircle(environmentColor)
-                    Text(vault.selectedEnvironment?.name ?? "Default")
+                    Text(vault.selectedEnvironment?.name ?? "No environment")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -173,7 +165,7 @@ struct VaultPopover: View {
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
             .fixedSize()
-            .disabled(vault.selectedProject == nil)
+            .disabled(vault.selectedProject == nil || vault.environments.isEmpty)
 
             Spacer()
 
@@ -186,7 +178,7 @@ struct VaultPopover: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(Theme.brand)
-            .disabled(vault.selectedProject == nil)
+            .disabled(vault.selectedProject == nil || vault.selectedEnvironment == nil)
             .keyboardShortcut("n", modifiers: .command)
             .help("New secret")
         }
@@ -246,7 +238,7 @@ struct VaultPopover: View {
                 ForEach(searchText.isEmpty ? recentSecrets : filtered) { secret in
                     PopoverRecentSecretRow(
                         project: vault.selectedProject?.name ?? "Lokalite",
-                        environment: vault.selectedEnvironment?.name ?? vault.selectedProject?.activeEnvironment ?? "default",
+                        environment: vault.selectedEnvironment?.name ?? "No environment",
                         secret: secret
                     ) {
                         vault.copyToClipboard(secret)
@@ -266,6 +258,7 @@ struct VaultPopover: View {
             Button("Add your first secret") {
                 showingAddSecret = true
             }
+            .disabled(vault.selectedProject == nil || vault.selectedEnvironment == nil)
         }
         .frame(maxWidth: .infinity)
         .padding(24)

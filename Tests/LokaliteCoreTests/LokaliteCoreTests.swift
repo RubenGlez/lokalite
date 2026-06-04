@@ -156,6 +156,45 @@ final class VaultStoreDeletionTests: XCTestCase {
         XCTAssertNil(try store.fetchProject(id: project.id))
     }
 
+    func testDeletingProjectWithEnvironmentFails() throws {
+        let store = try makeStore()
+        let project = try XCTUnwrap(store.fetchProject(name: "Default"))
+
+        XCTAssertThrowsError(try store.deleteProject(id: project.id)) { error in
+            guard case VaultError.projectContainsSecrets("Default") = error else {
+                return XCTFail("Expected projectContainsSecrets, got \(error)")
+            }
+        }
+    }
+
+    func testForceDeletingProjectRemovesEnvironmentsAndSecrets() throws {
+        let store = try makeStore()
+        let project = try XCTUnwrap(store.fetchProject(name: "Default"))
+        let environment = EnvironmentRecord(
+            id: UUID().uuidString,
+            projectId: project.id,
+            name: "Production",
+            color: nil,
+            createdAt: timestamp
+        )
+        let secret = secretRecord(projectId: project.id, name: "DATABASE_URL")
+        try store.insertEnvironment(environment)
+        try store.insertSecret(secret)
+        try store.upsertSecretValue(SecretValueRecord(
+            id: UUID().uuidString,
+            secretId: secret.id,
+            environmentId: environment.id,
+            encryptedValue: Data([0x01]),
+            updatedAt: timestamp
+        ))
+
+        try store.deleteProjectIncludingContents(id: project.id)
+
+        XCTAssertNil(try store.fetchProject(id: project.id))
+        XCTAssertTrue(try store.fetchAllEnvironments(projectId: project.id).isEmpty)
+        XCTAssertTrue(try store.fetchAllSecrets(projectId: project.id).isEmpty)
+    }
+
     func testDeletingEnvironmentWithSecretValuesFails() throws {
         let store = try makeStore()
         let project = try XCTUnwrap(store.fetchProject(name: "Default"))
@@ -199,6 +238,33 @@ final class VaultStoreDeletionTests: XCTestCase {
         try store.deleteEnvironment(name: environment.name, projectId: project.id)
 
         XCTAssertNil(try store.fetchEnvironment(name: environment.name, projectId: project.id))
+    }
+
+    func testForceDeletingEnvironmentRemovesValuesAndOrphanSecrets() throws {
+        let store = try makeStore()
+        let project = try XCTUnwrap(store.fetchProject(name: "Default"))
+        let environment = EnvironmentRecord(
+            id: UUID().uuidString,
+            projectId: project.id,
+            name: "Production",
+            color: nil,
+            createdAt: timestamp
+        )
+        let secret = secretRecord(projectId: project.id, name: "DATABASE_URL")
+        try store.insertEnvironment(environment)
+        try store.insertSecret(secret)
+        try store.upsertSecretValue(SecretValueRecord(
+            id: UUID().uuidString,
+            secretId: secret.id,
+            environmentId: environment.id,
+            encryptedValue: Data([0x01]),
+            updatedAt: timestamp
+        ))
+
+        try store.deleteEnvironmentIncludingContents(name: environment.name, projectId: project.id)
+
+        XCTAssertNil(try store.fetchEnvironment(name: environment.name, projectId: project.id))
+        XCTAssertNil(try store.fetchSecret(name: secret.name, projectId: project.id))
     }
 
     func testUpsertingDefaultSecretValueReplacesExistingValue() throws {

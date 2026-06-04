@@ -162,9 +162,7 @@ final class VaultViewModel {
         selectedProject = project
         selectedEnvironment = nil
         reloadEnvironments()
-        if selectedEnvironment == nil {
-            selectedEnvironment = environments.first
-        }
+        selectedEnvironment = environments.first { $0.name == project?.activeEnvironment } ?? environments.first
         reloadSecrets()
         reloadDashboardSummaries()
     }
@@ -191,9 +189,7 @@ final class VaultViewModel {
                 selectedEnvironment = nil
             }
             reloadEnvironments()
-            if selectedEnvironment == nil {
-                selectedEnvironment = environments.first
-            }
+            selectedEnvironment = environments.first { $0.name == selectedProject?.activeEnvironment } ?? environments.first
             reloadSecrets()
             reloadDashboardSummaries()
             reloadActivity()
@@ -231,7 +227,7 @@ final class VaultViewModel {
 
         do {
             projectSecretCount = try Vault.shared.totalSecretCount(projectId: project.id)
-            var counts = ["default": try Vault.shared.secretCount(projectId: project.id, environmentName: nil)]
+            var counts: [String: Int] = [:]
             for environment in environments {
                 counts[environment.id] = try Vault.shared.secretCount(
                     projectId: project.id,
@@ -252,23 +248,31 @@ final class VaultViewModel {
         do {
             let project = try Vault.shared.addProject(name: name, icon: icon)
             projects.append(project)
-            _ = try? Vault.shared.addEnvironment(name: "Default", projectId: project.id, color: nil)
             selectProject(project)
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
-    func deleteProject(_ project: Project) {
+    @discardableResult
+    func deleteProject(_ project: Project, includingContents: Bool = false) -> Bool {
         renewSession()
         do {
-            try Vault.shared.deleteProject(id: project.id)
+            if includingContents {
+                try Vault.shared.deleteProjectIncludingContents(id: project.id)
+            } else {
+                try Vault.shared.deleteProject(id: project.id)
+            }
             projects.removeAll { $0.id == project.id }
             if selectedProject?.id == project.id {
                 selectProject(projects.first)
             }
+            return true
+        } catch VaultError.projectContainsSecrets {
+            return false
         } catch {
             errorMessage = error.localizedDescription
+            return true
         }
     }
 
@@ -289,17 +293,27 @@ final class VaultViewModel {
         }
     }
 
-    func deleteEnvironment(_ env: VaultEnvironment) {
+    @discardableResult
+    func deleteEnvironment(_ env: VaultEnvironment, includingContents: Bool = false) -> Bool {
         renewSession()
         do {
-            try Vault.shared.deleteEnvironment(name: env.name, projectId: env.projectId)
+            if includingContents {
+                try Vault.shared.deleteEnvironmentIncludingContents(name: env.name, projectId: env.projectId)
+            } else {
+                try Vault.shared.deleteEnvironment(name: env.name, projectId: env.projectId)
+            }
             environments.removeAll { $0.id == env.id }
             if selectedEnvironment?.id == env.id {
-                selectEnvironment(nil)
+                selectEnvironment(environments.first)
             }
             reloadDashboardSummaries()
+            reloadSecrets()
+            return true
+        } catch VaultError.environmentContainsSecrets {
+            return false
         } catch {
             errorMessage = error.localizedDescription
+            return true
         }
     }
 

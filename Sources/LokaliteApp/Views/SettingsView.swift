@@ -43,7 +43,9 @@ struct SettingsView: View {
 
     // Delete confirmations
     @State private var deletingProject: Project?
+    @State private var forceDeletingProject: Project?
     @State private var deletingEnv: VaultEnvironment?
+    @State private var forceDeletingEnv: VaultEnvironment?
     @State private var deletingSecret: Secret?
 
     private var filteredSecrets: [Secret] {
@@ -66,21 +68,11 @@ struct SettingsView: View {
     }
 
     private var selectedEnvironmentName: String {
-        vault.selectedEnvironment?.name ?? vault.selectedProject?.activeEnvironment ?? "Default"
+        vault.selectedEnvironment?.name ?? "No environment"
     }
 
     private var environmentCards: [DashboardEnvironment] {
-        var cards = [
-            DashboardEnvironment(
-                id: "default",
-                name: "Default",
-                color: .white.opacity(0.7),
-                count: vault.environmentSecretCounts["default"] ?? 0,
-                isActive: vault.selectedEnvironment == nil
-            )
-        ]
-
-        cards += vault.environments.map { environment in
+        vault.environments.map { environment in
             DashboardEnvironment(
                 id: environment.id,
                 name: environment.name,
@@ -89,8 +81,6 @@ struct SettingsView: View {
                 isActive: vault.selectedEnvironment?.id == environment.id
             )
         }
-
-        return cards
     }
 
     var body: some View {
@@ -114,7 +104,9 @@ struct SettingsView: View {
             if isLocked {
                 presentedSheet = nil
                 deletingProject = nil
+                forceDeletingProject = nil
                 deletingEnv = nil
+                forceDeletingEnv = nil
                 deletingSecret = nil
             }
         }
@@ -148,11 +140,31 @@ struct SettingsView: View {
             titleVisibility: .visible
         ) {
             Button("Delete", role: .destructive) {
-                if let p = deletingProject { vault.deleteProject(p) }
+                if let p = deletingProject, !vault.deleteProject(p) {
+                    forceDeletingProject = p
+                }
                 deletingProject = nil
             }
             Button("Cancel", role: .cancel) { deletingProject = nil }
         } message: { Text("This cannot be undone.") }
+        .confirmationDialog(
+            "Delete \"\(forceDeletingProject?.name ?? "")\" and all contents?",
+            isPresented: Binding(
+                get: { forceDeletingProject != nil },
+                set: { if !$0 { forceDeletingProject = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete Project and Contents", role: .destructive) {
+                if let p = forceDeletingProject {
+                    vault.deleteProject(p, includingContents: true)
+                }
+                forceDeletingProject = nil
+            }
+            Button("Cancel", role: .cancel) { forceDeletingProject = nil }
+        } message: {
+            Text("This project contains environments and secrets. Deleting anyway removes the project, its environments, and all stored secrets.")
+        }
         .confirmationDialog(
             "Delete \"\(deletingEnv?.name ?? "")\"?",
             isPresented: Binding(
@@ -162,11 +174,31 @@ struct SettingsView: View {
             titleVisibility: .visible
         ) {
             Button("Delete", role: .destructive) {
-                if let e = deletingEnv { vault.deleteEnvironment(e) }
+                if let e = deletingEnv, !vault.deleteEnvironment(e) {
+                    forceDeletingEnv = e
+                }
                 deletingEnv = nil
             }
             Button("Cancel", role: .cancel) { deletingEnv = nil }
         } message: { Text("This cannot be undone.") }
+        .confirmationDialog(
+            "Delete \"\(forceDeletingEnv?.name ?? "")\" and its secrets?",
+            isPresented: Binding(
+                get: { forceDeletingEnv != nil },
+                set: { if !$0 { forceDeletingEnv = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete Environment and Secrets", role: .destructive) {
+                if let e = forceDeletingEnv {
+                    vault.deleteEnvironment(e, includingContents: true)
+                }
+                forceDeletingEnv = nil
+            }
+            Button("Cancel", role: .cancel) { forceDeletingEnv = nil }
+        } message: {
+            Text("This environment contains secret values. Deleting anyway removes those values and deletes secrets that only existed in this environment.")
+        }
         .confirmationDialog(
             "Delete \"\(deletingSecret?.name ?? "")\"?",
             isPresented: Binding(
@@ -444,9 +476,7 @@ struct SettingsView: View {
                 HStack(spacing: 14) {
                     ForEach(environmentCards) { environment in
                         EnvironmentSummaryCard(environment: environment) {
-                            if environment.id == "default" {
-                                vault.selectEnvironment(nil)
-                            } else if let match = vault.environments.first(where: { $0.id == environment.id }) {
+                            if let match = vault.environments.first(where: { $0.id == environment.id }) {
                                 vault.selectEnvironment(match)
                             }
                         }

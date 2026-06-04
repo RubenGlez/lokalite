@@ -80,6 +80,44 @@ extension VaultStore {
             }
         }
 
+        migrator.registerMigration("v4") { db in
+            let now = iso8601()
+            let projects = try ProjectRecord.fetchAll(db)
+
+            for project in projects {
+                let defaultEnvironment: EnvironmentRecord
+                if let existing = try EnvironmentRecord
+                    .filter(Column("project_id") == project.id && Column("name") == "Default")
+                    .fetchOne(db) {
+                    defaultEnvironment = existing
+                } else {
+                    defaultEnvironment = EnvironmentRecord(
+                        id: UUID().uuidString,
+                        projectId: project.id,
+                        name: "Default",
+                        color: nil,
+                        createdAt: now
+                    )
+                    try defaultEnvironment.insert(db)
+                }
+
+                try db.execute(sql: """
+                    UPDATE secret_values
+                    SET environment_id = ?
+                    WHERE environment_id IS NULL
+                      AND secret_id IN (SELECT id FROM secrets WHERE project_id = ?)
+                """, arguments: [defaultEnvironment.id, project.id])
+
+                if project.activeEnvironment == nil {
+                    try db.execute(sql: """
+                        UPDATE projects
+                        SET active_environment = ?, updated_at = ?
+                        WHERE id = ?
+                    """, arguments: [defaultEnvironment.name, now, project.id])
+                }
+            }
+        }
+
         try migrator.migrate(db)
     }
 }

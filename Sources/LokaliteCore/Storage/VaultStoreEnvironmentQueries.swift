@@ -58,6 +58,37 @@ extension VaultStore {
                 .filter(Column("project_id") == projectId && Column("name") == name)
                 .deleteAll(db)
             guard deleted > 0 else { throw VaultError.environmentNotFound(name) }
+            try db.execute(
+                sql: "UPDATE projects SET active_environment = NULL, updated_at = ? WHERE id = ? AND active_environment = ?",
+                arguments: [iso8601(), projectId, name]
+            )
+        }
+    }
+
+    func deleteEnvironmentIncludingContents(name: String, projectId: String) throws {
+        try db.write { db in
+            guard let environment = try EnvironmentRecord
+                .filter(Column("project_id") == projectId && Column("name") == name)
+                .fetchOne(db) else {
+                throw VaultError.environmentNotFound(name)
+            }
+
+            try SecretValueRecord
+                .filter(Column("environment_id") == environment.id)
+                .deleteAll(db)
+            try db.execute(sql: """
+                DELETE FROM secrets
+                WHERE project_id = ?
+                  AND id NOT IN (SELECT DISTINCT secret_id FROM secret_values)
+            """, arguments: [projectId])
+            let deleted = try EnvironmentRecord
+                .filter(Column("id") == environment.id)
+                .deleteAll(db)
+            guard deleted > 0 else { throw VaultError.environmentNotFound(name) }
+            try db.execute(
+                sql: "UPDATE projects SET active_environment = NULL, updated_at = ? WHERE id = ? AND active_environment = ?",
+                arguments: [iso8601(), projectId, name]
+            )
         }
     }
 

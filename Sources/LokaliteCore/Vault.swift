@@ -35,10 +35,11 @@ public final class Vault {
     public func addProject(name: String, path: String? = nil, icon: String? = nil) throws -> Project {
         let now = iso8601()
         let record = ProjectRecord(id: UUID().uuidString, name: name, path: path,
-                                   activeEnvironment: nil, icon: icon,
+                                   activeEnvironment: "Default", icon: icon,
                                    createdAt: now, updatedAt: now)
         try store.insertProject(record)
-        return Project(id: record.id, name: name, path: path, activeEnvironment: nil, icon: icon)
+        _ = try addEnvironment(name: "Default", projectId: record.id, color: nil)
+        return Project(id: record.id, name: name, path: path, activeEnvironment: "Default", icon: icon)
     }
 
     public func listProjects() throws -> [Project] {
@@ -59,10 +60,15 @@ public final class Vault {
 
     public func deleteProject(id: String) throws {
         let project = try project(id: id)
-        guard try store.secretCount(projectId: id) == 0 else {
+        guard try store.secretCount(projectId: id) == 0,
+              try store.fetchAllEnvironments(projectId: id).isEmpty else {
             throw VaultError.projectContainsSecrets(project.name)
         }
         try store.deleteProject(id: id)
+    }
+
+    public func deleteProjectIncludingContents(id: String) throws {
+        try store.deleteProjectIncludingContents(id: id)
     }
 
     public func activeProjectId() throws -> String? {
@@ -126,6 +132,10 @@ public final class Vault {
             throw VaultError.environmentContainsSecrets(name)
         }
         try store.deleteEnvironment(name: name, projectId: projectId)
+    }
+
+    public func deleteEnvironmentIncludingContents(name: String, projectId: String) throws {
+        try store.deleteEnvironmentIncludingContents(name: name, projectId: projectId)
     }
 
     public func renameProject(id: String, newName: String) throws {
@@ -314,7 +324,7 @@ public final class Vault {
         let environmentNamesById = Dictionary(uniqueKeysWithValues: environments.map { ($0.id, $0.name) })
         let secrets = try store.fetchAllSecrets(projectId: projectId)
 
-        let orderedNames = ["Default"] + environments.map { $0.name }
+        let orderedNames = environments.map { $0.name }
         let orderedIndex = Dictionary(uniqueKeysWithValues: orderedNames.enumerated().map { ($1, $0) })
         var result: [String: [String]] = [:]
         for secret in secrets {
@@ -424,7 +434,13 @@ public final class Vault {
     }
 
     private func resolveEnvironmentId(name: String?, projectId: String) throws -> String? {
-        guard let name else { return nil }
+        let resolvedName: String?
+        if let name {
+            resolvedName = name
+        } else {
+            resolvedName = try store.fetchProject(id: projectId)?.activeEnvironment
+        }
+        guard let name = resolvedName else { return nil }
         guard let env = try store.fetchEnvironment(name: name, projectId: projectId) else {
             throw VaultError.environmentNotFound(name)
         }

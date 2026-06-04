@@ -50,11 +50,37 @@ extension VaultStore {
             guard let project = try ProjectRecord.filter(Column("id") == id).fetchOne(db) else {
                 throw VaultError.projectNotFound(id)
             }
-            guard try SecretRecord.filter(Column("project_id") == id).fetchCount(db) == 0 else {
+            let secretCount = try SecretRecord.filter(Column("project_id") == id).fetchCount(db)
+            let environmentCount = try EnvironmentRecord.filter(Column("project_id") == id).fetchCount(db)
+            guard secretCount == 0 && environmentCount == 0 else {
                 throw VaultError.projectContainsSecrets(project.name)
             }
             let deleted = try ProjectRecord.filter(Column("id") == id).deleteAll(db)
             guard deleted > 0 else { throw VaultError.projectNotFound(id) }
+            try db.execute(
+                sql: "DELETE FROM config WHERE key = 'active_project_id' AND value = ?",
+                arguments: [id]
+            )
+        }
+    }
+
+    func deleteProjectIncludingContents(id: String) throws {
+        try db.write { db in
+            guard try ProjectRecord.filter(Column("id") == id).fetchOne(db) != nil else {
+                throw VaultError.projectNotFound(id)
+            }
+            try db.execute(sql: """
+                DELETE FROM secret_values
+                WHERE secret_id IN (SELECT id FROM secrets WHERE project_id = ?)
+            """, arguments: [id])
+            try SecretRecord.filter(Column("project_id") == id).deleteAll(db)
+            try EnvironmentRecord.filter(Column("project_id") == id).deleteAll(db)
+            let deleted = try ProjectRecord.filter(Column("id") == id).deleteAll(db)
+            guard deleted > 0 else { throw VaultError.projectNotFound(id) }
+            try db.execute(
+                sql: "DELETE FROM config WHERE key = 'active_project_id' AND value = ?",
+                arguments: [id]
+            )
         }
     }
 }

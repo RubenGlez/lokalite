@@ -37,7 +37,7 @@ public enum VaultError: Error, LocalizedError {
         case .projectAlreadyExists(let name):
             return "Project '\(name)' already exists."
         case .projectContainsSecrets(let name):
-            return "Project '\(name)' contains secrets and cannot be deleted."
+            return "Project '\(name)' contains environments or secrets and cannot be deleted."
         case .environmentNotFound(let name):
             return "Environment '\(name)' not found."
         case .environmentAlreadyExists(let name):

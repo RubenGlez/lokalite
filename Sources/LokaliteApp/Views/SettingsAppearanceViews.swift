@@ -278,6 +278,7 @@ struct EnvironmentEditorRow: View {
     @State private var name: String
     @State private var color: String
     @State private var isDeleting = false
+    @State private var isForceDeleting = false
 
     init(environment: VaultEnvironment) {
         self.environment = environment
@@ -292,13 +293,31 @@ struct EnvironmentEditorRow: View {
 
             Button(role: .destructive) {
                 isDeleting = true
-                vault.deleteEnvironment(environment)
+                if !vault.deleteEnvironment(environment) {
+                    isForceDeleting = true
+                }
             } label: {
                 Image(systemName: "trash")
                     .frame(width: 28, height: 24)
             }
             .buttonStyle(.plain)
             .help("Delete environment")
+        }
+        .confirmationDialog(
+            "Delete \"\(environment.name)\" and its secrets?",
+            isPresented: $isForceDeleting,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Environment and Secrets", role: .destructive) {
+                vault.deleteEnvironment(environment, includingContents: true)
+                isForceDeleting = false
+            }
+            Button("Cancel", role: .cancel) {
+                isDeleting = false
+                isForceDeleting = false
+            }
+        } message: {
+            Text("This environment contains secret values. Deleting anyway removes those values and deletes secrets that only existed in this environment.")
         }
         .onDisappear {
             if !isDeleting {

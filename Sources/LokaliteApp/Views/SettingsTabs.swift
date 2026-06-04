@@ -10,6 +10,7 @@ struct EnvironmentsTab: View {
     @State private var newColor = Theme.environmentPalette[0]
     @State private var editingEnvironment: VaultEnvironment?
     @State private var deletingEnvironment: VaultEnvironment?
+    @State private var forceDeletingEnvironment: VaultEnvironment?
 
     var body: some View {
         ScrollView {
@@ -88,11 +89,31 @@ struct EnvironmentsTab: View {
             titleVisibility: .visible
         ) {
             Button("Delete", role: .destructive) {
-                if let e = deletingEnvironment { vault.deleteEnvironment(e) }
+                if let e = deletingEnvironment, !vault.deleteEnvironment(e) {
+                    forceDeletingEnvironment = e
+                }
                 deletingEnvironment = nil
             }
             Button("Cancel", role: .cancel) { deletingEnvironment = nil }
         } message: { Text("This cannot be undone.") }
+        .confirmationDialog(
+            "Delete \"\(forceDeletingEnvironment?.name ?? "")\" and its secrets?",
+            isPresented: Binding(
+                get: { forceDeletingEnvironment != nil },
+                set: { if !$0 { forceDeletingEnvironment = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete Environment and Secrets", role: .destructive) {
+                if let e = forceDeletingEnvironment {
+                    vault.deleteEnvironment(e, includingContents: true)
+                }
+                forceDeletingEnvironment = nil
+            }
+            Button("Cancel", role: .cancel) { forceDeletingEnvironment = nil }
+        } message: {
+            Text("This environment contains secret values. Deleting anyway removes those values and deletes secrets that only existed in this environment.")
+        }
     }
 }
 
@@ -159,7 +180,7 @@ struct SecretsTab: View {
     }
 
     private var selectedEnvironmentName: String {
-        vault.selectedEnvironment?.name ?? vault.selectedProject?.activeEnvironment ?? "Default"
+        vault.selectedEnvironment?.name ?? "No environment"
     }
 
     var body: some View {
