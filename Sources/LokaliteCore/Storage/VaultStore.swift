@@ -179,7 +179,7 @@ final class VaultStore {
         }
 
         migrator.registerMigration("v3") { db in
-            try db.create(table: "activity_log") { t in
+            try db.create(table: "activity_log", options: .ifNotExists) { t in
                 t.column("id", .text).primaryKey()
                 t.column("secret_name", .text).notNull()
                 t.column("project_name", .text).notNull()
