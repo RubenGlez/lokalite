@@ -21,7 +21,7 @@ Lokalite is a macOS menu bar app and CLI for managing developer secrets locally.
 - **Global keyboard shortcut**: open the popover from anywhere, configurable in Settings (default `⌘⇧Space`)
 - **Full CLI**: read, write, and inject secrets from the terminal
 - **Projects**: group secrets by project; link to a local directory for automatic resolution
-- **Environments**: per-project environment profiles (dev, staging, production) with per-environment values; Default falls back across all environments
+- **Environments**: per-project environment profiles (dev, staging, production) with per-environment secret values; every project starts with a Default environment
 - **`.env` import/export**: pull from an existing `.env` file or export back to one
 - **Shell injection**: `eval $(lokalite shell)` exports secrets into the current session
 - **Clipboard auto-clear**: copied values are wiped after 30 seconds

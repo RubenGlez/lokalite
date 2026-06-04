@@ -48,7 +48,7 @@ SwiftUI app. `LSUIElement = true` (no dock icon). Two surfaces:
 
 **Library**: GRDB.swift
 
-**Schema** (current, after v2 migration):
+**Schema** (current, after v4 migration):
 
 ```sql
 CREATE TABLE projects (
@@ -81,7 +81,7 @@ CREATE TABLE secrets (
 CREATE TABLE secret_values (
   id             TEXT PRIMARY KEY,
   secret_id      TEXT NOT NULL REFERENCES secrets(id) ON DELETE CASCADE,
-  environment_id TEXT REFERENCES environments(id) ON DELETE CASCADE,  -- NULL = Default
+  environment_id TEXT REFERENCES environments(id) ON DELETE CASCADE,
   encrypted_value BLOB NOT NULL,
   updated_at     TEXT NOT NULL,
   UNIQUE (secret_id, environment_id)
@@ -93,7 +93,7 @@ CREATE TABLE config (
 );
 ```
 
-Secrets are namespaced by project. Each secret can have a value per environment; a `NULL` `environment_id` in `secret_values` means the Default value, which serves as a fallback for all environments. `name`, `description` are plaintext for fast search; only `encrypted_value` is encrypted. WAL mode enabled for safe concurrent access between CLI and app.
+Secrets are namespaced by project. Each secret has a value per environment; every project always has at least a "Default" environment (created automatically and set as the active environment on project creation). `name`, `description` are plaintext for fast search; only `encrypted_value` is encrypted. WAL mode enabled for safe concurrent access between CLI and app.
 
 ---
 
@@ -236,7 +236,7 @@ The menu bar app uses `NSStatusItem` + `NSPopover` rather than SwiftUI's `MenuBa
 Full CRUD, three-column `NavigationSplitView`:
 
 - **Left sidebar**: project list. Create, rename, and delete projects; set emoji/SF Symbol icon and link to a local directory path for automatic project resolution.
-- **Centre column**: environment picker (dropdown, per project) + searchable secrets list. Secrets show name (monospaced) and optional description. Hover reveals a copy button. The Default environment's values serve as fallback for named environments.
+- **Centre column**: environment picker (dropdown, per project) + searchable secrets list. Secrets show name (monospaced) and optional description. Hover reveals a copy button.
 - **Right detail**: selected secret's name, description, category, and value (masked by default with a reveal toggle). Inline Save button; Delete at the bottom as a destructive link.
 
 App-wide preferences are in the Settings tab (gear icon): session timeout, clipboard clear timeout, appearance (System / Light / Dark), global hotkey shortcut, and launch at login.
