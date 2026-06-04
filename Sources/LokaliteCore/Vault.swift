@@ -450,11 +450,9 @@ public final class Vault {
     }
 
     private func vaultFileURL() -> URL {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory,
-                                                   in: .userDomainMask).first!
-        let dir = appSupport.appendingPathComponent("Lokalite")
+        let dir = VaultConfiguration.applicationSupportDirectory
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir.appendingPathComponent("vault.db")
+        return VaultConfiguration.vaultFileURL
     }
 
     private func openStore(at url: URL) throws -> VaultStore {

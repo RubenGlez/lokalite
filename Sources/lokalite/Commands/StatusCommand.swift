@@ -22,9 +22,7 @@ struct StatusCommand: ParsableCommand {
         let linkedProject = try? vault.resolveProject(workingDirectory: cwd)
         let cwdLinked = linkedProject != nil
 
-        let vaultPath = FileManager.default
-            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Lokalite/vault.db").path
+        let vaultPath = VaultConfiguration.vaultFileURL.path
 
         let isMCPRegistered = checkMCPRegistered()
 

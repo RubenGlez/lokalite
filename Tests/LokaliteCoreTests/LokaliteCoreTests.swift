@@ -111,6 +111,20 @@ final class ProjectModelTests: XCTestCase {
     }
 }
 
+final class VaultConfigurationTests: XCTestCase {
+    func testDebugBuildUsesDevelopmentStorage() {
+        #if DEBUG
+        XCTAssertTrue(VaultConfiguration.isDevelopmentBuild)
+        XCTAssertEqual(VaultConfiguration.keychainService, "com.lokalite.vault.dev")
+        XCTAssertTrue(VaultConfiguration.vaultFileURL.path.hasSuffix("/Lokalite/dev/vault.db"))
+        #else
+        XCTAssertFalse(VaultConfiguration.isDevelopmentBuild)
+        XCTAssertEqual(VaultConfiguration.keychainService, "com.lokalite.vault")
+        XCTAssertTrue(VaultConfiguration.vaultFileURL.path.hasSuffix("/Lokalite/vault.db"))
+        #endif
+    }
+}
+
 final class VaultStoreDeletionTests: XCTestCase {
     func testDeletingProjectWithSecretsFails() throws {
         let store = try makeStore()

@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 enum KeychainStore {
-    private static let service = "com.lokalite.vault"
+    private static let service = VaultConfiguration.keychainService
     private static let account = "vault-key"
 
     static func save(_ data: Data) throws {
