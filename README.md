@@ -4,7 +4,7 @@
 
 ---
 
-Lokalite is a macOS menu bar app and CLI for managing developer secrets locally. API keys, tokens, certificates, database passwords, all stored in an encrypted vault on your machine, protected by Apple Keychain.
+Lokalite is a local-first secrets workspace for macOS — a menu bar app, CLI, and MCP server in one. Keep your API keys, tokens, and credentials in an encrypted vault on your machine, protected by Apple Keychain.
 
 ## Features
 
