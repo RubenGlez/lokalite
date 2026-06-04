@@ -65,6 +65,10 @@ final class VaultViewModel {
         didSet { UserDefaults.standard.set(recentSecretNames, forKey: "recentSecretNames") }
     }
 
+    var environmentColors: [String: Color] {
+        Dictionary(uniqueKeysWithValues: environments.map { ($0.name, Theme.color(hex: $0.color)) })
+    }
+
     var colorScheme: ColorScheme? {
         switch appearanceMode {
         case "light": return .light
@@ -139,14 +143,10 @@ final class VaultViewModel {
             try Vault.shared.unlock()
             isLocked = false
             refresh()
-            startLockTimer()
+            renewSession()
         } catch {
             errorMessage = error.localizedDescription
         }
-    }
-
-    private func startLockTimer() {
-        renewSession()
     }
 
     func renewSession() {

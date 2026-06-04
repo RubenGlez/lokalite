@@ -48,11 +48,6 @@ struct SecretRowView: View {
     }
 
     private func copySecret() {
-        vault.copyToClipboard(secret)
-        withAnimation { copied = true }
-        Task {
-            try? await Task.sleep(for: .seconds(1.5))
-            withAnimation { copied = false }
-        }
+        withCopyFeedback($copied) { vault.copyToClipboard(secret) }
     }
 }

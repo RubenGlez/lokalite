@@ -364,12 +364,7 @@ private struct PopoverRecentSecretRow: View {
     }
 
     private func copyWithFeedback() {
-        action()
-        withAnimation { copied = true }
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(1.4))
-            withAnimation { copied = false }
-        }
+        withCopyFeedback($copied) { action() }
     }
 
 }

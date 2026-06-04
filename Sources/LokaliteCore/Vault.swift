@@ -315,13 +315,14 @@ public final class Vault {
         let secrets = try store.fetchAllSecrets(projectId: projectId)
 
         let orderedNames = ["Default"] + environments.map { $0.name }
+        let orderedIndex = Dictionary(uniqueKeysWithValues: orderedNames.enumerated().map { ($1, $0) })
         var result: [String: [String]] = [:]
         for secret in secrets {
             let values = try store.fetchAllSecretValues(secretId: secret.id)
             let names = Set(values.map { value in
                 value.environmentId.flatMap { environmentNamesById[$0] } ?? "Default"
             })
-            result[secret.name] = names.sorted { orderedNames.firstIndex(of: $0) ?? Int.max < orderedNames.firstIndex(of: $1) ?? Int.max }
+            result[secret.name] = names.sorted { (orderedIndex[$0] ?? Int.max) < (orderedIndex[$1] ?? Int.max) }
         }
         return result
     }

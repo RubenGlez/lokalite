@@ -14,6 +14,7 @@ extension VaultEnvironment: Identifiable {}
 enum Theme {
     static let controlHeight: CGFloat = 30
     static let rowHeight: CGFloat = 44
+    static let tableHeaderHeight: CGFloat = 36
     static let brand      = Color(red: 0.349, green: 0.722, blue: 0.369)
     static let brandSubtle = brand.opacity(0.12)
     static let neutralSubtle = Color.white.opacity(0.06)
@@ -95,6 +96,32 @@ private extension View {
             prompt: "Filter secrets"
         )
     }
+
+    @ViewBuilder
+    func optionallyFocused(_ binding: FocusState<Bool>.Binding?) -> some View {
+        if let binding { focused(binding) } else { self }
+    }
+}
+
+private func shortPath(_ path: String?) -> String? {
+    guard let path, !path.isEmpty else { return nil }
+    let home = FileManager.default.homeDirectoryForCurrentUser.path
+    return path.replacingOccurrences(of: home, with: "~")
+}
+
+@MainActor
+func withCopyFeedback(_ copied: Binding<Bool>, action: () -> Void) {
+    action()
+    withAnimation { copied.wrappedValue = true }
+    Task { @MainActor in
+        try? await Task.sleep(for: .seconds(1.4))
+        withAnimation { copied.wrappedValue = false }
+    }
+}
+
+private func isCLIInstalled() -> Bool {
+    let paths = ["/usr/local/bin/lokalite", "/opt/homebrew/bin/lokalite", "/usr/bin/lokalite"]
+    return paths.contains { FileManager.default.fileExists(atPath: $0) }
 }
 
 // MARK: - Root
@@ -389,8 +416,7 @@ struct SettingsView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 15)
             .onAppear {
-                let paths = ["/usr/local/bin/lokalite", "/opt/homebrew/bin/lokalite", "/usr/bin/lokalite"]
-                cliInstalled = paths.contains { FileManager.default.fileExists(atPath: $0) }
+                cliInstalled = isCLIInstalled()
             }
         }
         .background(Theme.sidebarBackground)
@@ -487,7 +513,7 @@ struct SettingsView: View {
                 HStack(spacing: 22) {
                     ForEach(["Overview", "Environments", "Secrets", "Activity", "Settings"], id: \.self) { tab in
                         Button {
-                            handleTab(tab)
+                            selectedTab = tab
                         } label: {
                             VStack(spacing: 10) {
                                 HStack(spacing: 7) {
@@ -577,7 +603,7 @@ struct SettingsView: View {
                 DashboardSecretsTable(
                     secrets: filteredSecrets,
                     environmentNames: vault.secretEnvironmentNames,
-                    environmentColors: Dictionary(uniqueKeysWithValues: vault.environments.map { ($0.name, Theme.color(hex: $0.color)) }),
+                    environmentColors: vault.environmentColors,
                     selectedEnvironmentName: selectedEnvironmentName,
                     selectedSecret: selectedSecret,
                     showActions: false,
@@ -663,10 +689,6 @@ struct SettingsView: View {
 
     // MARK: - Actions
 
-    private func handleTab(_ tab: String) {
-        selectedTab = tab
-    }
-
     private func tabIcon(_ tab: String) -> String {
         switch tab {
         case "Overview": return "square.grid.2x2"
@@ -675,14 +697,6 @@ struct SettingsView: View {
         case "Activity": return "clock"
         default: return "gearshape"
         }
-    }
-
-
-
-    private func shortPath(_ path: String?) -> String? {
-        guard let path, !path.isEmpty else { return nil }
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        return path.replacingOccurrences(of: home, with: "~")
     }
 }
 
@@ -706,16 +720,10 @@ private struct DashboardSearchField: View {
         HStack(spacing: 7) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(Theme.textMuted)
-            if let isFocused {
-                TextField(placeholder, text: $text)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 13))
-                    .focused(isFocused)
-            } else {
-                TextField(placeholder, text: $text)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 13))
-            }
+            TextField(placeholder, text: $text)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+                .optionallyFocused(isFocused)
             Text(shortcut)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(Theme.textDim)
@@ -781,12 +789,6 @@ private struct DashboardProjectRow: View {
         if isSelected { return Color.white.opacity(0.10) }
         if isHovered { return Color.white.opacity(0.05) }
         return .clear
-    }
-
-    private func shortPath(_ path: String?) -> String? {
-        guard let path, !path.isEmpty else { return nil }
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        return path.replacingOccurrences(of: home, with: "~")
     }
 }
 
@@ -909,7 +911,7 @@ private struct DashboardSecretsTable: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: CGFloat(secrets.count) * Theme.rowHeight + 37)
+        .frame(height: CGFloat(secrets.count) * Theme.rowHeight + Theme.tableHeaderHeight + 1)
     }
 }
 
@@ -961,7 +963,7 @@ private struct DashboardSecretHeader: View {
         .foregroundStyle(Theme.textMuted)
         .textCase(.uppercase)
         .padding(.horizontal, 16)
-        .frame(height: 36)
+        .frame(height: Theme.tableHeaderHeight)
     }
 }
 
@@ -1063,12 +1065,7 @@ private struct DashboardSecretRow: View {
     }
 
     private func copyWithFeedback() {
-        onCopy()
-        withAnimation { copied = true }
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(1.4))
-            withAnimation { copied = false }
-        }
+        withCopyFeedback($copied) { onCopy() }
     }
 
     private func pillColor(_ name: String) -> Color {
@@ -1124,12 +1121,6 @@ private struct ProjectInfoPanel: View {
                 return nil
             }
         }.value
-    }
-
-    private func shortPath(_ path: String?) -> String? {
-        guard let path, !path.isEmpty else { return nil }
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        return path.replacingOccurrences(of: home, with: "~")
     }
 }
 
@@ -1279,12 +1270,7 @@ private struct DeveloperActionsPanel: View {
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(Theme.panelBackground, in: .rect(cornerRadius: 8))
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.sep, lineWidth: 1))
-        .onAppear { isInstalled = checkCLIInstalled() }
-    }
-
-    private func checkCLIInstalled() -> Bool {
-        let paths = ["/usr/local/bin/lokalite", "/opt/homebrew/bin/lokalite", "/usr/bin/lokalite"]
-        return paths.contains { FileManager.default.fileExists(atPath: $0) }
+        .onAppear { isInstalled = isCLIInstalled() }
     }
 }
 
@@ -2416,7 +2402,7 @@ private struct SecretsTab: View {
                         DashboardSecretsTable(
                             secrets: filteredSecrets,
                             environmentNames: vault.secretEnvironmentNames,
-                            environmentColors: Dictionary(uniqueKeysWithValues: vault.environments.map { ($0.name, Theme.color(hex: $0.color)) }),
+                            environmentColors: vault.environmentColors,
                             selectedEnvironmentName: selectedEnvironmentName,
                             selectedSecret: selectedSecret,
                             showActions: true,
@@ -2550,10 +2536,14 @@ private struct ActivityRow: View {
         }
     }
 
+    private static let relativeTimeFormatter: RelativeDateTimeFormatter = {
+        let f = RelativeDateTimeFormatter()
+        f.unitsStyle = .abbreviated
+        return f
+    }()
+
     private var relativeTime: String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: entry.accessedAt, relativeTo: Date())
+        Self.relativeTimeFormatter.localizedString(for: entry.accessedAt, relativeTo: Date())
     }
 }
 
@@ -2730,10 +2720,5 @@ private struct ProjectSettingsTab: View {
         }
     }
 
-    private func shortPath(_ p: String) -> String? {
-        guard !p.isEmpty else { return nil }
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        return p.replacingOccurrences(of: home, with: "~")
-    }
 }
 

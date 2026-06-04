@@ -448,16 +448,11 @@ final class VaultStore {
 
     func upsertSecretValue(_ record: SecretValueRecord) throws {
         try db.write { db in
-            if let environmentId = record.environmentId {
-                try SecretValueRecord
-                    .filter(Column("secret_id") == record.secretId && Column("environment_id") == environmentId)
-                    .deleteAll(db)
-            } else {
-                try SecretValueRecord
-                    .filter(Column("secret_id") == record.secretId && Column("environment_id") == nil)
-                    .deleteAll(db)
-            }
-            try record.insert(db)
+            try db.execute(sql: """
+                INSERT OR REPLACE INTO secret_values (id, secret_id, environment_id, encrypted_value, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+            """, arguments: [record.id, record.secretId, record.environmentId,
+                             record.encryptedValue, record.updatedAt])
         }
     }
 

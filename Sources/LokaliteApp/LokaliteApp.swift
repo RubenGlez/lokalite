@@ -24,9 +24,7 @@ private struct WindowButtonPositioner: NSViewRepresentable {
         return view
     }
 
-    func updateNSView(_ view: NSView, context: Context) {
-        DispatchQueue.main.async { positionButtons(from: view) }
-    }
+    func updateNSView(_ view: NSView, context: Context) {}
 
     private func positionButtons(from view: NSView) {
         guard let window = view.window,
@@ -53,6 +51,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let hotkeyManager = GlobalHotkeyManager()
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
+    private var windowEventMonitor: Any?
+    private var windowKeyObserver: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -105,7 +105,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupWindowBehavior() {
-        NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { event in
+        windowEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { event in
             guard event.clickCount == 2,
                   let window = event.window,
                   window.identifier?.rawValue == "settings" else { return event }
@@ -121,9 +121,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.zoom(nil)
             return nil
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            NSApp.windows.first { $0.identifier?.rawValue == "settings" }?
-                .isMovableByWindowBackground = true
+        windowKeyObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main
+        ) { [weak self] note in
+            guard let window = note.object as? NSWindow,
+                  window.identifier?.rawValue == "settings" else { return }
+            window.isMovableByWindowBackground = true
+            Task { @MainActor [weak self] in
+                if let obs = self?.windowKeyObserver {
+                    NotificationCenter.default.removeObserver(obs)
+                    self?.windowKeyObserver = nil
+                }
+            }
         }
     }
 
