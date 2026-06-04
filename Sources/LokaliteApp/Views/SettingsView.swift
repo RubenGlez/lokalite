@@ -432,25 +432,27 @@ struct SettingsView: View {
     }
 
     private var overviewContent: some View {
-        ScrollView {
-            HStack(alignment: .top, spacing: 18) {
-                VStack(alignment: .leading, spacing: 26) {
-                    environmentsSection
-                    secretsSection
+        GeometryReader { proxy in
+            ScrollView {
+                HStack(alignment: .top, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 26) {
+                        environmentsSection
+                        secretsSection
+                    }
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+
+                    Rectangle()
+                        .fill(Theme.sep)
+                        .frame(width: 1)
+                        .padding(.vertical, 4)
+
+                    overviewSideColumn
+                        .frame(width: min(proxy.size.width * 0.25, 300))
                 }
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-
-                Rectangle()
-                    .fill(Theme.sep)
-                    .frame(width: 1)
-                    .padding(.vertical, 4)
-
-                overviewSideColumn
-                    .frame(width: 235)
+                .padding(.horizontal, 36)
+                .padding(.top, 24)
+                .padding(.bottom, 28)
             }
-            .padding(.horizontal, 36)
-            .padding(.top, 24)
-            .padding(.bottom, 28)
         }
     }
 
