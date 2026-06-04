@@ -8,6 +8,11 @@ struct SeedCommand: ParsableCommand {
     )
 
     func run() throws {
+        guard VaultConfiguration.isDevelopmentBuild else {
+            print("Seed is only available in development builds. Production vaults are never seeded.")
+            throw ExitCode.failure
+        }
+
         try withVault { vault in
             print("Clearing existing data…")
             let cleared = try wipe(vault)
