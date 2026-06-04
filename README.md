@@ -2,8 +2,6 @@
   <img src="assets/banner.png" alt="Lokalite" width="100%"/>
 </p>
 
----
-
 Lokalite is a local-first secrets workspace for macOS — a menu bar app, CLI, and MCP server in one. Keep your API keys, tokens, and credentials in an encrypted vault on your machine, protected by Apple Keychain.
 
 ## Features
