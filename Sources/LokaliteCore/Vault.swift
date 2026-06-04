@@ -465,7 +465,7 @@ public final class Vault {
     }
 
     private func iso8601() -> String {
-        ISO8601DateFormatter().string(from: Date())
+        Self.dateFormatter.string(from: Date())
     }
 }
 

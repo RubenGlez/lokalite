@@ -520,6 +520,8 @@ final class VaultStore {
     }
 }
 
+private let sharedDateFormatter = ISO8601DateFormatter()
+
 private func iso8601() -> String {
-    ISO8601DateFormatter().string(from: Date())
+    sharedDateFormatter.string(from: Date())
 }
