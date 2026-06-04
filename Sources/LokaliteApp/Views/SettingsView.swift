@@ -133,8 +133,6 @@ struct SettingsView: View {
     @FocusState private var projectSearchFocused: Bool
     @FocusState private var secretSearchFocused: Bool
 
-    // Copy shell export feedback
-    @State private var shellExportCopied = false
     @State private var cliInstalled = false
 
     // Delete confirmations
@@ -303,8 +301,6 @@ struct SettingsView: View {
                     .keyboardShortcut("k", modifiers: .command)
                 Button("") { secretSearchFocused = true }
                     .keyboardShortcut("f", modifiers: .command)
-                Button("") { copyShellExport() }
-                    .keyboardShortcut("e", modifiers: .command)
             }
             .hidden()
         }
@@ -589,7 +585,7 @@ struct SettingsView: View {
                     onMove: { _ in },
                     onDelete: { _ in }
                 )
-                SecretShortcutRow(onNewSecret: { presentedSheet = .addSecret }, shellExportCopied: shellExportCopied)
+                SecretShortcutRow(onNewSecret: { presentedSheet = .addSecret })
             }
         }
     }
@@ -679,17 +675,7 @@ struct SettingsView: View {
         }
     }
 
-    private func copyShellExport() {
-        let envFlag = vault.selectedEnvironment.map { "--env \($0.name)" } ?? ""
-        let cmd = "eval $(lokalite shell\(envFlag.isEmpty ? "" : " \(envFlag)"))"
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(cmd, forType: .string)
-        shellExportCopied = true
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(1.4))
-            shellExportCopied = false
-        }
-    }
+
 
     private func shortPath(_ path: String?) -> String? {
         guard let path, !path.isEmpty else { return nil }
@@ -927,23 +913,16 @@ private struct DashboardSecretsTable: View {
 
 private struct SecretShortcutRow: View {
     let onNewSecret: () -> Void
-    let shellExportCopied: Bool
 
     var body: some View {
-        HStack(spacing: 72) {
+        HStack {
             Button(action: onNewSecret) {
                 ShortcutHint(keys: "⌘N", title: "New secret")
             }
             .buttonStyle(.plain)
             .keyboardShortcut("n", modifiers: .command)
-
-            ShortcutHint(
-                keys: "⌘E",
-                title: shellExportCopied ? "Copied!" : "Copy shell export"
-            )
-            .help("Copies eval $(lokalite shell) to clipboard — run it in your terminal to inject all secrets as environment variables for the current session.")
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 12)
     }
 }
