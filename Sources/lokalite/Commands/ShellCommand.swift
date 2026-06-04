@@ -34,6 +34,8 @@ struct ShellCommand: ParsableCommand {
             return try vault.list(projectId: ctx.project.id, environmentName: ctx.environmentName)
         }
         for secret in secrets {
+            Vault.shared.logAccess(secretName: secret.name, projectName: ctx.project.name,
+                                   environmentName: ctx.environmentName ?? "default", source: .cli)
             let escaped = secret.value.replacingOccurrences(of: "'", with: "'\\''")
             print("export \(secret.name)='\(escaped)'")
         }

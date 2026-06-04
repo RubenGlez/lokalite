@@ -94,6 +94,8 @@ struct VaultPopover: View {
 
     private var unlockedStateView: some View {
         VStack(spacing: 0) {
+            contextHeader
+            Divider()
             searchBar
             Divider()
             content
@@ -201,7 +203,7 @@ struct VaultPopover: View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
-            TextField("Search projects, envs, secrets...", text: $searchText)
+            TextField("Search secrets...", text: $searchText)
                 .textFieldStyle(.plain)
                 .font(.body)
                 .focused($searchFocused)
@@ -214,10 +216,6 @@ struct VaultPopover: View {
                 }
                 .buttonStyle(.plain)
             }
-
-            Text("⌘K")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(Theme.textDim)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -243,6 +241,7 @@ struct VaultPopover: View {
                 .foregroundStyle(Theme.textMuted)
                 .textCase(.uppercase)
                 .padding(.horizontal, 18)
+                .padding(.top, 8)
 
             VStack(spacing: 0) {
                 ForEach(searchText.isEmpty ? recentSecrets : filtered) { secret in
@@ -260,53 +259,6 @@ struct VaultPopover: View {
         }
         .frame(minHeight: 210, maxHeight: 330, alignment: .top)
     }
-
-    private var secretsList: some View {
-        List {
-            if !recentSecrets.isEmpty {
-                Section {
-                    ForEach(recentSecrets) { secret in
-                        SecretRowView(secret: secret)
-                            .environment(vault)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                    }
-                } header: {
-                    Text("Recent")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                        .textCase(nil)
-                        .padding(.leading, 6)
-                }
-                .listSectionSeparator(.hidden)
-            }
-
-            Section {
-                ForEach(filtered) { secret in
-                    SecretRowView(secret: secret)
-                        .environment(vault)
-                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                }
-            } header: {
-                if !recentSecrets.isEmpty {
-                    Text("All")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                        .textCase(nil)
-                        .padding(.leading, 6)
-                }
-            }
-            .listSectionSeparator(.hidden)
-        }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .frame(minHeight: 110, maxHeight: 420)
-    }
-
-
 
     private var emptyView: some View {
         ContentUnavailableView {
@@ -337,6 +289,7 @@ struct VaultPopover: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(Theme.text)
+            .keyboardShortcut("o", modifiers: .command)
 
             Spacer()
 
@@ -362,16 +315,17 @@ private struct PopoverRecentSecretRow: View {
     let environment: String
     let secret: Secret
     let action: () -> Void
+    @State private var copied = false
 
     var body: some View {
-        Button(action: action) {
+        Button(action: copyWithFeedback) {
             HStack(spacing: 11) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(rowColor.opacity(0.20))
-                    Circle()
-                        .fill(rowColor)
-                        .frame(width: 7, height: 7)
+                        .fill(Theme.brand.opacity(0.15))
+                    Image(systemName: secret.category.systemImage)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Theme.brand)
                 }
                 .frame(width: 28, height: 28)
 
@@ -387,23 +341,32 @@ private struct PopoverRecentSecretRow: View {
                 }
 
                 Spacer()
+
+                if copied {
+                    Label("Copied", systemImage: "checkmark")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Theme.brand)
+                        .transition(.scale.combined(with: .opacity))
+                }
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 7)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.15), value: copied)
         .contextMenu {
-            Button("Copy", action: action)
+            Button("Copy", action: copyWithFeedback)
         }
     }
 
-    private var rowColor: Color {
-        switch environment.lowercased() {
-        case "production": return Theme.blue
-        case "staging": return Theme.violet
-        case "local", "default": return Theme.green
-        default: return Theme.mint
+    private func copyWithFeedback() {
+        action()
+        withAnimation { copied = true }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1.4))
+            withAnimation { copied = false }
         }
     }
+
 }

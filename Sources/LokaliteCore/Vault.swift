@@ -314,12 +314,12 @@ public final class Vault {
         let environmentNamesById = Dictionary(uniqueKeysWithValues: environments.map { ($0.id, $0.name) })
         let secrets = try store.fetchAllSecrets(projectId: projectId)
 
-        let orderedNames = ["default"] + environments.map { $0.name }
+        let orderedNames = ["Default"] + environments.map { $0.name }
         var result: [String: [String]] = [:]
         for secret in secrets {
             let values = try store.fetchAllSecretValues(secretId: secret.id)
             let names = Set(values.map { value in
-                value.environmentId.flatMap { environmentNamesById[$0] } ?? "default"
+                value.environmentId.flatMap { environmentNamesById[$0] } ?? "Default"
             })
             result[secret.name] = names.sorted { orderedNames.firstIndex(of: $0) ?? Int.max < orderedNames.firstIndex(of: $1) ?? Int.max }
         }
@@ -432,8 +432,10 @@ public final class Vault {
     }
 
     private func projectFromRecord(_ record: ProjectRecord) -> Project {
-        Project(id: record.id, name: record.name, path: record.path,
-                activeEnvironment: record.activeEnvironment, icon: record.icon)
+        let createdAt = ISO8601DateFormatter().date(from: record.createdAt)
+        return Project(id: record.id, name: record.name, path: record.path,
+                       activeEnvironment: record.activeEnvironment, icon: record.icon,
+                       createdAt: createdAt)
     }
 
     private func secretFromRecord(_ record: SecretRecord, value: String) -> Secret {

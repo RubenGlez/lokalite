@@ -44,6 +44,11 @@ struct RunCommand: ParsableCommand {
             return try vault.list(projectId: ctx.project.id, environmentName: ctx.environmentName)
         }
 
+        for secret in secrets {
+            Vault.shared.logAccess(secretName: secret.name, projectName: ctx.project.name,
+                                   environmentName: ctx.environmentName ?? "default", source: .cli)
+        }
+
         var environment = ProcessInfo.processInfo.environment
         for secret in secrets {
             environment[secret.name] = secret.value

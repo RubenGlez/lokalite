@@ -135,6 +135,7 @@ struct SettingsView: View {
 
     // Copy shell export feedback
     @State private var shellExportCopied = false
+    @State private var cliInstalled = false
 
     // Delete confirmations
     @State private var deletingProject: Project?
@@ -161,14 +162,14 @@ struct SettingsView: View {
     }
 
     private var selectedEnvironmentName: String {
-        vault.selectedEnvironment?.name ?? vault.selectedProject?.activeEnvironment ?? "default"
+        vault.selectedEnvironment?.name ?? vault.selectedProject?.activeEnvironment ?? "Default"
     }
 
     private var environmentCards: [DashboardEnvironment] {
         var cards = [
             DashboardEnvironment(
                 id: "default",
-                name: "default",
+                name: "Default",
                 color: .white.opacity(0.7),
                 count: vault.environmentSecretCounts["default"] ?? 0,
                 isActive: vault.selectedEnvironment == nil
@@ -382,18 +383,19 @@ struct SettingsView: View {
 
             HStack(spacing: 8) {
                 Circle()
-                    .fill(Theme.green)
+                    .fill(cliInstalled ? Theme.green : Theme.textDim)
                     .frame(width: 7, height: 7)
                 Text("Lokalite CLI")
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.textMuted)
                 Spacer()
-                Text("v1.2.0")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.textDim)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 15)
+            .onAppear {
+                let paths = ["/usr/local/bin/lokalite", "/opt/homebrew/bin/lokalite", "/usr/bin/lokalite"]
+                cliInstalled = paths.contains { FileManager.default.fileExists(atPath: $0) }
+            }
         }
         .background(Theme.sidebarBackground)
     }
@@ -939,6 +941,7 @@ private struct SecretShortcutRow: View {
                 keys: "⌘E",
                 title: shellExportCopied ? "Copied!" : "Copy shell export"
             )
+            .help("Copies eval $(lokalite shell) to clipboard — run it in your terminal to inject all secrets as environment variables for the current session.")
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 12)
@@ -969,7 +972,8 @@ private struct DashboardSecretHeader: View {
     var body: some View {
         HStack(spacing: 12) {
             Text("Name").frame(maxWidth: .infinity, alignment: .leading)
-            Text("Environment").frame(width: 190, alignment: .leading)
+            Text("Category").frame(width: 110, alignment: .leading)
+            Text("Environment").frame(width: 160, alignment: .leading)
             Color.clear.frame(width: 28)
         }
         .font(.system(size: 10, weight: .semibold))
@@ -997,23 +1001,34 @@ private struct DashboardSecretRow: View {
     var body: some View {
         Button(action: showActions ? onSelect : copyWithFeedback) {
             HStack(spacing: 12) {
-                HStack(spacing: 8) {
-                    Text(secret.name)
-                        .font(.system(size: 12, weight: .medium, design: .monospaced))
-                        .foregroundStyle(Theme.text)
-                        .lineLimit(1)
-                    if copied {
-                        Label("Copied", systemImage: "checkmark")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(Theme.brand)
-                            .transition(.scale.combined(with: .opacity))
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 8) {
+                        Text(secret.name)
+                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            .foregroundStyle(Theme.text)
+                            .lineLimit(1)
+                        if copied {
+                            Label("Copied", systemImage: "checkmark")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(Theme.brand)
+                                .transition(.scale.combined(with: .opacity))
+                        }
+                    }
+                    if let desc = secret.description, !desc.isEmpty {
+                        Text(desc)
+                            .font(.system(size: 11))
+                            .foregroundStyle(Theme.textMuted)
+                            .lineLimit(1)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .animation(.easeInOut(duration: 0.15), value: copied)
 
+                CategoryPill(category: secret.category)
+                    .frame(width: 110, alignment: .leading)
+
                 HStack(spacing: 5) {
-                    ForEach(Array(environments.prefix(3)), id: \.self) { environment in
+                    ForEach(Array(environments.prefix(2)), id: \.self) { environment in
                         Text(environment)
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(pillColor(environment))
@@ -1022,7 +1037,7 @@ private struct DashboardSecretRow: View {
                             .background(pillColor(environment).opacity(0.16), in: .rect(cornerRadius: 5))
                     }
                 }
-                .frame(width: 190, alignment: .leading)
+                .frame(width: 160, alignment: .leading)
 
                 if showActions {
                     Menu {
@@ -1048,6 +1063,7 @@ private struct DashboardSecretRow: View {
             .padding(.horizontal, 16)
             .frame(height: Theme.rowHeight)
             .background(isSelected ? Color.white.opacity(0.055) : .clear)
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
         .onHover { hovering in
@@ -1075,25 +1091,58 @@ private struct DashboardSecretRow: View {
     }
 
     private func pillColor(_ name: String) -> Color {
-        environmentColors[name] ?? Theme.green
+        environmentColors[name] ?? Theme.textMuted
     }
 }
+
+private let createdDateFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.dateStyle = .medium
+    f.timeStyle = .none
+    return f
+}()
 
 private struct ProjectInfoPanel: View {
     let project: Project?
     let environmentCount: Int
     let secretCount: Int
+    @State private var gitRemote: String? = nil
 
     var body: some View {
         InspectorCard(title: "Project Info") {
             VStack(alignment: .leading, spacing: 15) {
                 InfoLine(icon: "folder", title: "Linked folder", value: shortPath(project?.path) ?? "Not linked")
-                InfoLine(icon: "point.3.connected.trianglepath.dotted", title: "Repository", value: "Not configured")
+                InfoLine(icon: "point.3.connected.trianglepath.dotted", title: "Repository", value: gitRemote ?? "Not configured")
                 InfoLine(icon: "square.stack.3d.up", title: "\(environmentCount + 1) environments", value: nil)
                 InfoLine(icon: "lock", title: "\(secretCount) secrets", value: nil)
-                InfoLine(icon: "clock", title: "Created", value: "Local vault")
+                InfoLine(icon: "clock", title: "Created", value: project?.createdAt.map { createdDateFormatter.string(from: $0) } ?? "Unknown")
             }
         }
+        .task(id: project?.path) {
+            gitRemote = await detectGitRemote(project?.path)
+        }
+    }
+
+    private func detectGitRemote(_ path: String?) async -> String? {
+        guard let path, !path.isEmpty else { return nil }
+        return await Task.detached(priority: .utility) {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+            process.arguments = ["-C", path, "remote", "get-url", "origin"]
+            let stdout = Pipe()
+            process.standardOutput = stdout
+            process.standardError = Pipe()
+            do {
+                try process.run()
+                process.waitUntilExit()
+                guard process.terminationStatus == 0 else { return nil }
+                let data = stdout.fileHandleForReading.readDataToEndOfFile()
+                let url = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+                return url?.isEmpty == false ? url : nil
+            } catch {
+                return nil
+            }
+        }.value
     }
 
     private func shortPath(_ path: String?) -> String? {
@@ -2343,7 +2392,7 @@ private struct SecretsTab: View {
     }
 
     private var selectedEnvironmentName: String {
-        vault.selectedEnvironment?.name ?? vault.selectedProject?.activeEnvironment ?? "default"
+        vault.selectedEnvironment?.name ?? vault.selectedProject?.activeEnvironment ?? "Default"
     }
 
     var body: some View {
@@ -2593,33 +2642,32 @@ private struct ProjectSettingsTab: View {
 
                 Divider().overlay(Theme.sep)
 
-                settingsRow(label: "Linked folder") {
-                    HStack(spacing: 8) {
-                        Text(shortPath(path) ?? "Not linked")
-                            .font(.system(size: 13))
-                            .foregroundStyle(path.isEmpty ? Theme.textDim : Theme.blue)
-                            .lineLimit(1)
-                        Button {
-                            pickDirectory()
-                        } label: {
+                Button(action: pickDirectory) {
+                    settingsRow(label: "Linked folder") {
+                        HStack(spacing: 8) {
+                            Text(shortPath(path) ?? "Not linked")
+                                .font(.system(size: 13))
+                                .foregroundStyle(path.isEmpty ? Theme.textDim : Theme.blue)
+                                .lineLimit(1)
                             Image(systemName: "folder")
                                 .font(.system(size: 12))
                                 .foregroundStyle(Theme.textMuted)
-                        }
-                        .buttonStyle(.plain)
-                        if !path.isEmpty {
-                            Button {
-                                path = ""
-                                savePath()
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(Theme.textMuted)
+                            if !path.isEmpty {
+                                Button {
+                                    path = ""
+                                    savePath()
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(Theme.textMuted)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                 }
+                .buttonStyle(.plain)
+                .contentShape(.rect)
             }
             .background(Theme.panelBackground, in: .rect(cornerRadius: 8))
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.sep, lineWidth: 1))

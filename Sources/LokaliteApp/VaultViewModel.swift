@@ -164,6 +164,9 @@ final class VaultViewModel {
         selectedProject = project
         selectedEnvironment = nil
         reloadEnvironments()
+        if selectedEnvironment == nil {
+            selectedEnvironment = environments.first
+        }
         reloadSecrets()
         reloadDashboardSummaries()
     }
@@ -248,6 +251,7 @@ final class VaultViewModel {
         do {
             let project = try Vault.shared.addProject(name: name, icon: icon)
             projects.append(project)
+            _ = try? Vault.shared.addEnvironment(name: "Default", projectId: project.id, color: nil)
             selectProject(project)
         } catch {
             errorMessage = error.localizedDescription
@@ -271,7 +275,10 @@ final class VaultViewModel {
 
     func addEnvironment(name: String, color: String? = nil) {
         renewSession()
-        guard let project = selectedProject else { return }
+        guard let project = selectedProject else {
+            errorMessage = "Select a project before adding an environment."
+            return
+        }
         do {
             let env = try Vault.shared.addEnvironment(name: name, projectId: project.id, color: color)
             environments.append(env)
@@ -385,7 +392,14 @@ final class VaultViewModel {
         category: SecretCategory? = nil
     ) {
         renewSession()
-        guard let project = selectedProject else { return }
+        guard let project = selectedProject else {
+            errorMessage = "Create or select a project before adding a secret."
+            return
+        }
+        guard selectedEnvironment != nil else {
+            errorMessage = "Select an environment before adding a secret."
+            return
+        }
         do {
             _ = try Vault.shared.add(name: name, value: value, description: description, category: category,
                                      projectId: project.id,
@@ -451,7 +465,7 @@ final class VaultViewModel {
         Vault.shared.logAccess(
             secretName: secret.name,
             projectName: selectedProject?.name ?? "unknown",
-            environmentName: selectedEnvironment?.name ?? "default",
+            environmentName: selectedEnvironment?.name ?? "Default",
             source: .app
         )
         reloadActivity()
