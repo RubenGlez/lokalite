@@ -4,7 +4,8 @@ import LokaliteCore
 struct SeedCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "seed",
-        abstract: "Wipe the vault and populate it with sample data for testing."
+        abstract: "Wipe the vault and populate it with sample data for testing.",
+        shouldDisplay: false
     )
 
     func run() throws {

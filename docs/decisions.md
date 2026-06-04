@@ -36,7 +36,7 @@ CLI built first. Menu bar app is a native SwiftUI popover (no dock icon, `LSUIEl
 
 ## D6: CLI scope
 
-Full CRUD from the CLI. Commands: `add`, `set`, `delete`, `get`, `copy`, `list`, `export`, `import`, `shell`, `run`, `status`, `init`, `project`. The desktop app is a convenience layer, not a requirement.
+Full CRUD from the CLI. Commands: `add`, `set`, `delete`, `get`, `copy`, `list`, `export`, `import`, `shell`, `run`, `status`, `init`, `install`, `project`, `env`. The desktop app is a convenience layer, not a requirement.
 
 ---
 

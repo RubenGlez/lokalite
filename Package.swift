@@ -41,6 +41,9 @@ let package = Package(
                 .product(name: "SymbolPicker", package: "SymbolPicker"),
             ],
             path: "Sources/LokaliteApp",
+            resources: [
+                .process("Resources")
+            ],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .testTarget(

@@ -181,8 +181,17 @@ lokalite shell --keys KEY1,KEY2            # limit to specific keys
 lokalite run <command> [args...]           # injects secrets as env vars into subprocess
 lokalite run --keys KEY1,KEY2 -- <cmd>
 
+lokalite project add <name> [--path <dir>] # create a new project
+lokalite project list                      # list all projects
+lokalite project use <name>               # set the active project
 lokalite project link [<name>] [--path <dir>]   # link project to directory; defaults to cwd
-lokalite project link --unlink <name>            # remove path association
+lokalite project link --unlink <name>     # remove path association
+lokalite project delete <name>            # delete project and all its secrets
+
+lokalite env add <name>                    # add an environment to the active project
+lokalite env list                          # list environments in the active project
+lokalite env use <name>                    # set the active environment
+lokalite env delete <name>                 # delete an environment and its secret values
 ```
 
 ### Project and environment resolution

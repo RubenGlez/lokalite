@@ -114,6 +114,20 @@ lokalite delete OPENAI_API_KEY
 lokalite run -- npm start
 lokalite run --keys OPENAI_API_KEY,ANTHROPIC_API_KEY -- claude
 
+# Manage projects
+lokalite project add MyProject
+lokalite project list
+lokalite project use MyProject
+lokalite project link [<name>] [--path <dir>]   # link to a directory; defaults to cwd
+lokalite project link --unlink <name>            # remove path association
+lokalite project delete MyProject
+
+# Manage environments
+lokalite env add staging
+lokalite env list
+lokalite env use staging
+lokalite env delete staging
+
 # Import from a .env file
 lokalite import .env
 lokalite import .env --overwrite        # overwrite existing secrets
@@ -133,7 +147,7 @@ eval $(lokalite shell --keys OPENAI_API_KEY,ANTHROPIC_API_KEY)
 
 ## Menu Bar App
 
-Click the dial icon in your menu bar (or press the global shortcut, default `⌘⇧Space`) to open the vault popover. The popover shows recently copied secrets at the top, then all secrets for the active project and environment. Use the project and environment menus in the header to switch context, and click **Manage** in the footer to open the full secrets manager window.
+Click the armadillo icon in your menu bar (or press the global shortcut, default `⌘⇧Space`) to open the vault popover. The popover shows recently copied secrets at the top, then all secrets for the active project and environment. Use the project and environment menus in the header to switch context, and click **Manage** in the footer to open the full secrets manager window.
 
 The secrets manager is a three-column layout:
 - **Left sidebar**: project list; create, rename, and delete projects; set icon and link to a local directory

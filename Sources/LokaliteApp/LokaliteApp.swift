@@ -6,6 +6,15 @@ struct LokaliteApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
+        MenuBarExtra {
+            VaultPopover()
+                .environment(appDelegate.vault)
+                .frame(width: 360, height: 420)
+        } label: {
+            MenuBarIcon()
+        }
+        .menuBarExtraStyle(.window)
+
         Window("Lokalite", id: "settings") {
             SettingsView()
                 .environment(appDelegate.vault)
@@ -49,14 +58,11 @@ private struct WindowButtonPositioner: NSViewRepresentable {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let vault = VaultViewModel()
     let hotkeyManager = GlobalHotkeyManager()
-    private var statusItem: NSStatusItem?
-    private var popover: NSPopover?
     private var windowEventMonitor: Any?
     private var windowKeyObserver: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        setupStatusItem()
         setupHotkey()
         setupWindowBehavior()
 
@@ -72,36 +78,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
-    }
-
-    private func setupStatusItem() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-
-        if let button = statusItem?.button {
-            button.image = DialMenuBarIcon.templateImage()
-            button.target = self
-            button.action = #selector(togglePopover(_:))
-        }
-
-        let controller = NSHostingController(
-            rootView: VaultPopover().environment(vault)
-        )
-        controller.view.frame.size = NSSize(width: 360, height: 420)
-
-        let p = NSPopover()
-        p.contentViewController = controller
-        p.behavior = .transient
-        self.popover = p
-    }
-
-    @objc func togglePopover(_ sender: Any?) {
-        guard let button = statusItem?.button, let popover else { return }
-        if popover.isShown {
-            popover.performClose(sender)
-        } else {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            NSApp.activate(ignoringOtherApps: true)
-        }
     }
 
     private func setupWindowBehavior() {
@@ -137,7 +113,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupHotkey() {
-        hotkeyManager.onActivate = { [weak self] in self?.togglePopover(nil) }
+        hotkeyManager.onActivate = {
+            NSApp.activate(ignoringOtherApps: true)
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        }
         let shortcut = GlobalHotkeyManager.Shortcut.fromID(AppPreferences().hotkeyShortcutID)
         hotkeyManager.register(shortcut)
     }
