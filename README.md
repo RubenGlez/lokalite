@@ -196,8 +196,6 @@ Pass `--read-write` to also expose write tools:
 
 All secret values are encrypted with AES-256-GCM before being written to disk. The vault key lives exclusively in Apple Keychain and is gated behind Touch ID or your device password. Nothing leaves your machine.
 
-See [docs/security-model.md](docs/security-model.md) for full details.
-
 ## License
 
 MIT
