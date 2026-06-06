@@ -95,8 +95,9 @@ The standard release flow is:
    You can also use `minor` or `major` instead of `patch`.
 
 2. The script creates an annotated tag and pushes it to GitHub.
-3. GitHub Actions builds the release artifacts, publishes the GitHub release, and opens a draft PR to update the Homebrew formula and cask.
-4. Merge the Homebrew PR after CI passes.
+3. GitHub Actions builds the release artifacts and publishes the GitHub release.
+4. If the repository secret `HOMEBREW_PR_TOKEN` is configured, the workflow also opens a draft PR to update the Homebrew formula and cask.
+5. Merge the Homebrew PR after CI passes. If the token is not configured, the workflow leaves the Homebrew branch pushed and prints the branch URL so you can open the PR manually.
 
 That keeps `main` protected while still making releases a one-command local operation.
 

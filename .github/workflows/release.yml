@@ -114,6 +114,7 @@ jobs:
       - name: Update Homebrew formula and cask
         env:
           GH_TOKEN: ${{ github.token }}
+          HOMEBREW_PR_TOKEN: ${{ secrets.HOMEBREW_PR_TOKEN }}
         run: |
           VERSION="${GITHUB_REF_NAME}"
           BRANCH="homebrew/${VERSION}"
@@ -166,15 +167,21 @@ jobs:
             "The branch was created automatically from the release tag and is ready to merge into \`main\`." \
             > /tmp/homebrew-pr-body.md
 
-          PR_URL=$(gh pr list --repo RubenGlez/lokalite --head "${BRANCH}" --base main --state open --json url --jq '.[0].url // empty')
-          if [ -z "${PR_URL}" ]; then
-            PR_URL=$(gh pr create \
-              --repo RubenGlez/lokalite \
-              --base main \
-              --head "${BRANCH}" \
-              --draft \
-              --title "Update Homebrew formula and cask to ${VERSION}" \
-              --body-file /tmp/homebrew-pr-body.md)
-          fi
+          if [ -n "${HOMEBREW_PR_TOKEN}" ]; then
+            PR_URL=$(GH_TOKEN="${HOMEBREW_PR_TOKEN}" gh pr list --repo RubenGlez/lokalite --head "${BRANCH}" --base main --state open --json url --jq '.[0].url // empty')
+            if [ -z "${PR_URL}" ]; then
+              PR_URL=$(GH_TOKEN="${HOMEBREW_PR_TOKEN}" gh pr create \
+                --repo RubenGlez/lokalite \
+                --base main \
+                --head "${BRANCH}" \
+                --draft \
+                --title "Update Homebrew formula and cask to ${VERSION}" \
+                --body-file /tmp/homebrew-pr-body.md)
+            fi
 
-          echo "Homebrew PR: ${PR_URL}"
+            echo "Homebrew PR: ${PR_URL}"
+          else
+            echo "HOMEBREW_PR_TOKEN is not configured; skipping PR creation."
+            echo "Open the branch manually if you want an automatic Homebrew PR:"
+            echo "https://github.com/RubenGlez/lokalite/tree/${BRANCH}"
+          fi
