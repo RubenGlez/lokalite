@@ -31,9 +31,8 @@ Lokalite is a local-first secrets workspace for macOS — a menu bar app, CLI, a
 CLI, MCP server, and menu bar app via Homebrew:
 
 ```bash
-brew tap RubenGlez/lokalite https://github.com/RubenGlez/lokalite
-brew install lokalite
-brew install --cask lokalite
+brew install RubenGlez/lokalite/lokalite
+brew install --cask RubenGlez/lokalite/lokalite
 lokalite install   # registers the MCP server in ~/.claude.json
 ```
 
@@ -42,8 +41,7 @@ lokalite install   # registers the MCP server in ~/.claude.json
 If you don't need the menu bar app:
 
 ```bash
-brew tap RubenGlez/lokalite https://github.com/RubenGlez/lokalite
-brew install lokalite
+brew install RubenGlez/lokalite/lokalite
 lokalite install
 ```
 
@@ -52,8 +50,7 @@ lokalite install
 If you already have the CLI installed or don't need it:
 
 ```bash
-brew tap RubenGlez/lokalite https://github.com/RubenGlez/lokalite
-brew install --cask lokalite
+brew install --cask RubenGlez/lokalite/lokalite
 ```
 
 ### Without Homebrew

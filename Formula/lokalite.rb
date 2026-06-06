@@ -10,7 +10,7 @@ class Lokalite < Formula
   depends_on :macos => :sonoma
 
   def install
-    system "swift", "build", "--configuration", "release", "--product", "lokalite"
+    system "swift", "build", "--configuration", "release", "--product", "lokalite", "--disable-sandbox"
     bin.install ".build/release/lokalite"
   end
 
