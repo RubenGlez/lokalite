@@ -10,6 +10,7 @@ jobs:
     runs-on: macos-latest
     permissions:
       contents: write
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v4.2.2
@@ -115,6 +116,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${GITHUB_REF_NAME}"
+          BRANCH="homebrew/${VERSION}"
           SHORT_VERSION="${VERSION#v}"
           TARBALL_URL="https://github.com/RubenGlez/lokalite/archive/refs/tags/${VERSION}.tar.gz"
           DMG_URL="https://github.com/RubenGlez/lokalite/releases/download/${VERSION}/Lokalite-${VERSION}.dmg"
@@ -149,6 +151,30 @@ jobs:
 
           git config user.email "action@github.com"
           git config user.name "GitHub Actions"
+          git checkout -B "${BRANCH}"
           git add Formula/lokalite.rb Casks/lokalite.rb
           git commit -m "Update Homebrew formula and cask to ${VERSION}"
-          git push origin HEAD:main
+          git push -u origin "${BRANCH}"
+
+          printf '%s\n' \
+            "Update Homebrew formula and cask to ${VERSION}." \
+            "" \
+            "This release workflow refreshes:" \
+            "- \`Formula/lokalite.rb\`" \
+            "- \`Casks/lokalite.rb\`" \
+            "" \
+            "The branch was created automatically from the release tag and is ready to merge into \`main\`." \
+            > /tmp/homebrew-pr-body.md
+
+          PR_URL=$(gh pr list --repo RubenGlez/lokalite --head "${BRANCH}" --base main --state open --json url --jq '.[0].url // empty')
+          if [ -z "${PR_URL}" ]; then
+            PR_URL=$(gh pr create \
+              --repo RubenGlez/lokalite \
+              --base main \
+              --head "${BRANCH}" \
+              --draft \
+              --title "Update Homebrew formula and cask to ${VERSION}" \
+              --body-file /tmp/homebrew-pr-body.md)
+          fi
+
+          echo "Homebrew PR: ${PR_URL}"

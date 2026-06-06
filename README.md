@@ -82,6 +82,24 @@ swift build -c release
 sudo .build/release/lokalite install
 ```
 
+## Release
+
+The standard release flow is:
+
+1. Run a local release bump from a clean checkout on `main`:
+
+   ```bash
+   make release BUMP=patch
+   ```
+
+   You can also use `minor` or `major` instead of `patch`.
+
+2. The script creates an annotated tag and pushes it to GitHub.
+3. GitHub Actions builds the release artifacts, publishes the GitHub release, and opens a draft PR to update the Homebrew formula and cask.
+4. Merge the Homebrew PR after CI passes.
+
+That keeps `main` protected while still making releases a one-command local operation.
+
 ## CLI
 
 ```bash
