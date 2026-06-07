@@ -24,6 +24,12 @@ fi
 
 git fetch origin --tags --quiet
 
+BEHIND=$(git rev-list HEAD..origin/main --count)
+if [ "${BEHIND}" != "0" ]; then
+  echo "Branch is ${BEHIND} commit(s) behind origin/main — pull first." >&2
+  exit 1
+fi
+
 LATEST=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
 LATEST=${LATEST:-v0.0.0}
 
