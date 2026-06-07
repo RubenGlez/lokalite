@@ -93,8 +93,8 @@ struct EnvCommand: ParsableCommand {
                     }
                 }
                 try vault.deleteEnvironmentIncludingContents(name: name, projectId: ctx.project.id)
+                print("Deleted environment '\(name)'.")
             }
-            print("Deleted environment '\(name)'.")
         }
     }
 }

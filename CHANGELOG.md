@@ -1,0 +1,215 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.2.4] - 2026-06-06
+
+### Fixed
+- Homebrew install reliability improvements
+
+## [1.2.3] - 2026-06-06
+
+### Fixed
+- Homebrew formula checksums corrected after CDN propagation delay
+
+## [1.2.2] - 2026-06-06
+
+### Fixed
+- Homebrew formula now tracks the menu bar icon resource correctly
+
+## [1.2.1] - 2026-06-04
+
+### Changed
+- Menu bar icon updated to a rounded-square L lettermark
+
+## [1.2.0] - 2026-06-04
+
+### Added
+- Environment-specific secrets: each environment now stores its own values independently, with no automatic fallback to a default
+- Environments can be deleted through the app UI
+- Activity log: secret operations (get, copy, shell, run) are recorded and surfaced in the manager
+- Repository row in project info panel detects and displays the git remote for the linked directory
+- Popover footer now includes Quit Lokalite shortcut (⌘Q)
+
+### Changed
+- Full UI redesign: new sidebar layout, settings overhaul, environment color indicators standardized across the app
+- Default environment is now a concrete row that can be selected and managed like any other environment
+- Sidebar selection style updated for visual consistency
+
+### Fixed
+- Vault unlock state and settings panel placement
+- Unlock concurrency warning resolved
+- Recent secrets section no longer shows arbitrary secrets when no actual recents exist
+- Secret count per environment now counts only values in that environment, not total project secrets
+- Moving a secret to another project now fails early if the destination already has the secret
+
+## [1.1.2] - 2026-05-26
+
+### Fixed
+- Sidebar list selection highlight no longer bleeds through in certain display modes
+
+## [1.1.1] - 2026-05-26
+
+### Changed
+- Menu bar icon simplified to a thick ring with notches
+
+## [1.1.0] - 2026-05-26
+
+### Added
+- `lokalite status`: shows active project, environment, secret count, vault path, and MCP registration status; accepts `--json` for scripting
+- `lokalite init`: creates a project named after the current directory, sets it active, and prints next steps
+- Color scheme picker in Settings (System / Light / Dark); preference is persisted across sessions
+
+### Changed
+- Tags removed from the CLI and UI; projects and environments are now the primary organization mechanism
+
+### Fixed
+- Three SwiftUI bugs: global hotkey manager memory leak, recent secrets list not re-rendering on copy, and a duplicate sheet conflict in settings
+
+## [1.0.17] - 2026-05-26
+
+### Fixed
+- Release pipeline stability improvement
+
+## [1.0.16] - 2026-05-26
+
+### Fixed
+- Release pipeline: replaced broken artifact upload action with `gh` CLI
+
+## [1.0.15] - 2026-05-26
+
+### Fixed
+- Popover secret list layout polish
+- Project icon no longer fails to refresh after an update
+
+## [1.0.14] - 2026-05-26
+
+### Fixed
+- All app windows and surfaces now close when the vault locks
+
+## [1.0.13] - 2026-05-26
+
+### Changed
+- App selection styling refinement in the manager sidebar
+
+## [1.0.12] - 2026-05-26
+
+### Changed
+- Manager UI overhaul: native toolbar controls, SwiftUI modernisation, project/env switchers, copy action, error alerts, and search focus improvements
+- Manager window stays alive after the manager is closed (app remains in menu bar)
+
+## [1.0.11] - 2026-05-24
+
+### Added
+- Projects and environments: secrets are now scoped to a project and can have per-environment values
+- `lokalite project` and `lokalite env` subcommands for managing projects and environments
+- All existing commands (`get`, `set`, `add`, `delete`, `list`, `copy`, `run`, `export`) gain `--project` and `--env` flags
+- MCP server updated: `get_secret` and `list_secrets` accept optional `project` and `environment` arguments; write tools (`add_secret`, `set_secret`, `delete_secret`) available behind `--read-write` flag
+- `lokalite install`: copies the binary to PATH and registers the MCP server in `~/.claude.json`
+- Context menus for secrets, environments, and projects in the manager UI
+- Inline secret editing in the manager
+- Redesigned settings UI
+- Argon2id used for encrypted exports (replaces previous export encryption)
+- `lokalite import <file>`: parses `.env` files, skips existing secrets by default; `--overwrite` to replace
+- `lokalite shell`: outputs `export KEY='value'` lines for eval in bash/zsh; supports `--keys`, `--project`, `--env`
+- `lokalite export --format env`: writes `KEY="value"` lines to stdout or `--output` file, no passphrase required
+- Recent secrets section in the popover: last 5 copied secrets shown above the full list
+- Global keyboard shortcut to open the popover (default ⌘⇧Space); configurable in Settings
+- Project linking in the manager UI: directory picker and Unlink action in the project edit sheet
+- Onboarding screen shown when the vault is unlocked but has no projects yet
+
+### Changed
+- `lokalite project link` name now defaults to the current directory name; path defaults to cwd
+- `lokalite project link --unlink` removes the link without a separate command
+
+## [1.0.10] - 2026-05-22
+
+### Fixed
+- Manager unlock state and settings panel placement corrected
+- Unlock concurrency warning resolved
+
+## [1.0.9] - 2026-05-22
+
+### Fixed
+- Release build for custom menu bar icon
+
+## [1.0.8] - 2026-05-22
+
+### Fixed
+- Menu bar icon visibility on light backgrounds
+
+## [1.0.7] - 2026-05-22
+
+### Fixed
+- Menu bar icon type-check error in release builds
+
+## [1.0.6] - 2026-05-22
+
+### Changed
+- Menu bar icon replaced with a custom combination dial design
+
+## [1.0.5] - 2026-05-22
+
+### Changed
+- DMG uses a styled drag-to-Applications layout
+
+## [1.0.4] - 2026-05-22
+
+### Added
+- Launch at Login toggle in Settings
+- Quit button in popover footer
+
+## [1.0.3] - 2026-05-22
+
+### Changed
+- Vault locks automatically when the popover is dismissed; manual lock button removed
+
+## [1.0.2] - 2026-05-22
+
+### Fixed
+- App bundle ad-hoc signed to resolve Gatekeeper "damaged app" error on first launch
+
+## [1.0.1] - 2026-05-22
+
+### Added
+- App icon added to the release bundle
+
+## [1.0.0] - 2026-05-22
+
+### Added
+- CLI (`lokalite`) with `add`, `get`, `set`, `delete`, `copy`, `list`, `export`, and `run` commands
+- Menu bar app (`LokaliteApp`) with secret list, search, and copy-to-clipboard
+- AES-256-GCM encryption via CryptoKit; vault key stored in Apple Keychain
+- Touch ID authentication with configurable session timeout and clipboard auto-clear
+- MCP stdio server (`lokalite mcp`) for Claude Code integration: exposes `get_secret` and `list_secrets`
+- Distributed via Homebrew
+
+[1.2.4]: https://github.com/RubenGlez/lokalite/releases/tag/v1.2.4
+[1.2.3]: https://github.com/RubenGlez/lokalite/releases/tag/v1.2.3
+[1.2.2]: https://github.com/RubenGlez/lokalite/releases/tag/v1.2.2
+[1.2.1]: https://github.com/RubenGlez/lokalite/releases/tag/v1.2.1
+[1.2.0]: https://github.com/RubenGlez/lokalite/releases/tag/v1.2.0
+[1.1.2]: https://github.com/RubenGlez/lokalite/releases/tag/v1.1.2
+[1.1.1]: https://github.com/RubenGlez/lokalite/releases/tag/v1.1.1
+[1.1.0]: https://github.com/RubenGlez/lokalite/releases/tag/v1.1.0
+[1.0.17]: https://github.com/RubenGlez/lokalite/releases/tag/v1.0.17
+[1.0.16]: https://github.com/RubenGlez/lokalite/releases/tag/v1.0.16
+[1.0.15]: https://github.com/RubenGlez/lokalite/releases/tag/v1.0.15
+[1.0.14]: https://github.com/RubenGlez/lokalite/releases/tag/v1.0.14
+[1.0.13]: https://github.com/RubenGlez/lokalite/releases/tag/v1.0.13
+[1.0.12]: https://github.com/RubenGlez/lokalite/releases/tag/v1.0.12
+[1.0.11]: https://github.com/RubenGlez/lokalite/releases/tag/v1.0.11
+[1.0.10]: https://github.com/RubenGlez/lokalite/releases/tag/v1.0.10
+[1.0.9]: https://github.com/RubenGlez/lokalite/releases/tag/v1.0.9
+[1.0.8]: https://github.com/RubenGlez/lokalite/releases/tag/v1.0.8
+[1.0.7]: https://github.com/RubenGlez/lokalite/releases/tag/v1.0.7
+[1.0.6]: https://github.com/RubenGlez/lokalite/releases/tag/v1.0.6
+[1.0.5]: https://github.com/RubenGlez/lokalite/releases/tag/v1.0.5
+[1.0.4]: https://github.com/RubenGlez/lokalite/releases/tag/v1.0.4
+[1.0.3]: https://github.com/RubenGlez/lokalite/releases/tag/v1.0.3
+[1.0.2]: https://github.com/RubenGlez/lokalite/releases/tag/v1.0.2
+[1.0.1]: https://github.com/RubenGlez/lokalite/releases/tag/v1.0.1
+[1.0.0]: https://github.com/RubenGlez/lokalite/releases/tag/v1.0.0
