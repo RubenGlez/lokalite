@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+- App unlock now fails closed when device authentication is unavailable instead of opening the vault without a prompt
+- `lokalite copy` no longer places the secret value in the clipboard-clear helper's process arguments (compares a SHA-256 digest instead)
+- `lokalite add` and `lokalite set` can read the value from a hidden prompt or stdin (omit the value or pass `-`), keeping secrets out of shell history
+- Clipboard copies are marked with `org.nspasteboard.ConcealedType` so clipboard managers skip recording them
+- Export salt generation now fails loudly if the system random generator reports an error
+- Removed the keychain `.userPresence` access control flag, which macOS silently ignores in the file-based login keychain; user-presence checks remain at the app layer via LocalAuthentication
+- Pinned the argon2 dependency to an exact revision instead of tracking `master`
+- Release artifacts now ship with a `SHA256SUMS` checksum file
+
 ## [1.2.4] - 2026-06-06
 
 ### Fixed

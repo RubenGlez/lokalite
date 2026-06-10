@@ -1,4 +1,6 @@
+import AppKit
 import ArgumentParser
+import CryptoKit
 import Foundation
 import LokaliteCore
 
@@ -22,29 +24,28 @@ struct CopyCommand: ParsableCommand {
             let ctx = try resolveContext(projectFlag: project, envFlag: env, using: workspace)
             return try workspace.get(name: name, context: ctx, accessSource: .cli)
         }
-        try copyToPasteboard(secret.value)
+        copyToPasteboard(secret.value)
         try clearClipboardLater(value: secret.value)
         print("Copied \(name) to clipboard.")
     }
 
-    private func copyToPasteboard(_ value: String) throws {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/pbcopy")
-        let pipe = Pipe()
-        process.standardInput = pipe
-        try process.run()
-        pipe.fileHandleForWriting.write(Data(value.utf8))
-        pipe.fileHandleForWriting.closeFile()
-        process.waitUntilExit()
+    private func copyToPasteboard(_ value: String) {
+        // org.nspasteboard.ConcealedType tells clipboard managers not to record the value.
+        let concealed = NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType")
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.declareTypes([.string, concealed], owner: nil)
+        pasteboard.setString(value, forType: .string)
+        pasteboard.setString("", forType: concealed)
     }
 
     private func clearClipboardLater(value: String) throws {
-        let escaped = value
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-            .replacingOccurrences(of: "$", with: "\\$")
-            .replacingOccurrences(of: "`", with: "\\`")
-        let script = "sleep 30 && [ \"$(pbpaste)\" = \"\(escaped)\" ] && pbcopy < /dev/null"
+        // Only a SHA-256 digest goes into the script, so the secret never
+        // appears in the detached process's argument list.
+        let digest = SHA256.hash(data: Data(value.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
+        let script = "sleep 30 && [ \"$(pbpaste | shasum -a 256 | cut -d' ' -f1)\" = \"\(digest)\" ] && pbcopy < /dev/null"
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
         process.arguments = ["-c", script]

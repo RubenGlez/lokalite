@@ -1,5 +1,5 @@
 {
-  "originHash" : "ec880aa49dcf99992749adef2b3a6e23af904b1cd79c42ca811c919be6513699",
+  "originHash" : "e6afb7edc3c1e6fcba23176278e34510709dcf482a5fb50addeb94c935dab52f",
   "pins" : [
     {
       "identity" : "grdb.swift",
@@ -15,7 +15,6 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/P-H-C/phc-winner-argon2.git",
       "state" : {
-        "branch" : "master",
         "revision" : "f57e61e19229e23c4445b85494dbf7c07de721cb"
       }
     },

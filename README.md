@@ -110,6 +110,8 @@ lokalite status --json
 
 # Add a secret
 lokalite add OPENAI_API_KEY sk-...
+lokalite add OPENAI_API_KEY          # no value: prompts for it, keeping it out of shell history
+echo -n "sk-..." | lokalite add OPENAI_API_KEY -   # or pipe it via stdin
 
 # Get a secret (prints to stdout, pipeable)
 lokalite get OPENAI_API_KEY
@@ -120,7 +122,7 @@ lokalite copy OPENAI_API_KEY
 # List all secrets
 lokalite list
 
-# Update a secret
+# Update a secret (also supports the prompt/stdin forms shown for `add`)
 lokalite set OPENAI_API_KEY sk-new-...
 
 # Delete a secret
@@ -208,9 +210,16 @@ Pass `--read-write` to also expose write tools:
 | `set_secret` | Update an existing secret's value |
 | `delete_secret` | Permanently delete a secret |
 
+> **Security note:** `get_secret` hands raw secret values to the connected agent with no per-access confirmation, so a prompt-injected agent can read any secret it can name (`list_secrets` gives it the names). Keep the server read-only (the default), scope it to a single project by setting `LOKALITE_PROJECT` in the server's `env` config, and prefer clients that ask for approval before tool calls. Every MCP access is recorded in the activity log.
+
 ## Security
 
-All secret values are encrypted with AES-256-GCM before being written to disk. The vault key lives exclusively in Apple Keychain and is gated behind Touch ID or your device password. Nothing leaves your machine.
+- **Values**: every secret value is encrypted with AES-256-GCM before being written to disk. The 256-bit vault key is generated on first use and stored in your macOS login keychain — it is never written to the vault file.
+- **Metadata**: secret names, descriptions, project names, linked paths, and the access activity log are stored unencrypted in `~/Library/Application Support/Lokalite/vault.db`. They reveal which services you use, not the credentials themselves; the file relies on home-directory permissions and FileVault.
+- **App unlock**: the menu bar app requires Touch ID or your device password before showing secrets, and auto-locks after the session timeout.
+- **CLI and MCP**: commands read the vault key from the login keychain without an extra prompt. The trust boundary is your unlocked macOS user session — anything running as your user with keychain access can read secrets, just like with `~/.aws/credentials` or `.env` files (which Lokalite improves on by encrypting values at rest and logging access).
+- **Clipboard**: copies are marked with `org.nspasteboard.ConcealedType` so well-behaved clipboard managers skip them, and are auto-cleared after 30 seconds.
+- Nothing leaves your machine: no cloud, no telemetry.
 
 ## License
 

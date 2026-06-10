@@ -5,23 +5,18 @@ enum KeychainStore {
     private static let service = VaultConfiguration.keychainService
     private static let account = "vault-key"
 
+    // The key lives in the file-based login keychain, which does not enforce
+    // SecAccessControl flags like .userPresence (those require the
+    // data-protection keychain and a signed binary with an application
+    // identifier). The protection boundary is the unlocked user session;
+    // user-presence checks happen at the app layer via LocalAuthentication.
     static func save(_ data: Data) throws {
-        var error: Unmanaged<CFError>?
-        guard let accessControl = SecAccessControlCreateWithFlags(
-            kCFAllocatorDefault,
-            kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-            .userPresence,
-            &error
-        ) else {
-            throw VaultError.keychainWriteFailed(errSecParam)
-        }
-
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
             kSecValueData as String: data,
-            kSecAttrAccessControl as String: accessControl,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
         ]
         let deleteQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,

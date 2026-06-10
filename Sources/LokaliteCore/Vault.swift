@@ -408,7 +408,7 @@ public final class Vault {
 
     private func encryptExport(_ data: Data, passphrase: String) throws -> Data {
         let kdfParameters = ExportKDFParameters.current
-        let salt = VaultCrypto.generateSalt()
+        let salt = try VaultCrypto.generateSalt()
         let derivedKey = try VaultCrypto.deriveExportKey(
             from: passphrase,
             salt: salt,

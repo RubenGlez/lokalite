@@ -63,3 +63,34 @@ func resolveContext(projectFlag: String?, envFlag: String?) throws -> SecretWork
         try resolveContext(projectFlag: projectFlag, envFlag: envFlag, using: workspace)
     }
 }
+
+/// Resolves a secret value from an optional argument. When the argument is
+/// omitted or `-`, reads the value from stdin instead so it never appears in
+/// shell history or the process argument list.
+func resolveSecretValue(_ argument: String?) throws -> String {
+    if let argument, argument != "-" { return argument }
+
+    let value: String
+    if isatty(STDIN_FILENO) == 1 {
+        print("Enter secret value: ", terminator: "")
+        var term = termios()
+        tcgetattr(STDIN_FILENO, &term)
+        var noEcho = term
+        noEcho.c_lflag &= ~tcflag_t(ECHO)
+        tcsetattr(STDIN_FILENO, TCSANOW, &noEcho)
+        value = readLine() ?? ""
+        tcsetattr(STDIN_FILENO, TCSANOW, &term)
+        print()
+    } else {
+        let data = FileHandle.standardInput.readDataToEndOfFile()
+        var piped = String(data: data, encoding: .utf8) ?? ""
+        if piped.hasSuffix("\n") { piped.removeLast() }
+        value = piped
+    }
+
+    guard !value.isEmpty else {
+        print("Error: secret value cannot be empty.")
+        throw ExitCode.failure
+    }
+    return value
+}

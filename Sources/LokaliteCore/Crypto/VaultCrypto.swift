@@ -81,9 +81,12 @@ enum VaultCrypto {
         return SymmetricKey(data: keyBytes)
     }
 
-    static func generateSalt() -> Data {
+    static func generateSalt() throws -> Data {
         var bytes = [UInt8](repeating: 0, count: 32)
-        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        guard status == errSecSuccess else {
+            throw VaultError.keyDerivationFailed("Failed to generate random salt (status \(status)).")
+        }
         return Data(bytes)
     }
 }

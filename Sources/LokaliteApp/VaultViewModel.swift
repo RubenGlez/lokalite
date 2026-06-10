@@ -90,7 +90,8 @@ final class VaultViewModel {
             let context = LAContext()
             var authError: NSError?
             guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &authError) else {
-                self?.performUnlock()
+                self?.errorMessage = authError?.localizedDescription
+                    ?? "Device authentication is unavailable. Set a login password to unlock the vault."
                 return
             }
             do {

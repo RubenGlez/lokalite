@@ -99,6 +99,16 @@ jobs:
           zip -r "Lokalite-${VERSION}.zip" LokaliteApp.app
           zip -j "lokalite-cli-${VERSION}.zip" .build/release/lokalite
 
+      - name: Generate checksums
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          shasum -a 256 \
+            "Lokalite-${VERSION}.dmg" \
+            "lokalite-cli-${VERSION}.pkg" \
+            "Lokalite-${VERSION}.zip" \
+            "lokalite-cli-${VERSION}.zip" > SHA256SUMS
+          cat SHA256SUMS
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -109,7 +119,8 @@ jobs:
             "Lokalite-${VERSION}.dmg" \
             "lokalite-cli-${VERSION}.pkg" \
             "Lokalite-${VERSION}.zip" \
-            "lokalite-cli-${VERSION}.zip"
+            "lokalite-cli-${VERSION}.zip" \
+            SHA256SUMS
 
       - name: Update Homebrew formula and cask
         env:
