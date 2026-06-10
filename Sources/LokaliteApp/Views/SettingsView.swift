@@ -39,7 +39,6 @@ struct SettingsView: View {
     @FocusState private var projectSearchFocused: Bool
     @FocusState private var secretSearchFocused: Bool
 
-    @State private var cliInstalled = false
 
     // Delete confirmations
     @State private var deletingProject: Project?
@@ -311,24 +310,7 @@ struct SettingsView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(Theme.text)
-
-            Divider().overlay(Theme.sep)
-                .padding(.horizontal, 20)
-
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(cliInstalled ? Theme.green : Theme.textDim)
-                    .frame(width: 7, height: 7)
-                Text("Lokalite CLI")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Theme.textMuted)
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 15)
-            .onAppear {
-                cliInstalled = isCLIInstalled()
-            }
+            .padding(.bottom, 8)
         }
         .background(Theme.sidebarBackground)
     }
