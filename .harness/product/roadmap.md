@@ -1,5 +1,10 @@
 # Roadmap
 
+## Shipped (v1.4.3 — 2026-06-10)
+
+- [x] **Appearance preference now actually works** — the System / Light / Dark picker shipped in v1.2.4 had no effect (the Theme palette was hardcoded dark and the picker didn't trigger a re-render); the palette is now appearance-adaptive with dedicated light variants and the picker applies instantly
+- [x] **Removed the "Lokalite CLI" status row** from the settings window sidebar footer (the CLI install card in the dashboard remains)
+
 ## Shipped (v1.4.2 — 2026-06-10)
 
 - [x] Release packaging fix: app is now built with xcodebuild and ships its SPM resource bundles in Contents/Resources (the v1.4.0/v1.4.1 app artifacts crashed at launch; both releases carry warning notes)
