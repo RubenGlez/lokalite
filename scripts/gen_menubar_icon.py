@@ -14,16 +14,17 @@ OUT = Path(__file__).parent.parent / "Sources" / "LokaliteApp" / "Resources" / "
 
 BALL_CENTER = (258, 268)
 BALL_RADIUS = 208
-CLAW_ARC_CENTER = (470, 240)
-# (arc radius, max thickness, start angle, end angle) per claw,
-# angles in degrees around CLAW_ARC_CENTER, y-down
+CLAW_ARC_CENTER = (500, 170)
+# (arc radius, max thickness, tip angle, base angle) per claw,
+# angles in degrees around CLAW_ARC_CENTER, y-down. Claws taper from a
+# wide base at the top rim to a point at the tip (bottom-center).
 CLAWS = [
-    (165, 34, 162, 252),
-    (222, 42, 152, 260),
-    (279, 50, 143, 267),
-    (336, 58, 134, 274),
+    (145, 40, 152, 246),
+    (205, 48, 145, 256),
+    (265, 57, 140, 266),
+    (322, 64, 146, 276),
 ]
-TAPER_POWER = 0.7  # sine-profile exponent; lower = broader mid-claw
+TAPER_POWER = 0.5  # thickness ~ progress^power from tip to base
 
 Y, X = np.mgrid[:W, :W].astype(np.float64)
 
@@ -36,7 +37,7 @@ def build():
     claws = np.zeros((W, W), dtype=bool)
     for radius, tmax, a1, a2 in CLAWS:
         f = np.clip((ang - a1) / (a2 - a1), 0, 1)
-        t = tmax * np.sin(f * math.pi) ** TAPER_POWER
+        t = tmax * f**TAPER_POWER
         claws |= (np.abs(d - radius) <= t / 2) & (ang >= a1) & (ang <= a2)
     return ball & ~claws
 

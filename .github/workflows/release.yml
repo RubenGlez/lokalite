@@ -27,6 +27,9 @@ jobs:
           mkdir -p LokaliteApp.app/Contents/Resources
           cp .build/release/LokaliteApp LokaliteApp.app/Contents/MacOS/LokaliteApp
           cp assets/AppIcon.icns LokaliteApp.app/Contents/Resources/AppIcon.icns
+          # SPM resource bundles (Bundle.module) must ship inside the app,
+          # otherwise resource lookups crash or come back empty at runtime
+          cp -R .build/release/*.bundle LokaliteApp.app/Contents/Resources/
 
           cat > LokaliteApp.app/Contents/Info.plist << EOF
           <?xml version="1.0" encoding="UTF-8"?>
