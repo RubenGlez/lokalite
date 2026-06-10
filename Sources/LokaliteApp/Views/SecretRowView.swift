@@ -13,9 +13,9 @@ struct SecretRowView: View {
             HStack(spacing: 8) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.white.opacity(0.16))
+                        .fill(Theme.neutral(0.16))
                     RoundedRectangle(cornerRadius: 6)
-                        .strokeBorder(Color.white.opacity(0.22), lineWidth: 1)
+                        .strokeBorder(Theme.neutral(0.22), lineWidth: 1)
                     Text(secret.category.defaultIcon)
                         .font(.system(size: 13))
                 }

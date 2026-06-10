@@ -186,7 +186,7 @@ struct EnvironmentAppearanceView: View {
                                     if color == hex {
                                         Image(systemName: "checkmark")
                                             .font(.system(size: 10, weight: .bold))
-                                            .foregroundStyle(.black.opacity(0.7))
+                                            .foregroundStyle(Theme.onAccent)
                                     }
                                 }
                                 .frame(width: 22, height: 22)
@@ -357,7 +357,7 @@ struct ColorSwatches: View {
                         if selection == hex {
                             Image(systemName: "checkmark")
                                 .font(.system(size: 8, weight: .bold))
-                                .foregroundStyle(.black.opacity(0.72))
+                                .foregroundStyle(Theme.onAccent)
                         }
                     }
                     .frame(width: 18, height: 18)
@@ -433,10 +433,10 @@ struct SidebarProjectRow: View {
 
     private var rowBackground: some ShapeStyle {
         if isSelected {
-            return Color.white.opacity(0.10)
+            return Theme.neutral(0.10)
         }
         if isHovered {
-            return Color.white.opacity(0.05)
+            return Theme.neutral(0.05)
         }
         return Color.clear
     }
@@ -455,7 +455,7 @@ struct SecretRow: View {
 
     var body: some View {
         HStack(spacing: 9) {
-            IdentityBadge(icon: secret.category.defaultIcon, color: .white, size: 26)
+            IdentityBadge(icon: secret.category.defaultIcon, color: Theme.text, size: 26)
             VStack(alignment: .leading, spacing: 2) {
                 Text(secret.name)
                     .font(.system(size: 12, design: .monospaced).weight(.medium))
@@ -508,10 +508,10 @@ struct SecretRow: View {
 
     private var rowBackground: some ShapeStyle {
         if isSelected {
-            return Color.white.opacity(0.10)
+            return Theme.neutral(0.10)
         }
         if isHovered {
-            return Color.white.opacity(0.05)
+            return Theme.neutral(0.05)
         }
         return Color.clear
     }

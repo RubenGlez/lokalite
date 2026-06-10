@@ -187,7 +187,7 @@ struct VaultPopover: View {
     }
 
     private var environmentColor: Color {
-        vault.selectedEnvironment.map { Theme.color(hex: $0.color) } ?? .white.opacity(0.7)
+        vault.selectedEnvironment.map { Theme.color(hex: $0.color) } ?? Theme.text.opacity(0.7)
     }
 
     private var searchBar: some View {
@@ -210,7 +210,7 @@ struct VaultPopover: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color.white.opacity(0.035), in: .rect(cornerRadius: 7))
+        .background(Theme.neutral(0.035), in: .rect(cornerRadius: 7))
         .padding(12)
     }
 

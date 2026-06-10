@@ -46,9 +46,9 @@ final class VaultViewModel {
         set { preferences.clipboardClearSeconds = newValue }
     }
 
-    var appearanceMode: String {
-        get { preferences.appearanceMode }
-        set { preferences.appearanceMode = newValue }
+    // Stored (not computed) so @Observable tracks it and the UI re-renders on change.
+    var appearanceMode: String = AppPreferences().appearanceMode {
+        didSet { preferences.appearanceMode = appearanceMode }
     }
 
     var hotkeyShortcutID: String {

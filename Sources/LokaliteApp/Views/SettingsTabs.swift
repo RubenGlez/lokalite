@@ -55,7 +55,7 @@ struct EnvironmentsTab: View {
                             .font(.system(size: 13))
                             .padding(.horizontal, 10)
                             .padding(.vertical, 8)
-                            .background(Color.white.opacity(0.045), in: .rect(cornerRadius: 7))
+                            .background(Theme.neutral(0.045), in: .rect(cornerRadius: 7))
                             .overlay(RoundedRectangle(cornerRadius: 7).stroke(Theme.sep, lineWidth: 1))
 
                         ColorSwatches(selection: $newColor)

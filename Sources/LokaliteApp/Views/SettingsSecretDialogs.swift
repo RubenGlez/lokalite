@@ -90,7 +90,7 @@ struct SecretDetailView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 12) {
-                IdentityBadge(icon: secret.category.defaultIcon, color: .white, size: 38)
+                IdentityBadge(icon: secret.category.defaultIcon, color: Theme.text, size: 38)
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 8) {
                         Text(secret.name)

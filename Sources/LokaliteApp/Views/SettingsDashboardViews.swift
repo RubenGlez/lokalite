@@ -32,7 +32,7 @@ struct DashboardSearchField: View {
         }
         .padding(.horizontal, 9)
         .frame(height: Theme.controlHeight)
-        .background(Color.white.opacity(0.045), in: .rect(cornerRadius: 7))
+        .background(Theme.neutral(0.045), in: .rect(cornerRadius: 7))
         .overlay(RoundedRectangle(cornerRadius: 7).stroke(Theme.sep, lineWidth: 1))
     }
 }
@@ -88,8 +88,8 @@ struct DashboardProjectRow: View {
     }
 
     private var rowBackground: Color {
-        if isSelected { return Color.white.opacity(0.10) }
-        if isHovered { return Color.white.opacity(0.05) }
+        if isSelected { return Theme.neutral(0.10) }
+        if isHovered { return Theme.neutral(0.05) }
         return .clear
     }
 }
@@ -347,7 +347,7 @@ struct DashboardSecretRow: View {
             }
             .padding(.horizontal, 16)
             .frame(height: Theme.rowHeight)
-            .background(isSelected ? Color.white.opacity(0.055) : .clear)
+            .background(isSelected ? Theme.neutral(0.055) : .clear)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
@@ -448,7 +448,7 @@ struct CopyableCommandLine: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.white.opacity(copied ? 0.070 : 0.045), in: .rect(cornerRadius: 6))
+            .background(Theme.neutral(copied ? 0.070 : 0.045), in: .rect(cornerRadius: 6))
             .overlay(RoundedRectangle(cornerRadius: 6).stroke(copied ? Theme.green.opacity(0.35) : Theme.sep, lineWidth: 1))
         }
         .buttonStyle(.plain)
@@ -618,7 +618,7 @@ struct InspectorCard<Content: View>: View {
                         .foregroundStyle(Theme.textMuted)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 4)
-                        .background(Color.white.opacity(0.06), in: .rect(cornerRadius: 5))
+                        .background(Theme.neutral(0.06), in: .rect(cornerRadius: 5))
                 }
             }
             content
