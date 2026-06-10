@@ -16,20 +16,29 @@ jobs:
       - uses: actions/checkout@v4.2.2
 
       - name: Build release binaries
-        run: swift build -c release
+        run: |
+          # CLI: plain SPM build
+          swift build -c release --product lokalite
+          # App: build with xcodebuild — its Bundle.module accessor resolves
+          # resource bundles from Contents/Resources, unlike `swift build`,
+          # whose accessor only checks the bundle root and the build path
+          xcodebuild build -scheme LokaliteApp -configuration Release \
+            -derivedDataPath .dd -destination "platform=macOS" \
+            CODE_SIGNING_ALLOWED=NO
 
       - name: Create app bundle
         run: |
           VERSION="${GITHUB_REF_NAME}"
           SHORT_VERSION="${VERSION#v}"
+          APP_PRODUCTS=".dd/Build/Products/Release"
 
           mkdir -p LokaliteApp.app/Contents/MacOS
           mkdir -p LokaliteApp.app/Contents/Resources
-          cp .build/release/LokaliteApp LokaliteApp.app/Contents/MacOS/LokaliteApp
+          cp "${APP_PRODUCTS}/LokaliteApp" LokaliteApp.app/Contents/MacOS/LokaliteApp
           cp assets/AppIcon.icns LokaliteApp.app/Contents/Resources/AppIcon.icns
           # SPM resource bundles (Bundle.module) must ship inside the app,
-          # otherwise resource lookups crash or come back empty at runtime
-          cp -R .build/release/*.bundle LokaliteApp.app/Contents/Resources/
+          # otherwise resource lookups crash at runtime
+          cp -R "${APP_PRODUCTS}"/*.bundle LokaliteApp.app/Contents/Resources/
 
           cat > LokaliteApp.app/Contents/Info.plist << EOF
           <?xml version="1.0" encoding="UTF-8"?>

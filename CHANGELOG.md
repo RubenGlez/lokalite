@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] - 2026-06-10
+
+### Fixed
+- The packaged menu bar app crashed at launch because `swift build`'s resource accessor cannot find bundles in `Contents/Resources`; the app is now built with `xcodebuild`, whose accessor resolves them correctly (affected the v1.4.0 and v1.4.1 app artifacts; the CLI was unaffected)
+
 ## [1.4.1] - 2026-06-10
 
 ### Fixed
