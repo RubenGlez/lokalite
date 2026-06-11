@@ -1,6 +1,6 @@
 # Popover Refactor — Quick-Actions Launcher
 
-Status: planned. Refines [ADR 0009](../adr/0009-menu-bar-ux.md) (search-first popover, click to copy) — the skeleton stays, the tuning changes.
+Status: done. Refines [ADR 0009](../adr/0009-menu-bar-ux.md) (search-first popover, click to copy) — the skeleton stays, the tuning changes.
 
 ## Problem
 
@@ -43,6 +43,19 @@ Everything in the popover must justify itself against this list; browsing/managi
 - **Value peek**: eye icon on hover / Space to reveal inline; auto-hide when the popover closes.
 - **Clipboard-clear feedback**: change the "Copied" flash to "Copied · clears in 30s" using the configured auto-clear timeout.
 
-## Open decision
+## Resolution
 
-The popover's environment switcher only changes the GUI viewing scope (`VaultViewModel.selectEnvironment` does not persist `activeEnvironment`), while the CLI keeps its own persistent active-environment marker. A user switching to "staging" in the popover may believe `lokalite run` now uses staging. Either the switcher should set the real active environment (and the dot becomes state), or it should be visually framed as a filter. Decide before Batch 2; if it becomes state-setting, record it as an ADR.
+Decided 2026-06-11: the environment switcher stays a GUI-only viewing filter. `selectEnvironment` does not persist `activeEnvironment`; the switcher is framed as a filter (small filter glyph plus a "viewing filter" tooltip) rather than redesigned. No ADR needed.
+
+## Implementation note
+
+All three batches shipped together:
+
+- Empty-recents fallback: full secret list under "All", recents (max 5) on top under "Recent"; list is scrollable.
+- Row hierarchy inverted: secret name primary (monospaced 13), category/description secondary; "Project / Environment" line dropped.
+- Footer: Lock (⌘L) and Copy .env added; Quit removed (now in the menu bar icon's right-click menu via an `NSEvent` monitor in `AppDelegate`; ⌘Q still works inside the popover through a hidden button).
+- Keyboard flow: ↓/↑ move selection from the search field, ⏎ copies and closes the popover, ⌥⏎ copies `KEY="value"`, ⌃⏎ copies `export KEY="value"`.
+- Copy formats: row context menu (Copy Value / as KEY=value / as export KEY=value) and ⌥/⌃-click variants; `VaultViewModel.copyToClipboard(_:format:)`.
+- Copy .env: joins all secrets in the current scope using the shared `EnvFileFormat.line` helper in LokaliteCore (also used by the CLI `export --format env`); auto-clear applies.
+- Value peek: eye icon on hover, Space toggles for the selected row when the search field is empty; reveal resets when the popover closes.
+- Copied flash now reads "Copied · clears in Ns" from the configured auto-clear timeout.

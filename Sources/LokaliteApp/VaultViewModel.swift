@@ -475,7 +475,17 @@ final class VaultViewModel {
 
     // MARK: - Clipboard
 
+    enum CopyFormat {
+        case value
+        case dotenvLine
+        case exportLine
+    }
+
     func copyToClipboard(_ secret: Secret) {
+        copyToClipboard(secret, format: .value)
+    }
+
+    func copyToClipboard(_ secret: Secret, format: CopyFormat) {
         renewSession()
         recordRecent(secret)
         if let selectedProject {
@@ -483,7 +493,23 @@ final class VaultViewModel {
             workspace.logAccess(secretName: secret.name, context: context, source: .app)
         }
         reloadActivity()
-        clipboard.copy(secret.value, clearAfter: clipboardClearSeconds)
+        let text: String
+        switch format {
+        case .value:
+            text = secret.value
+        case .dotenvLine:
+            text = EnvFileFormat.line(name: secret.name, value: secret.value)
+        case .exportLine:
+            text = "export " + EnvFileFormat.line(name: secret.name, value: secret.value)
+        }
+        clipboard.copy(text, clearAfter: clipboardClearSeconds)
+    }
+
+    func copyEnvFile() {
+        renewSession()
+        guard !secrets.isEmpty else { return }
+        let lines = secrets.map { EnvFileFormat.line(name: $0.name, value: $0.value) }
+        clipboard.copy(lines.joined(separator: "\n") + "\n", clearAfter: clipboardClearSeconds)
     }
 
     private func reloadActivity() {

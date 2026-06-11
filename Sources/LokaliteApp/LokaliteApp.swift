@@ -60,11 +60,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let hotkeyManager = GlobalHotkeyManager()
     private var windowEventMonitor: Any?
     private var windowKeyObserver: NSObjectProtocol?
+    private var statusItemMenuMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         setupHotkey()
         setupWindowBehavior()
+        setupStatusItemMenu()
 
         NotificationCenter.default.addObserver(
             forName: .hotkeyShortcutChanged, object: nil, queue: .main
@@ -109,6 +111,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     self?.windowKeyObserver = nil
                 }
             }
+        }
+    }
+
+    // MenuBarExtra has no public right-click API, so intercept right-clicks on the
+    // status bar item's window and show a Quit menu there.
+    private func setupStatusItemMenu() {
+        statusItemMenuMonitor = NSEvent.addLocalMonitorForEvents(matching: .rightMouseDown) { event in
+            guard let window = event.window,
+                  NSStringFromClass(type(of: window)).contains("NSStatusBarWindow"),
+                  let contentView = window.contentView else { return event }
+
+            let menu = NSMenu()
+            menu.addItem(NSMenuItem(title: "Quit Lokalite",
+                                    action: #selector(NSApplication.terminate(_:)),
+                                    keyEquivalent: "q"))
+            NSMenu.popUpContextMenu(menu, with: event, for: contentView)
+            return nil
         }
     }
 

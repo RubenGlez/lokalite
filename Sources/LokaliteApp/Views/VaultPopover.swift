@@ -7,6 +7,9 @@ struct VaultPopover: View {
     @Environment(\.openWindow) private var openWindow
     @State private var searchText = ""
     @State private var showingAddSecret = false
+    @State private var selectedIndex = 0
+    @State private var revealedSecretID: Secret.ID?
+    @State private var envCopied = false
     @FocusState private var searchFocused: Bool
 
     private var filtered: [Secret] {
@@ -25,6 +28,27 @@ struct VaultPopover: View {
         }
     }
 
+    private var sections: [(title: String, secrets: [Secret])] {
+        guard searchText.isEmpty else { return [("Results", filtered)] }
+        let recents = recentSecrets
+        guard !recents.isEmpty else { return [("All", vault.secrets)] }
+        let recentNames = Set(recents.map(\.name))
+        let others = vault.secrets.filter { !recentNames.contains($0.name) }
+        var result = [("Recent", recents)]
+        if !others.isEmpty { result.append(("All", others)) }
+        return result
+    }
+
+    private var visibleSecrets: [Secret] {
+        sections.flatMap(\.secrets)
+    }
+
+    private var selectedSecret: Secret? {
+        let list = visibleSecrets
+        guard !list.isEmpty else { return nil }
+        return list[min(max(selectedIndex, 0), list.count - 1)]
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             if vault.isLocked {
@@ -37,13 +61,18 @@ struct VaultPopover: View {
         .preferredColorScheme(vault.colorScheme)
         .animation(.easeInOut(duration: 0.2), value: vault.isLocked)
         .onAppear {
+            revealedSecretID = nil
+            selectedIndex = 0
             vault.unlock()
             if !vault.isLocked { Task { @MainActor in searchFocused = true } }
         }
         .onChange(of: vault.isLocked) { _, locked in
             if !locked { Task { @MainActor in searchFocused = true } }
         }
-        .onDisappear { showingAddSecret = false }
+        .onDisappear {
+            showingAddSecret = false
+            revealedSecretID = nil
+        }
         .alert("Error", isPresented: Binding(
             get: { vault.errorMessage != nil },
             set: { if !$0 { vault.errorMessage = nil } }
@@ -61,7 +90,7 @@ struct VaultPopover: View {
     private var lockedStateView: some View {
         VStack(spacing: 16) {
             Spacer()
-            
+
             ZStack {
                 Circle()
                     .fill(Theme.panelBackground)
@@ -86,7 +115,7 @@ struct VaultPopover: View {
             .buttonStyle(.borderedProminent)
             .tint(Theme.brand)
             .controlSize(.small)
-            
+
             Spacer()
         }
     }
@@ -146,7 +175,7 @@ struct VaultPopover: View {
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(.tertiary)
 
-            // Environment switcher
+            // Environment switcher (viewing filter only — does not change the active environment)
             Menu {
                 ForEach(vault.environments, id: \.id) { env in
                     Button { vault.selectEnvironment(env) } label: {
@@ -155,6 +184,9 @@ struct VaultPopover: View {
                 }
             } label: {
                 HStack(spacing: 4) {
+                    Image(systemName: "line.3.horizontal.decrease")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.tertiary)
                     Theme.envCircle(environmentColor)
                     Text(vault.selectedEnvironment?.name ?? "No environment")
                         .font(.system(size: 12, weight: .medium))
@@ -166,6 +198,7 @@ struct VaultPopover: View {
             .menuIndicator(.hidden)
             .fixedSize()
             .disabled(vault.selectedProject == nil || vault.environments.isEmpty)
+            .help("Viewing filter — does not change the active environment")
 
             Spacer()
 
@@ -198,6 +231,32 @@ struct VaultPopover: View {
                 .textFieldStyle(.plain)
                 .font(.body)
                 .focused($searchFocused)
+                .onKeyPress(.downArrow) {
+                    moveSelection(1)
+                    return .handled
+                }
+                .onKeyPress(.upArrow) {
+                    moveSelection(-1)
+                    return .handled
+                }
+                .onKeyPress(keys: [.return], phases: .down) { press in
+                    guard let secret = selectedSecret else { return .ignored }
+                    let format: VaultViewModel.CopyFormat = if press.modifiers.contains(.option) {
+                        .dotenvLine
+                    } else if press.modifiers.contains(.control) {
+                        .exportLine
+                    } else {
+                        .value
+                    }
+                    vault.copyToClipboard(secret, format: format)
+                    closePopover()
+                    return .handled
+                }
+                .onKeyPress(.space) {
+                    guard searchText.isEmpty, let secret = selectedSecret else { return .ignored }
+                    toggleReveal(secret)
+                    return .handled
+                }
             if !searchText.isEmpty {
                 Button {
                     searchText = ""
@@ -212,6 +271,7 @@ struct VaultPopover: View {
         .padding(.vertical, 10)
         .background(Theme.neutral(0.035), in: .rect(cornerRadius: 7))
         .padding(12)
+        .onChange(of: searchText) { _, _ in selectedIndex = 0 }
     }
 
     @ViewBuilder
@@ -221,32 +281,47 @@ struct VaultPopover: View {
         } else if filtered.isEmpty {
             noResultsView
         } else {
-            recentsList
+            secretList
         }
     }
 
-    private var recentsList: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(searchText.isEmpty ? "Recent" : "Results")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(Theme.textMuted)
-                .textCase(.uppercase)
-                .padding(.horizontal, 18)
-                .padding(.top, 8)
+    private var secretList: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    let secs = sections
+                    ForEach(secs.indices, id: \.self) { sectionIndex in
+                        let section = secs[sectionIndex]
+                        let offset = secs[..<sectionIndex].reduce(0) { $0 + $1.secrets.count }
 
-            VStack(spacing: 0) {
-                ForEach(searchText.isEmpty ? recentSecrets : filtered) { secret in
-                    PopoverRecentSecretRow(
-                        project: vault.selectedProject?.name ?? "Lokalite",
-                        environment: vault.selectedEnvironment?.name ?? "No environment",
-                        secret: secret
-                    ) {
-                        vault.copyToClipboard(secret)
+                        Text(section.title)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Theme.textMuted)
+                            .textCase(.uppercase)
+                            .padding(.horizontal, 18)
+                            .padding(.top, 8)
+
+                        VStack(spacing: 0) {
+                            ForEach(Array(section.secrets.enumerated()), id: \.element.id) { i, secret in
+                                PopoverSecretRow(
+                                    secret: secret,
+                                    isSelected: offset + i == selectedIndex,
+                                    isRevealed: revealedSecretID == secret.id,
+                                    clearSeconds: Int(vault.clipboardClearSeconds),
+                                    onCopy: { format in vault.copyToClipboard(secret, format: format) },
+                                    onToggleReveal: { toggleReveal(secret) }
+                                )
+                                .id(secret.id)
+                            }
+                        }
+                        .padding(.horizontal, 12)
                     }
                 }
+                .padding(.bottom, 10)
             }
-            .padding(.horizontal, 12)
-            .padding(.bottom, 10)
+            .onChange(of: selectedIndex) { _, _ in
+                if let secret = selectedSecret { proxy.scrollTo(secret.id) }
+            }
         }
         .frame(minHeight: 210, maxHeight: 330, alignment: .top)
     }
@@ -271,7 +346,7 @@ struct VaultPopover: View {
     }
 
     private var footer: some View {
-        HStack {
+        HStack(spacing: 14) {
             Button {
                 openManageWindow()
             } label: {
@@ -286,18 +361,56 @@ struct VaultPopover: View {
             Spacer()
 
             Button {
-                NSApp.terminate(nil)
+                withCopyFeedback($envCopied) { vault.copyEnvFile() }
             } label: {
-                Text("Quit Lokalite")
+                Text(envCopied ? "Copied · clears in \(Int(vault.clipboardClearSeconds))s" : "Copy .env")
+                    .font(.system(size: 13, weight: .medium))
+                    .frame(minHeight: 24)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(envCopied ? Theme.brand : Theme.textMuted)
+            .disabled(vault.secrets.isEmpty)
+            .help("Copy all secrets in this view as a .env file")
+
+            Button {
+                vault.lock()
+            } label: {
+                Text("Lock")
                     .font(.system(size: 13, weight: .medium))
                     .frame(minHeight: 24)
             }
             .buttonStyle(.plain)
             .foregroundStyle(Theme.textMuted)
+            .keyboardShortcut("l", modifiers: .command)
+
+            Button("") {
+                NSApp.terminate(nil)
+            }
             .keyboardShortcut("q", modifiers: .command)
+            .buttonStyle(.plain)
+            .frame(width: 0, height: 0)
+            .opacity(0)
+            .accessibilityHidden(true)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
+        .animation(.easeInOut(duration: 0.15), value: envCopied)
+    }
+
+    private func moveSelection(_ delta: Int) {
+        let count = visibleSecrets.count
+        guard count > 0 else { return }
+        selectedIndex = min(max(selectedIndex + delta, 0), count - 1)
+    }
+
+    private func toggleReveal(_ secret: Secret) {
+        revealedSecretID = revealedSecretID == secret.id ? nil : secret.id
+    }
+
+    private func closePopover() {
+        NSApp.windows
+            .filter { $0.isVisible && !$0.styleMask.contains(.titled) }
+            .forEach { $0.orderOut(nil) }
     }
 
     private func openManageWindow() {
@@ -306,58 +419,97 @@ struct VaultPopover: View {
     }
 }
 
-private struct PopoverRecentSecretRow: View {
-    let project: String
-    let environment: String
+private struct PopoverSecretRow: View {
     let secret: Secret
-    let action: () -> Void
+    let isSelected: Bool
+    let isRevealed: Bool
+    let clearSeconds: Int
+    let onCopy: (VaultViewModel.CopyFormat) -> Void
+    let onToggleReveal: () -> Void
     @State private var copied = false
+    @State private var hovering = false
 
     var body: some View {
-        Button(action: copyWithFeedback) {
-            HStack(spacing: 11) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Theme.brand.opacity(0.15))
-                    Image(systemName: secret.category.systemImage)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Theme.brand)
-                }
-                .frame(width: 28, height: 28)
+        HStack(spacing: 0) {
+            Button(action: copyFromClick) {
+                HStack(spacing: 11) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Theme.brand.opacity(0.15))
+                        Image(systemName: secret.category.systemImage)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Theme.brand)
+                    }
+                    .frame(width: 28, height: 28)
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("\(project) / \(environment)")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Theme.text)
-                        .lineLimit(1)
-                    Text(secret.name)
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.textMuted)
-                        .lineLimit(1)
-                }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(secret.name)
+                            .font(.system(size: 13, design: .monospaced))
+                            .foregroundStyle(Theme.text)
+                            .lineLimit(1)
+                        Text(secondaryText)
+                            .font(.system(size: 11, design: isRevealed ? .monospaced : .default))
+                            .foregroundStyle(Theme.textMuted)
+                            .lineLimit(1)
+                    }
 
-                Spacer()
+                    Spacer()
 
-                if copied {
-                    Label("Copied", systemImage: "checkmark")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Theme.brand)
-                        .transition(.scale.combined(with: .opacity))
+                    if copied {
+                        Label("Copied · clears in \(clearSeconds)s", systemImage: "checkmark")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Theme.brand)
+                            .transition(.scale.combined(with: .opacity))
+                    }
                 }
+                .contentShape(.rect)
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 7)
-            .contentShape(.rect)
+            .buttonStyle(.plain)
+
+            if hovering || isRevealed {
+                Button(action: onToggleReveal) {
+                    Image(systemName: isRevealed ? "eye.slash" : "eye")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Theme.textMuted)
+                        .frame(width: 22, height: 22)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .help(isRevealed ? "Hide value" : "Reveal value")
+            }
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 7)
+        .background(isSelected ? Theme.neutral(0.07) : .clear, in: .rect(cornerRadius: 6))
+        .onHover { hovering = $0 }
         .animation(.easeInOut(duration: 0.15), value: copied)
         .contextMenu {
-            Button("Copy", action: copyWithFeedback)
+            Button("Copy Value") { copy(.value) }
+            Button("Copy as KEY=value") { copy(.dotenvLine) }
+            Button("Copy as export KEY=value") { copy(.exportLine) }
         }
     }
 
-    private func copyWithFeedback() {
-        withCopyFeedback($copied) { action() }
+    private var secondaryText: String {
+        if isRevealed { return secret.value }
+        if let description = secret.description, !description.isEmpty {
+            return "\(secret.category.label) · \(description)"
+        }
+        return secret.category.label
     }
 
+    private func copyFromClick() {
+        let flags = NSApp.currentEvent?.modifierFlags ?? []
+        if flags.contains(.option) {
+            copy(.dotenvLine)
+        } else if flags.contains(.control) {
+            copy(.exportLine)
+        } else {
+            copy(.value)
+        }
+    }
+
+    private func copy(_ format: VaultViewModel.CopyFormat) {
+        withCopyFeedback($copied) { onCopy(format) }
+    }
 }

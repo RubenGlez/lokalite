@@ -100,6 +100,19 @@ final class SecretCategoryTests: XCTestCase {
     }
 }
 
+final class EnvFileFormatTests: XCTestCase {
+    func testFormatsPlainValue() {
+        XCTAssertEqual(EnvFileFormat.line(name: "API_KEY", value: "abc123"), "API_KEY=\"abc123\"")
+    }
+
+    func testEscapesBackslashesAndQuotes() {
+        XCTAssertEqual(
+            EnvFileFormat.line(name: "TRICKY", value: #"a\b"c"#),
+            #"TRICKY="a\\b\"c""#
+        )
+    }
+}
+
 final class ProjectModelTests: XCTestCase {
     func testProjectEqualityIncludesVisibleProperties() {
         let base = Project(id: "project-id", name: "App", icon: "folder")

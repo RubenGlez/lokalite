@@ -36,7 +36,7 @@ struct ExportCommand: ParsableCommand {
             let secrets = try withWorkspace { workspace in
                 try workspace.list(context: ctx)
             }
-            let lines = secrets.map { envLine($0.name, $0.value) }.joined(separator: "\n")
+            let lines = secrets.map { EnvFileFormat.line(name: $0.name, value: $0.value) }.joined(separator: "\n")
             if let outputPath = output {
                 try (lines + "\n").write(toFile: outputPath, atomically: true, encoding: .utf8)
                 print("Exported to \(outputPath).")
@@ -76,13 +76,6 @@ struct ExportCommand: ParsableCommand {
                 print(data.base64EncodedString())
             }
         }
-    }
-
-    private func envLine(_ key: String, _ value: String) -> String {
-        let escaped = value
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-        return "\(key)=\"\(escaped)\""
     }
 
     private func readPassphrase() -> String {

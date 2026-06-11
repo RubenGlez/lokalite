@@ -55,7 +55,7 @@ All core features are implemented and distributed via Homebrew.
 
 These are realistic next priorities given what is already built:
 
-- [ ] **Popover quick-actions refactor** — turn the menu bar popover into a keyboard-first launcher (empty-recents fallback, row hierarchy, Lock in footer, ↓/↑+⏎ copy flow, copy as KEY=value / export / .env, value peek); spec in [popover-refactor.md](popover-refactor.md)
+- [x] **Popover quick-actions refactor** — turn the menu bar popover into a keyboard-first launcher (empty-recents fallback, row hierarchy, Lock in footer, ↓/↑+⏎ copy flow, copy as KEY=value / export / .env, value peek); spec in [popover-refactor.md](popover-refactor.md)
 - [ ] **Secret search in CLI** — `lokalite list --search <term>` to filter by name or description from the terminal; the app already supports real-time search
 - [ ] **Secret categories / tags** — the schema supports tags (stored as JSON array) but no CLI or app UI exposes them yet; adding a `--tag` flag and tag filter would unlock grouping
 - [ ] **Audit log** — local-only, append-only log of access events (read, copy, write) with timestamps; useful for compliance-conscious users
