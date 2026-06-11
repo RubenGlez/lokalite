@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-06-11
+
+### Added
+- Popover quick-actions launcher: the full secret list is always available (last 5 under Recent, the rest under All), with a keyboard-driven copy flow — arrows to select, Return copies the value, modifier variants copy `KEY=value` or `export KEY=value`
+- Copy a ready-to-paste `.env` for the current project and environment, using the same formatting as the CLI export
+- Value peek: reveal a secret in the popover via the hover eye or Space while the search field is empty
+- Lock action in the popover footer (cmd-L)
+
+### Changed
+- Menu bar icon is the armadillo head again, replacing the curled-shell mark
+- Secret rows show the monospaced name as primary text with category and description as secondary
+- Quit moved from the popover footer to the menu bar icon's right-click menu
+- The copied confirmation flash now shows the configured clipboard auto-clear timeout
+
 ## [1.4.3] - 2026-06-10
 
 ### Fixed
