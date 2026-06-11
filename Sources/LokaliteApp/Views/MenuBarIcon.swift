@@ -23,7 +23,7 @@ struct MenuBarIcon: View {
     }
 
     private static let artwork: NSImage = {
-        guard let url = Bundle.module.url(forResource: "MenuBarIcon", withExtension: "png"),
+        guard let url = Bundle.module.url(forResource: "MenuBarIcon", withExtension: "svg"),
               let image = NSImage(contentsOf: url) else {
             return NSImage(size: NSSize(width: 18, height: 18))
         }
