@@ -1,5 +1,10 @@
 # Roadmap
 
+## Shipped (v1.5.0 — 2026-06-11)
+
+- [x] **Popover quick-actions launcher** — full secret list with Recent/All sections, keyboard copy flow (↓/↑+⏎, modifier variants for `KEY=value` / `export KEY=value`), copy `.env` for the current project + environment, value peek, Lock in footer (⌘L), Quit moved to the status item's right-click menu; spec in [popover-refactor.md](popover-refactor.md)
+- [x] **Menu bar icon back to the armadillo head** (replacing the curled-shell mark; tried a vector shell SVG in between, too detailed at 18 pt)
+
 ## Shipped (v1.4.3 — 2026-06-10)
 
 - [x] **Appearance preference now actually works** — the System / Light / Dark picker shipped in v1.2.4 had no effect (the Theme palette was hardcoded dark and the picker didn't trigger a re-render); the palette is now appearance-adaptive with dedicated light variants and the picker applies instantly
@@ -55,7 +60,6 @@ All core features are implemented and distributed via Homebrew.
 
 These are realistic next priorities given what is already built:
 
-- [x] **Popover quick-actions refactor** — turn the menu bar popover into a keyboard-first launcher (empty-recents fallback, row hierarchy, Lock in footer, ↓/↑+⏎ copy flow, copy as KEY=value / export / .env, value peek); spec in [popover-refactor.md](popover-refactor.md)
 - [ ] **Secret search in CLI** — `lokalite list --search <term>` to filter by name or description from the terminal; the app already supports real-time search
 - [ ] **Secret categories / tags** — the schema supports tags (stored as JSON array) but no CLI or app UI exposes them yet; adding a `--tag` flag and tag filter would unlock grouping
 - [ ] **Audit log** — local-only, append-only log of access events (read, copy, write) with timestamps; useful for compliance-conscious users
