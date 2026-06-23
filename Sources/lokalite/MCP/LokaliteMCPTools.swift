@@ -27,8 +27,9 @@ final class LokaliteMCPTools {
             }
             let projectName = args["project"] as? String
             let envName = args["environment"] as? String
+            let path = args["path"] as? String
             do {
-                let ctx = try resolveContext(projectFlag: projectName, envFlag: envName)
+                let ctx = try resolveContext(projectFlag: projectName, envFlag: envName, pathFlag: path)
                 let secret = try workspace.get(name: secretName, context: ctx, accessSource: .mcp)
                 return .success(content(secret.value))
             } catch {
@@ -38,8 +39,9 @@ final class LokaliteMCPTools {
         case "list_secrets":
             let projectName = args["project"] as? String
             let envName = args["environment"] as? String
+            let path = args["path"] as? String
             do {
-                let ctx = try resolveContext(projectFlag: projectName, envFlag: envName)
+                let ctx = try resolveContext(projectFlag: projectName, envFlag: envName, pathFlag: path)
                 let secrets = try workspace.listInfo(context: ctx)
                 if secrets.isEmpty {
                     return .success(content("No secrets found."))
@@ -67,8 +69,9 @@ final class LokaliteMCPTools {
             let description = args["description"] as? String
             let projectName = args["project"] as? String
             let envName = args["environment"] as? String
+            let path = args["path"] as? String
             do {
-                let ctx = try resolveContext(projectFlag: projectName, envFlag: envName)
+                let ctx = try resolveContext(projectFlag: projectName, envFlag: envName, pathFlag: path)
                 _ = try workspace.add(name: secretName, value: value, description: description, context: ctx)
                 return .success(content("Secret '\(secretName)' created."))
             } catch {
@@ -87,8 +90,9 @@ final class LokaliteMCPTools {
             }
             let projectName = args["project"] as? String
             let envName = args["environment"] as? String
+            let path = args["path"] as? String
             do {
-                let ctx = try resolveContext(projectFlag: projectName, envFlag: envName)
+                let ctx = try resolveContext(projectFlag: projectName, envFlag: envName, pathFlag: path)
                 _ = try workspace.set(name: secretName, value: value, context: ctx)
                 return .success(content("Secret '\(secretName)' updated."))
             } catch {
@@ -103,8 +107,9 @@ final class LokaliteMCPTools {
                 return .invalidArguments("Missing required argument: name")
             }
             let projectName = args["project"] as? String
+            let path = args["path"] as? String
             do {
-                let ctx = try resolveContext(projectFlag: projectName, envFlag: nil)
+                let ctx = try resolveContext(projectFlag: projectName, envFlag: nil, pathFlag: path)
                 try workspace.delete(name: secretName, context: ctx)
                 return .success(content("Secret '\(secretName)' deleted."))
             } catch {
@@ -125,8 +130,9 @@ final class LokaliteMCPTools {
                     "type": "object",
                     "properties": [
                         "name": ["type": "string", "description": "Exact secret name, e.g. OPENAI_API_KEY"],
-                        "project": ["type": "string", "description": "Project name. Omit to use the active project."],
-                        "environment": ["type": "string", "description": "Environment name (e.g. production). Omit to use the active environment."]
+                        "project": ["type": "string", "description": "Project name. Omit to auto-resolve the project from the working directory (path)."],
+                        "environment": ["type": "string", "description": "Environment name (e.g. production). Omit to use the active environment."],
+                        "path": ["type": "string", "description": "Absolute path of the caller's working directory; used to auto-resolve the project when omitted."]
                     ],
                     "required": ["name"]
                 ] as [String: Any]
@@ -137,8 +143,9 @@ final class LokaliteMCPTools {
                 "inputSchema": [
                     "type": "object",
                     "properties": [
-                        "project": ["type": "string", "description": "Project name. Omit to use the active project."],
-                        "environment": ["type": "string", "description": "Environment name. Omit to use the active environment."]
+                        "project": ["type": "string", "description": "Project name. Omit to auto-resolve the project from the working directory (path)."],
+                        "environment": ["type": "string", "description": "Environment name. Omit to use the active environment."],
+                        "path": ["type": "string", "description": "Absolute path of the caller's working directory; used to auto-resolve the project when omitted."]
                     ]
                 ] as [String: Any]
             ]
@@ -155,8 +162,9 @@ final class LokaliteMCPTools {
                             "name": ["type": "string", "description": "Secret name, e.g. STRIPE_SECRET_KEY"],
                             "value": ["type": "string", "description": "Secret value to encrypt and store"],
                             "description": ["type": "string", "description": "Optional human-readable description"],
-                            "project": ["type": "string", "description": "Project name. Omit to use the active project."],
-                            "environment": ["type": "string", "description": "Environment name. Omit to use the active environment."]
+                            "project": ["type": "string", "description": "Project name. Omit to auto-resolve the project from the working directory (path)."],
+                            "environment": ["type": "string", "description": "Environment name. Omit to use the active environment."],
+                            "path": ["type": "string", "description": "Absolute path of the caller's working directory; used to auto-resolve the project when omitted."]
                         ],
                         "required": ["name", "value"]
                     ] as [String: Any]
@@ -169,8 +177,9 @@ final class LokaliteMCPTools {
                         "properties": [
                             "name": ["type": "string", "description": "Exact name of the secret to update"],
                             "value": ["type": "string", "description": "New secret value"],
-                            "project": ["type": "string", "description": "Project name. Omit to use the active project."],
-                            "environment": ["type": "string", "description": "Environment name. Omit to use the active environment."]
+                            "project": ["type": "string", "description": "Project name. Omit to auto-resolve the project from the working directory (path)."],
+                            "environment": ["type": "string", "description": "Environment name. Omit to use the active environment."],
+                            "path": ["type": "string", "description": "Absolute path of the caller's working directory; used to auto-resolve the project when omitted."]
                         ],
                         "required": ["name", "value"]
                     ] as [String: Any]
@@ -182,7 +191,8 @@ final class LokaliteMCPTools {
                         "type": "object",
                         "properties": [
                             "name": ["type": "string", "description": "Exact name of the secret to delete"],
-                            "project": ["type": "string", "description": "Project name. Omit to use the active project."]
+                            "project": ["type": "string", "description": "Project name. Omit to auto-resolve the project from the working directory (path)."],
+                            "path": ["type": "string", "description": "Absolute path of the caller's working directory; used to auto-resolve the project when omitted."]
                         ],
                         "required": ["name"]
                     ] as [String: Any]
@@ -193,10 +203,15 @@ final class LokaliteMCPTools {
         return tools
     }
 
-    private func resolveContext(projectFlag: String?, envFlag: String?) throws -> SecretWorkspaceContext {
+    private func resolveContext(projectFlag: String?, envFlag: String?, pathFlag: String? = nil) throws -> SecretWorkspaceContext {
         let projectName = projectFlag ?? ProcessInfo.processInfo.environment["LOKALITE_PROJECT"]
         let envName = envFlag ?? ProcessInfo.processInfo.environment["LOKALITE_ENV"]
-        return try workspace.resolveContext(projectName: projectName, environmentName: envName)
+        let workingDirectory = pathFlag ?? FileManager.default.currentDirectoryPath
+        return try workspace.resolveContext(
+            projectName: projectName,
+            environmentName: envName,
+            workingDirectory: workingDirectory
+        )
     }
 
     private func content(_ text: String) -> [String: Any] {
