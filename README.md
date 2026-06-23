@@ -122,6 +122,9 @@ lokalite copy OPENAI_API_KEY
 # List all secrets
 lokalite list
 
+# Filter secrets by name or description (case-insensitive substring)
+lokalite list --search openai
+
 # Update a secret (also supports the prompt/stdin forms shown for `add`)
 lokalite set OPENAI_API_KEY sk-new-...
 
