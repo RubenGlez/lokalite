@@ -198,6 +198,8 @@ By default the server is **read-only** and exposes two tools:
 | `list_secrets` | List secret names, categories, and descriptions (values never exposed) |
 | `get_secret` | Retrieve a secret value by name |
 
+When a tool call omits `project`, the server auto-resolves it from the caller's working directory using the project's linked path — the same way the CLI does. Pass an absolute `path` argument with the directory to resolve (preferred, since the server's own process may run elsewhere); otherwise it falls back to the server process's working directory. An explicit `project` argument (or `LOKALITE_PROJECT` in the server `env`) always wins.
+
 Pass `--read-write` to also expose write tools:
 
 ```json
