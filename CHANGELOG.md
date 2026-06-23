@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-06-24
+
+### Added
+- `lokalite list --search <term>` filters secrets by name or description (case-insensitive substring), bringing the app's real-time search to the terminal
+- `lokalite log` shows the secret access log with timestamps, source (app / cli / mcp), project, environment, and secret name; supports `--limit` and `--source`
+- `lokalite backup` writes a passphrase-encrypted backup of a project's active environment, and `lokalite restore` decrypts and re-imports it (skips existing secrets by default, `--overwrite` to replace)
+- The MCP server now auto-resolves the project from the caller's working directory (optional `path` argument, falling back to the server's working directory) via the project path link, so callers no longer need to pass a project name; an explicit `project` still wins
+
 ## [1.5.0] - 2026-06-11
 
 ### Added
