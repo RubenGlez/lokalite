@@ -108,6 +108,11 @@ lokalite init
 lokalite status
 lokalite status --json
 
+# View the secret access log (who read what, and from where)
+lokalite log
+lokalite log --limit 20
+lokalite log --source cli       # filter by app, cli, or mcp
+
 # Add a secret
 lokalite add OPENAI_API_KEY sk-...
 lokalite add OPENAI_API_KEY          # no value: prompts for it, keeping it out of shell history
