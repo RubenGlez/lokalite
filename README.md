@@ -165,7 +165,7 @@ lokalite export --plain --output secrets.json
 lokalite export --format env                # .env format, stdout
 lokalite export --format env --output .env
 
-# Encrypted backup / restore (active project, current environment)
+# Encrypted backup / restore (a project's active environment)
 lokalite backup                             # prompts for a passphrase, writes a timestamped .lokalite file
 lokalite backup --output backup.lokalite
 lokalite restore backup.lokalite            # prompts for the passphrase, skips existing secrets

@@ -7,10 +7,10 @@ struct BackupCommand: ParsableCommand {
         commandName: "backup",
         abstract: "Create an encrypted backup of the vault.",
         discussion: """
-        Writes a passphrase-encrypted backup of the active project's secrets \
-        (current environment). The backup is always encrypted; restore it with \
-        `lokalite restore`. Scope is limited to a single project — back up other \
-        projects separately with --project.
+        Writes a passphrase-encrypted backup of a project's active environment. \
+        The backup is always encrypted; restore it with `lokalite restore`. Scope \
+        is limited to a single project's active environment — switch environments \
+        with `lokalite env use` or back up other projects separately with --project.
         """
     )
 
@@ -20,11 +20,8 @@ struct BackupCommand: ParsableCommand {
     @Option(name: .shortAndLong, help: "Project name. Defaults to the active project.")
     var project: String?
 
-    @Option(name: .shortAndLong, help: "Environment name. Defaults to the active environment.")
-    var env: String?
-
     func run() throws {
-        let ctx = try resolveContext(projectFlag: project, envFlag: env)
+        let ctx = try resolveContext(projectFlag: project, envFlag: nil)
 
         print("Enter passphrase to encrypt the backup: ", terminator: "")
         let passphrase = readPassphrase()
