@@ -61,7 +61,6 @@ All core features are implemented and distributed via Homebrew.
 These are realistic next priorities given what is already built:
 
 - [ ] **Secret search in CLI** — `lokalite list --search <term>` to filter by name or description from the terminal; the app already supports real-time search
-- [ ] **Secret categories / tags** — the schema supports tags (stored as JSON array) but no CLI or app UI exposes them yet; adding a `--tag` flag and tag filter would unlock grouping
 - [ ] **Audit log** — local-only, append-only log of access events (read, copy, write) with timestamps; useful for compliance-conscious users
 - [ ] **Vault backup / restore workflow** — encrypted export is implemented but there is no guided backup reminder or restore command; a `lokalite backup` and `lokalite restore` command pair would make this a first-class workflow
 - [ ] **Multiple vaults** — single vault per machine today; supporting named vaults would let consultants maintain fully separate workspaces per client
