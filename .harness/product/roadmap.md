@@ -1,10 +1,10 @@
 # Roadmap
 
-## Unreleased (merged to `main`, pending release)
+## Shipped (v1.6.0 — 2026-06-24)
 
 - [x] **Secret search in CLI** — `lokalite list --search <term>` filters by name or description (case-insensitive substring)
 - [x] **Audit log view** — `lokalite log` shows the access log (app/CLI/MCP sources, with `--limit` and `--source`); access logging was already wired, this adds the terminal view
-- [x] **Vault backup / restore** — `lokalite backup` writes a passphrase-encrypted backup; `lokalite restore` decrypts and re-imports (skip-existing, `--overwrite`). Scope is the active project's current environment (same limit as `export`)
+- [x] **Vault backup / restore** — `lokalite backup` writes a passphrase-encrypted backup; `lokalite restore` decrypts and re-imports (skip-existing, `--overwrite`). Scope is the active project's active environment (same limit as `export`)
 - [x] **MCP context awareness** — the MCP server auto-resolves the project from the caller's working directory (optional `path` arg, falling back to server cwd) via the project `path` link; explicit `project` still wins
 
 ## Shipped (v1.5.0 — 2026-06-11)
