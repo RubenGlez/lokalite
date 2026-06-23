@@ -1,5 +1,12 @@
 # Roadmap
 
+## Unreleased (merged to `main`, pending release)
+
+- [x] **Secret search in CLI** — `lokalite list --search <term>` filters by name or description (case-insensitive substring)
+- [x] **Audit log view** — `lokalite log` shows the access log (app/CLI/MCP sources, with `--limit` and `--source`); access logging was already wired, this adds the terminal view
+- [x] **Vault backup / restore** — `lokalite backup` writes a passphrase-encrypted backup; `lokalite restore` decrypts and re-imports (skip-existing, `--overwrite`). Scope is the active project's current environment (same limit as `export`)
+- [x] **MCP context awareness** — the MCP server auto-resolves the project from the caller's working directory (optional `path` arg, falling back to server cwd) via the project `path` link; explicit `project` still wins
+
 ## Shipped (v1.5.0 — 2026-06-11)
 
 - [x] **Popover quick-actions launcher** — full secret list with Recent/All sections, keyboard copy flow (↓/↑+⏎, modifier variants for `KEY=value` / `export KEY=value`), copy `.env` for the current project + environment, value peek, Lock in footer (⌘L), Quit moved to the status item's right-click menu; spec in [popover-refactor.md](popover-refactor.md)
@@ -60,12 +67,8 @@ All core features are implemented and distributed via Homebrew.
 
 These are realistic next priorities given what is already built:
 
-- [ ] **Secret search in CLI** — `lokalite list --search <term>` to filter by name or description from the terminal; the app already supports real-time search
-- [ ] **Audit log** — local-only, append-only log of access events (read, copy, write) with timestamps; useful for compliance-conscious users
-- [ ] **Vault backup / restore workflow** — encrypted export is implemented but there is no guided backup reminder or restore command; a `lokalite backup` and `lokalite restore` command pair would make this a first-class workflow
 - [ ] **Multiple vaults** — single vault per machine today; supporting named vaults would let consultants maintain fully separate workspaces per client
 - [ ] **Secret versioning** — keep prior encrypted values when a secret is updated so it can be rolled back; schema already supports adding a `version` column to `secret_values`
-- [ ] **MCP context awareness** — let the MCP server resolve secrets for the calling agent's working directory automatically (using the project `path` link) without requiring the caller to specify a project name
 
 ## Nice-to-have
 
