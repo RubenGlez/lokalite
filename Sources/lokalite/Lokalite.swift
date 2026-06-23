@@ -23,6 +23,7 @@ struct LokaliteCLI: ParsableCommand {
             ImportCommand.self,
             ShellCommand.self,
             StatusCommand.self,
+            LogCommand.self,
             InitCommand.self,
             SeedCommand.self,
         ]
