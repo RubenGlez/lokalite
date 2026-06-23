@@ -14,6 +14,7 @@ Lokalite is a local-first secrets workspace for macOS — a menu bar app, CLI, a
 - **Projects**: group secrets by project; link to a local directory for automatic resolution
 - **Environments**: per-project environment profiles (dev, staging, production) with per-environment secret values; every project starts with a Default environment
 - **`.env` import/export**: pull from an existing `.env` file or export back to one
+- **Encrypted backup/restore**: `lokalite backup` writes a passphrase-encrypted file; `lokalite restore` reads it back
 - **Shell injection**: `eval $(lokalite shell)` exports secrets into the current session
 - **Clipboard auto-clear**: copied values are wiped after 30 seconds
 - **Session timeout**: vault auto-locks after inactivity
@@ -155,6 +156,12 @@ lokalite export --output backup.lk          # encrypted (default)
 lokalite export --plain --output secrets.json
 lokalite export --format env                # .env format, stdout
 lokalite export --format env --output .env
+
+# Encrypted backup / restore (active project, current environment)
+lokalite backup                             # prompts for a passphrase, writes a timestamped .lokalite file
+lokalite backup --output backup.lokalite
+lokalite restore backup.lokalite            # prompts for the passphrase, skips existing secrets
+lokalite restore backup.lokalite --overwrite
 
 # Inject secrets into the current shell session (see security note below)
 eval $(lokalite shell)

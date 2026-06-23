@@ -406,6 +406,37 @@ public final class Vault {
         return json
     }
 
+    /// Decrypts an encrypted export envelope produced by `export(projectId:passphrase:)`
+    /// and returns the `[name: value]` map it contains. Throws `invalidExportPassphrase`
+    /// when the passphrase is wrong or the file is not a valid encrypted export.
+    public func decryptExport(_ envelope: Data, passphrase: String) throws -> [String: String] {
+        guard envelope.first == 0x02, envelope.count > 13 + 32 else {
+            throw VaultError.invalidExportPassphrase
+        }
+        var offset = envelope.startIndex + 1
+        let iterations = envelope.readUInt32(at: &offset)
+        let memoryKiB = envelope.readUInt32(at: &offset)
+        let parallelism = envelope.readUInt32(at: &offset)
+        let salt = envelope.subdata(in: offset..<(offset + 32))
+        offset += 32
+        let combined = envelope.subdata(in: offset..<envelope.endIndex)
+
+        let parameters = ExportKDFParameters(iterations: iterations, memoryKiB: memoryKiB, parallelism: parallelism)
+        do {
+            let derivedKey = try VaultCrypto.deriveExportKey(from: passphrase, salt: salt, parameters: parameters)
+            let sealedBox = try AES.GCM.SealedBox(combined: combined)
+            let json = try AES.GCM.open(sealedBox, using: derivedKey)
+            guard let dict = try JSONSerialization.jsonObject(with: json) as? [String: String] else {
+                throw VaultError.invalidExportPassphrase
+            }
+            return dict
+        } catch let error as VaultError {
+            throw error
+        } catch {
+            throw VaultError.invalidExportPassphrase
+        }
+    }
+
     private func encryptExport(_ data: Data, passphrase: String) throws -> Data {
         let kdfParameters = ExportKDFParameters.current
         let salt = try VaultCrypto.generateSalt()
@@ -491,5 +522,11 @@ private extension Data {
     mutating func appendUInt32(_ value: UInt32) {
         var bigEndian = value.bigEndian
         Swift.withUnsafeBytes(of: &bigEndian) { append(contentsOf: $0) }
+    }
+
+    func readUInt32(at offset: inout Index) -> UInt32 {
+        let bytes = self[offset..<(offset + 4)]
+        offset += 4
+        return bytes.reduce(UInt32(0)) { ($0 << 8) | UInt32($1) }
     }
 }

@@ -21,6 +21,8 @@ struct LokaliteCLI: ParsableCommand {
             MCPCommand.self,
             InstallCommand.self,
             ImportCommand.self,
+            BackupCommand.self,
+            RestoreCommand.self,
             ShellCommand.self,
             StatusCommand.self,
             InitCommand.self,
