@@ -441,6 +441,7 @@ struct VaultPopover: View {
     }
 
     private func openManageWindow() {
+        closePopover()
         NSApp.activate(ignoringOtherApps: true)
         openWindow(id: "settings")
     }

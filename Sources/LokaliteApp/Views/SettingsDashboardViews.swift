@@ -393,7 +393,7 @@ struct ProjectInfoPanel: View {
             VStack(alignment: .leading, spacing: 15) {
                 InfoLine(icon: "folder", title: "Linked folder", value: shortPath(project?.path) ?? "Not linked")
                 InfoLine(icon: "point.3.connected.trianglepath.dotted", title: "Repository", value: gitRemote ?? "Not configured")
-                InfoLine(icon: "square.stack.3d.up", title: "\(environmentCount + 1) environments", value: nil)
+                InfoLine(icon: "square.stack.3d.up", title: "\(environmentCount) environments", value: nil)
                 InfoLine(icon: "lock", title: "\(secretCount) secrets", value: nil)
                 InfoLine(icon: "clock", title: "Created", value: project?.createdAt.map { createdDateFormatter.string(from: $0) } ?? "Unknown")
             }
