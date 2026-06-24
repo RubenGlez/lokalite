@@ -2,6 +2,20 @@ import CryptoKit
 import Foundation
 import Security
 
+/// Outcome of importing `.env` pairs: how many secrets were created, replaced
+/// (with `overwrite`), or skipped because they already existed.
+public struct ImportSummary: Sendable, Equatable {
+    public let added: Int
+    public let updated: Int
+    public let skipped: Int
+
+    public init(added: Int, updated: Int, skipped: Int) {
+        self.added = added
+        self.updated = updated
+        self.skipped = skipped
+    }
+}
+
 public final class Vault {
     public static let shared = Vault()
 
@@ -256,6 +270,33 @@ public final class Vault {
                                             updatedAt: iso8601())
         try store.upsertSecretValue(valueRecord)
         return secretFromRecord(secretRecord, value: value)
+    }
+
+    /// Apply parsed `.env` key/value pairs to a project + environment.
+    /// Existing secrets are skipped unless `overwrite` is set. Shared by the
+    /// CLI (`import`, `init --from-env`) and the app so summaries stay consistent.
+    @discardableResult
+    public func importEnv(
+        pairs: [(name: String, value: String)],
+        projectId: String,
+        environmentName: String? = nil,
+        overwrite: Bool = false
+    ) throws -> ImportSummary {
+        var added = 0, updated = 0, skipped = 0
+        for (name, value) in pairs {
+            do {
+                _ = try add(name: name, value: value, projectId: projectId, environmentName: environmentName)
+                added += 1
+            } catch VaultError.secretAlreadyExists {
+                if overwrite {
+                    _ = try set(name: name, value: value, projectId: projectId, environmentName: environmentName)
+                    updated += 1
+                } else {
+                    skipped += 1
+                }
+            }
+        }
+        return ImportSummary(added: added, updated: updated, skipped: skipped)
     }
 
     public func moveSecretToEnvironment(name: String, projectId: String,

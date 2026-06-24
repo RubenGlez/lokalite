@@ -427,42 +427,47 @@ final class VaultViewModel {
         }
     }
 
-    struct ImportSummary {
-        let added: Int
-        let skipped: Int
-    }
-
-    /// Import secrets from a `.env` file into the selected project + environment.
-    /// Existing secrets are skipped unless `overwrite` is set.
+    /// Import parsed `.env` pairs into an existing project + environment via the
+    /// shared core routine. Existing secrets are skipped unless `overwrite` is set.
     @discardableResult
-    func importEnvFile(at url: URL, overwrite: Bool = false) -> ImportSummary? {
+    func importEnv(pairs: [(name: String, value: String)], projectId: String,
+                   environmentName: String, overwrite: Bool) -> ImportSummary? {
         renewSession()
-        guard let project = selectedProject, let environment = selectedEnvironment else {
-            errorMessage = "Select a project and environment before importing."
-            return nil
-        }
         do {
-            let content = try String(contentsOf: url, encoding: .utf8)
-            let pairs = EnvFileFormat.parse(content)
-            var added = 0, skipped = 0
-            for (name, value) in pairs {
-                do {
-                    _ = try Vault.shared.add(name: name, value: value, description: nil, category: nil,
-                                             projectId: project.id, environmentName: environment.name)
-                    added += 1
-                } catch VaultError.secretAlreadyExists {
-                    if overwrite {
-                        _ = try Vault.shared.set(name: name, value: value,
-                                                 projectId: project.id, environmentName: environment.name)
-                        added += 1
-                    } else {
-                        skipped += 1
-                    }
-                }
-            }
+            let summary = try Vault.shared.importEnv(pairs: pairs, projectId: projectId,
+                                                     environmentName: environmentName, overwrite: overwrite)
             reloadSecrets()
             reloadDashboardSummaries()
-            return ImportSummary(added: added, skipped: skipped)
+            return summary
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
+    /// Create a project from parsed `.env` pairs. A non-Default environment name
+    /// renames the auto-created Default rather than leaving an empty one behind.
+    @discardableResult
+    func createProjectFromEnv(name: String, environmentName: String, linkPath: String?,
+                              pairs: [(name: String, value: String)], overwrite: Bool) -> ImportSummary? {
+        renewSession()
+        do {
+            let created = try Vault.shared.addProject(name: name, path: linkPath, icon: "folder")
+            var target = "Default"
+            if environmentName != "Default", !environmentName.isEmpty {
+                if let def = try Vault.shared.environment(name: "Default", projectId: created.id) {
+                    try Vault.shared.renameEnvironment(id: def.id, newName: environmentName, projectId: created.id)
+                }
+                try Vault.shared.setActiveEnvironment(name: environmentName, projectId: created.id)
+                target = environmentName
+            }
+            let summary = try Vault.shared.importEnv(pairs: pairs, projectId: created.id,
+                                                     environmentName: target, overwrite: overwrite)
+            let fresh = try Vault.shared.project(id: created.id)
+            projects.append(fresh)
+            selectProject(fresh)
+            reloadDashboardSummaries()
+            return summary
         } catch {
             errorMessage = error.localizedDescription
             return nil

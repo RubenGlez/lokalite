@@ -95,6 +95,20 @@ public final class SecretWorkspace {
         try vault.delete(name: name, projectId: context.project.id)
     }
 
+    @discardableResult
+    public func importEnv(
+        pairs: [(name: String, value: String)],
+        context: SecretWorkspaceContext,
+        overwrite: Bool = false
+    ) throws -> ImportSummary {
+        try vault.importEnv(
+            pairs: pairs,
+            projectId: context.project.id,
+            environmentName: context.environmentName,
+            overwrite: overwrite
+        )
+    }
+
     public func secrets(named names: [String]?, context: SecretWorkspaceContext, accessSource: ActivityLogEntry.AccessSource? = nil) throws -> [Secret] {
         if let names {
             return try names.map { try get(name: $0, context: context, accessSource: accessSource) }

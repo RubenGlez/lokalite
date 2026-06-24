@@ -18,6 +18,7 @@ struct SettingsView: View {
         case moveSecret(Secret)
         case projectAppearance(Project?)
         case environmentAppearance(VaultEnvironment)
+        case importEnv(ImportEnvRequest)
 
         var id: String {
             switch self {
@@ -27,6 +28,7 @@ struct SettingsView: View {
             case .moveSecret(let secret): "move-secret-\(secret.id)"
             case .projectAppearance(let project): "project-\(project?.id ?? "new")"
             case .environmentAppearance(let environment): "environment-\(environment.id)"
+            case .importEnv(let request): "import-env-\(request.id)"
             }
         }
     }
@@ -128,6 +130,8 @@ struct SettingsView: View {
                 ProjectAppearanceView(project: project).environment(vault)
             case .environmentAppearance(let environment):
                 EnvironmentAppearanceView(environment: environment).environment(vault)
+            case .importEnv(let request):
+                ImportEnvView(request: request).environment(vault)
             }
         }
         .confirmationDialog(
@@ -266,14 +270,21 @@ struct SettingsView: View {
                     .foregroundStyle(Theme.textMuted)
                     .textCase(.uppercase)
                 Spacer()
-                Button {
-                    presentedSheet = .projectAppearance(nil)
+                Menu {
+                    Button("New project") {
+                        presentedSheet = .projectAppearance(nil)
+                    }
+                    Button("Import from .env…") {
+                        beginImportFromEnv(mode: .createProject)
+                    }
                 } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 13, weight: .medium))
                         .frame(width: 24, height: 24)
                 }
-                .buttonStyle(.plain)
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
                 .foregroundStyle(Theme.textMuted)
                 .help("New project")
             }
@@ -292,6 +303,13 @@ struct SettingsView: View {
                                 vault.selectProject(project)
                             }
                         )
+                        .contextMenu {
+                            Button("Import from .env…") {
+                                selectedSecret = nil
+                                vault.selectProject(project)
+                                beginImportFromEnv(mode: .existingProject(project))
+                            }
+                        }
                     }
                 }
                 .padding(.horizontal, 10)
@@ -577,7 +595,7 @@ struct SettingsView: View {
                 .controlSize(.large)
 
                 Button("Import from .env") {
-                    importFromEnvOnboarding()
+                    beginImportFromEnv(mode: .createProject)
                 }
                 .buttonStyle(.link)
                 .help("Pick an existing .env file (or its folder) to create a project from it")
@@ -586,28 +604,41 @@ struct SettingsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func importFromEnvOnboarding() {
+    /// Pick a `.env` file (or a folder containing one), parse it, and open the
+    /// guided import sheet. Shared by onboarding, the new-project affordance,
+    /// and the per-project import action.
+    private func beginImportFromEnv(mode: ImportEnvRequest.Mode) {
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
         panel.message = "Choose a .env file, or a folder containing one."
-        panel.prompt = "Import"
-        guard panel.runModal() == .OK, var url = panel.url else { return }
+        panel.prompt = "Choose"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
 
         var isDir: ObjCBool = false
         FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
         let projectFolder = isDir.boolValue ? url : url.deletingLastPathComponent()
-        if isDir.boolValue { url = url.appendingPathComponent(".env") }
+        let envURL = isDir.boolValue ? url.appendingPathComponent(".env") : url
 
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            vault.errorMessage = "No .env file found at \(url.path)."
+        guard FileManager.default.fileExists(atPath: envURL.path),
+              let content = try? String(contentsOf: envURL, encoding: .utf8) else {
+            vault.errorMessage = "No .env file found at \(envURL.path)."
             return
         }
-
+        let pairs = EnvFileFormat.parse(content)
+        guard !pairs.isEmpty else {
+            vault.errorMessage = "No key=value pairs found in \(envURL.lastPathComponent)."
+            return
+        }
         let folderName = projectFolder.lastPathComponent
-        vault.addProject(name: folderName.isEmpty ? "Imported" : folderName)
-        vault.importEnvFile(at: url)
+        presentedSheet = .importEnv(ImportEnvRequest(
+            mode: mode,
+            envURL: envURL,
+            suggestedProjectName: folderName.isEmpty ? "Imported" : folderName,
+            suggestedLinkPath: projectFolder.path,
+            pairs: pairs
+        ))
     }
 
     // MARK: - Actions

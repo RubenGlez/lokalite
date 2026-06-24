@@ -46,6 +46,17 @@ func withWorkspace<T>(_ body: (SecretWorkspace) throws -> T) throws -> T {
     return try body(workspace)
 }
 
+/// One-line summary printed by `import` and `init --from-env`.
+func importSummaryLine(_ summary: ImportSummary) -> String {
+    var parts: [String] = []
+    if summary.added > 0 { parts.append("\(summary.added) added") }
+    if summary.updated > 0 { parts.append("\(summary.updated) updated") }
+    if summary.skipped > 0 {
+        parts.append("\(summary.skipped) skipped (already exist — use --overwrite to replace)")
+    }
+    return parts.isEmpty ? "Nothing to import." : parts.joined(separator: ", ") + "."
+}
+
 func resolveContext(
     projectFlag: String?,
     envFlag: String?,
