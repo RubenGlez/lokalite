@@ -568,14 +568,46 @@ struct SettingsView: View {
                     .font(.body)
                     .foregroundStyle(Theme.textMuted)
             }
-            Button("Create your first project") {
-                presentedSheet = .projectAppearance(nil)
+            VStack(spacing: 10) {
+                Button("Create your first project") {
+                    presentedSheet = .projectAppearance(nil)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Theme.brand)
+                .controlSize(.large)
+
+                Button("Import from .env") {
+                    importFromEnvOnboarding()
+                }
+                .buttonStyle(.link)
+                .help("Pick an existing .env file (or its folder) to create a project from it")
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Theme.brand)
-            .controlSize(.large)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func importFromEnvOnboarding() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.message = "Choose a .env file, or a folder containing one."
+        panel.prompt = "Import"
+        guard panel.runModal() == .OK, var url = panel.url else { return }
+
+        var isDir: ObjCBool = false
+        FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
+        let projectFolder = isDir.boolValue ? url : url.deletingLastPathComponent()
+        if isDir.boolValue { url = url.appendingPathComponent(".env") }
+
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            vault.errorMessage = "No .env file found at \(url.path)."
+            return
+        }
+
+        let folderName = projectFolder.lastPathComponent
+        vault.addProject(name: folderName.isEmpty ? "Imported" : folderName)
+        vault.importEnvFile(at: url)
     }
 
     // MARK: - Actions

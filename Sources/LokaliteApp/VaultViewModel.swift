@@ -427,6 +427,48 @@ final class VaultViewModel {
         }
     }
 
+    struct ImportSummary {
+        let added: Int
+        let skipped: Int
+    }
+
+    /// Import secrets from a `.env` file into the selected project + environment.
+    /// Existing secrets are skipped unless `overwrite` is set.
+    @discardableResult
+    func importEnvFile(at url: URL, overwrite: Bool = false) -> ImportSummary? {
+        renewSession()
+        guard let project = selectedProject, let environment = selectedEnvironment else {
+            errorMessage = "Select a project and environment before importing."
+            return nil
+        }
+        do {
+            let content = try String(contentsOf: url, encoding: .utf8)
+            let pairs = EnvFileFormat.parse(content)
+            var added = 0, skipped = 0
+            for (name, value) in pairs {
+                do {
+                    _ = try Vault.shared.add(name: name, value: value, description: nil, category: nil,
+                                             projectId: project.id, environmentName: environment.name)
+                    added += 1
+                } catch VaultError.secretAlreadyExists {
+                    if overwrite {
+                        _ = try Vault.shared.set(name: name, value: value,
+                                                 projectId: project.id, environmentName: environment.name)
+                        added += 1
+                    } else {
+                        skipped += 1
+                    }
+                }
+            }
+            reloadSecrets()
+            reloadDashboardSummaries()
+            return ImportSummary(added: added, skipped: skipped)
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
     func update(
         name: String,
         value: String,

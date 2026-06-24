@@ -111,6 +111,27 @@ final class EnvFileFormatTests: XCTestCase {
             #"TRICKY="a\\b\"c""#
         )
     }
+
+    func testParsesBareAndQuotedAndExportLines() {
+        let content = """
+        # comment
+        FOO=bar
+        export TOKEN="sk-123"
+        QUOTED='single'
+
+        WITH_COMMENT=value # trailing
+        """
+        let pairs = EnvFileFormat.parse(content)
+        XCTAssertEqual(pairs.map(\.name), ["FOO", "TOKEN", "QUOTED", "WITH_COMMENT"])
+        XCTAssertEqual(pairs.map(\.value), ["bar", "sk-123", "single", "value"])
+    }
+
+    func testSkipsBlankAndCommentAndKeylessLines() {
+        let pairs = EnvFileFormat.parse("\n#only a comment\n=novalue\nKEY=ok\n")
+        XCTAssertEqual(pairs.count, 1)
+        XCTAssertEqual(pairs.first?.name, "KEY")
+        XCTAssertEqual(pairs.first?.value, "ok")
+    }
 }
 
 final class ProjectModelTests: XCTestCase {
