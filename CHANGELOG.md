@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-06-24
+
+### Added
+- `lokalite init --from-env <file>` creates a project from a `.env` file (or a folder containing one), linked to that directory, and imports its keys. An optional name and `--env <name>` set the project name and target environment; `--overwrite` replaces existing secrets
+- The menu bar app can import a `.env` through a guided form (project name, target environment, linked directory, overwrite, and a key list you can prune), reachable from onboarding, the sidebar's new-project menu, and a per-project "Import from .env" action — for both creating a new project and importing into an existing one
+
 ## [1.6.0] - 2026-06-24
 
 ### Added
