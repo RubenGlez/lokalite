@@ -486,6 +486,10 @@ struct MCPPanel: View {
 
             CopyableCommandLine(text: "lokalite install")
 
+            Text("Registers with Claude Code. For Cursor or Windsurf, add --client cursor or --client windsurf.")
+                .font(.system(size: 11))
+                .foregroundStyle(Theme.textMuted)
+
             Divider().overlay(Theme.sep)
 
             Button {

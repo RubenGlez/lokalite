@@ -10,8 +10,11 @@ struct InstallCommand: ParsableCommand {
     @Option(name: .long, help: "Directory to install the binary into.")
     var binDir: String = "/usr/local/bin"
 
-    @Flag(name: .long, help: "Skip writing the Claude Code MCP config.")
+    @Flag(name: .long, help: "Skip writing the MCP client config.")
     var skipMcp = false
+
+    @Option(name: .long, help: "MCP client to register with: claude, cursor, or windsurf.")
+    var client: MCPClient = .claude
 
     func run() throws {
         let destination = URL(fileURLWithPath: binDir)
@@ -22,10 +25,10 @@ struct InstallCommand: ParsableCommand {
 
         if !skipMcp {
             let configURL = try registerMCPServer()
-            print("✓ MCP server registered in \(configURL.abbreviatingWithTildeInPath)")
+            print("✓ MCP server registered for \(client.displayName) in \(configURL.abbreviatingWithTildeInPath)")
         }
 
-        print("\nRestart Claude Code to pick up the new server.")
+        print("\nRestart \(client.displayName) to pick up the new server.")
     }
 
     // MARK: - Binary installation
@@ -56,8 +59,12 @@ struct InstallCommand: ParsableCommand {
 
     @discardableResult
     private func registerMCPServer() throws -> URL {
-        let configURL = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".claude.json")
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let configURL = client.configURL(home: home)
+        try FileManager.default.createDirectory(
+            at: configURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
 
         var config = readJSON(at: configURL)
         var mcpServers = config["mcpServers"] as? [String: Any] ?? [:]
@@ -77,6 +84,30 @@ struct InstallCommand: ParsableCommand {
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return [:] }
         return json
+    }
+}
+
+// MARK: - MCP clients
+
+enum MCPClient: String, ExpressibleByArgument, CaseIterable {
+    case claude, cursor, windsurf
+
+    var displayName: String {
+        switch self {
+        case .claude: return "Claude Code"
+        case .cursor: return "Cursor"
+        case .windsurf: return "Windsurf"
+        }
+    }
+
+    // All three clients use the same `{ "mcpServers": { ... } }` schema; only the
+    // config file location differs.
+    func configURL(home: URL) -> URL {
+        switch self {
+        case .claude:   return home.appendingPathComponent(".claude.json")
+        case .cursor:   return home.appendingPathComponent(".cursor/mcp.json")
+        case .windsurf: return home.appendingPathComponent(".codeium/windsurf/mcp_config.json")
+        }
     }
 }
 

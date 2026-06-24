@@ -191,7 +191,15 @@ On first launch, an onboarding screen guides you through creating your first pro
 
 ## MCP Integration
 
-`lokalite install` registers the MCP server automatically. You can also add it manually to `~/.claude.json`:
+`lokalite install` registers the MCP server with Claude Code automatically (writing `~/.claude.json`). To register with a different client, pass `--client`:
+
+```bash
+lokalite install --client claude     # ~/.claude.json (default)
+lokalite install --client cursor     # ~/.cursor/mcp.json
+lokalite install --client windsurf   # ~/.codeium/windsurf/mcp_config.json
+```
+
+For any other MCP-compatible agent, add the same server block to its config manually:
 
 ```json
 {
@@ -203,8 +211,6 @@ On first launch, an onboarding screen guides you through creating your first pro
   }
 }
 ```
-
-The same config works for Cursor, Windsurf, and any other MCP-compatible agent.
 
 By default the server is **read-only** and exposes two tools:
 
