@@ -95,9 +95,12 @@ struct VaultPopover: View {
                 Circle()
                     .fill(Theme.panelBackground)
                     .frame(width: 48, height: 48)
-                Text("L")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(Theme.text)
+                Image(nsImage: MenuBarIcon.templateImage(size: 26))
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 26, height: 26)
+                    .foregroundStyle(Theme.brand)
             }
 
             VStack(spacing: 6) {
@@ -127,10 +130,34 @@ struct VaultPopover: View {
             searchBar
             Divider()
             content
+            if !vault.secrets.isEmpty {
+                copyHintBar
+            }
             Divider()
             footer
         }
         .background(Theme.panelBackground)
+    }
+
+    private var copyHintBar: some View {
+        HStack(spacing: 12) {
+            hint("⏎", "copy")
+            hint("⌥⏎", "KEY=value")
+            hint("⌃⏎", "export")
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 5)
+    }
+
+    private func hint(_ key: String, _ label: String) -> some View {
+        HStack(spacing: 4) {
+            Text(key)
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .foregroundStyle(Theme.textMuted)
+            Text(label)
+                .font(.system(size: 10))
+                .foregroundStyle(Theme.textMuted)
+        }
     }
 
     private var contextHeader: some View {
