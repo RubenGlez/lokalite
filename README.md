@@ -2,7 +2,13 @@
   <img src="assets/banner.png" alt="Lokalite" width="100%"/>
 </p>
 
-Lokalite is a local-first secrets workspace for macOS — a menu bar app, CLI, and MCP server in one. Keep your API keys, tokens, and credentials in an encrypted vault on your machine, protected by Apple Keychain.
+Lokalite is a local-first secrets manager for macOS, built for how developers work with AI coding agents. Your API keys, tokens, and credentials live in an encrypted vault on your machine, and reach Claude Code, Cursor, and Windsurf through MCP, on your terms, with every access logged. Menu bar app, CLI, and MCP server in one. No cloud, no accounts, no telemetry.
+
+## Why Lokalite
+
+- **vs. `.env` files**: values are encrypted at rest instead of sitting in plaintext, access is logged, and the same secrets are available to your shell, the CLI, and your AI agents without copy-pasting between files.
+- **vs. cloud secret managers** (Doppler, Infisical, 1Password): nothing leaves your machine. No account to create, no per-seat billing, no vendor to trust with your credentials. Local-first is the point, not a limitation.
+- **Built for agents**: MCP support means an AI agent can read the secrets it needs through a logged, read-only-by-default server, scoped per project, instead of you pasting keys into a chat.
 
 ## Features
 
@@ -59,7 +65,9 @@ brew install --cask RubenGlez/lokalite/lokalite
 Download from the [Releases page](https://github.com/RubenGlez/lokalite/releases):
 
 - **CLI**: run the `.pkg` installer, then `lokalite install`
-- **Menu bar app**: drag the `.dmg` to Applications, then run `xattr -cr /Applications/Lokalite.app` once to clear the macOS quarantine flag (the app is open source and unsigned)
+- **Menu bar app**: drag the `.dmg` to Applications, then run `xattr -cr /Applications/Lokalite.app` once to clear the macOS quarantine flag
+
+  The app is not yet signed with an Apple Developer ID, so Gatekeeper quarantines it on first launch. The source is fully open and every release ships a `SHA256SUMS` file you can verify against the artifacts; if you'd rather not run `xattr`, build from source instead (below). Developer ID signing and notarization are planned.
 
 ### Build from source
 
