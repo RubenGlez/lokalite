@@ -67,6 +67,12 @@ All core features are implemented and distributed via Homebrew.
 
 These are realistic next priorities given what is already built:
 
+- [ ] **Import a `.env` that creates a project** (next phase) — finish the import experience. A basic version already shipped: the shared parser (`LokaliteCore.EnvFileFormat.parse`), and a first-launch onboarding "Import from .env" that auto-creates a project named after the file's folder and imports its keys into the Default environment. The reusable `VaultViewModel.importEnvFile(at:overwrite:)` engine also exists. Remaining work:
+  - **CLI `lokalite init --from-env <file>`** — create the project (name defaults to the file's directory, links cwd) and seed all keys; optional explicit name and `--env`. Existing `import` (into existing projects) is unchanged.
+  - **Guided form** — replace the auto-everything onboarding import with a form: editable project name (prefilled from filename), target environment, optional linked directory, skip/overwrite, plus a key preview with checkboxes to prune keys. Keys import as name+value with the default category; details refined later.
+  - **New-project-from-`.env` beyond first launch** — the same create flow reachable once projects already exist (a new-project affordance), not only the empty-vault onboarding screen.
+  - **Into-existing in settings** — a per-project "Import from .env" action wiring the existing `importEnvFile` engine to UI (target env, skip/overwrite, prunable preview).
+  - Out of scope: per-key category/description/rename in the import sheet, drag-and-drop (file picker only), and any change to existing CLI `import` semantics.
 - [ ] **Multiple vaults** — single vault per machine today; supporting named vaults would let consultants maintain fully separate workspaces per client
 - [ ] **Secret versioning** — keep prior encrypted values when a secret is updated so it can be rolled back; schema already supports adding a `version` column to `secret_values`
 
