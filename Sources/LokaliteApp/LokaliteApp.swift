@@ -132,11 +132,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupHotkey() {
-        hotkeyManager.onActivate = {
-            NSApp.activate(ignoringOtherApps: true)
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        hotkeyManager.onActivate = { [weak self] in
+            self?.togglePopover()
         }
         let shortcut = GlobalHotkeyManager.Shortcut.fromID(AppPreferences().hotkeyShortcutID)
         hotkeyManager.register(shortcut)
+    }
+
+    // MenuBarExtra exposes no API to open its popover programmatically, so locate
+    // the status item's button and synthesize a click — the same toggle a real
+    // click performs (opening it, or closing it if already open).
+    private func togglePopover() {
+        guard let button = statusItemButton() else {
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        button.performClick(nil)
+    }
+
+    private func statusItemButton() -> NSStatusBarButton? {
+        for window in NSApp.windows
+        where NSStringFromClass(type(of: window)).contains("NSStatusBarWindow") {
+            if let button = window.contentView?.firstDescendant(ofType: NSStatusBarButton.self) {
+                return button
+            }
+        }
+        return nil
+    }
+}
+
+private extension NSView {
+    func firstDescendant<T: NSView>(ofType type: T.Type) -> T? {
+        if let match = self as? T { return match }
+        for subview in subviews {
+            if let found = subview.firstDescendant(ofType: type) { return found }
+        }
+        return nil
     }
 }
