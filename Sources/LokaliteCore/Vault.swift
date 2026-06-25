@@ -20,12 +20,22 @@ public final class Vault {
     public static let shared = Vault()
 
     private var key: SymmetricKey?
-    private lazy var store: VaultStore = {
-        let url = vaultFileURL()
-        return try! openStore(at: url)
-    }()
+    private var _store: VaultStore?
+    private var store: VaultStore {
+        if let _store { return _store }
+        let opened = try! openStore(at: vaultFileURL())
+        _store = opened
+        return opened
+    }
 
     private init() {}
+
+    /// Test seam: build a Vault over an explicit store so resolution and
+    /// project/environment logic can be exercised without the real vault file
+    /// or Keychain. Not used in production code.
+    init(store: VaultStore) {
+        self._store = store
+    }
 
     // MARK: - Setup
 

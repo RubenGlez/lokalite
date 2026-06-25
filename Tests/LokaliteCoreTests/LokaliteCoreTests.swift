@@ -438,3 +438,118 @@ final class VaultStoreDeletionTests: XCTestCase {
         "2026-05-25T00:00:00Z"
     }
 }
+
+final class VaultResolutionTests: XCTestCase {
+    func testResolvesByExplicitName() throws {
+        let vault = try makeVault()
+        let a = try vault.addProject(name: "alpha")
+        _ = try vault.addProject(name: "beta")
+
+        let resolved = try vault.resolveProject(name: "alpha")
+        XCTAssertEqual(resolved.id, a.id)
+    }
+
+    func testUnknownNameThrowsProjectNotFound() throws {
+        let vault = try makeVault()
+        _ = try vault.addProject(name: "alpha")
+
+        XCTAssertThrowsError(try vault.resolveProject(name: "ghost")) { error in
+            guard case VaultError.projectNotFound = error else {
+                return XCTFail("expected projectNotFound, got \(error)")
+            }
+        }
+    }
+
+    func testResolvesByLinkedWorkingDirectory() throws {
+        let vault = try makeVault()
+        _ = try vault.addProject(name: "alpha")
+        let linked = try vault.addProject(name: "beta", path: "/tmp/lokalite-beta")
+
+        let resolved = try vault.resolveProject(workingDirectory: "/tmp/lokalite-beta/sub/dir")
+        XCTAssertEqual(resolved.id, linked.id)
+    }
+
+    func testFallsBackToStoredActiveProject() throws {
+        let vault = try makeVault()
+        _ = try vault.addProject(name: "alpha")
+        let beta = try vault.addProject(name: "beta")
+        try vault.setActiveProject(id: beta.id)
+
+        let resolved = try vault.resolveProject()
+        XCTAssertEqual(resolved.id, beta.id)
+    }
+
+    func testFallsBackToSingleProjectWhenNoActiveSet() throws {
+        // A fresh vault is seeded with a single Default project and an active
+        // pointer to it. Clear the active pointer to exercise the single-project
+        // fallback branch.
+        let vault = try makeVault()
+        try vault.setActiveProject(id: nil)
+        let projects = try vault.listProjects()
+        XCTAssertEqual(projects.count, 1)
+
+        let resolved = try vault.resolveProject()
+        XCTAssertEqual(resolved.id, projects[0].id)
+    }
+
+    func testThrowsNoActiveProjectWhenAmbiguous() throws {
+        let vault = try makeVault()
+        try vault.setActiveProject(id: nil)
+        _ = try vault.addProject(name: "alpha")
+
+        XCTAssertThrowsError(try vault.resolveProject()) { error in
+            guard case VaultError.noActiveProject = error else {
+                return XCTFail("expected noActiveProject, got \(error)")
+            }
+        }
+    }
+
+    func testExplicitNameBeatsLinkedDirectoryAndActive() throws {
+        let vault = try makeVault()
+        let alpha = try vault.addProject(name: "alpha")
+        let beta = try vault.addProject(name: "beta", path: "/tmp/lokalite-beta")
+        try vault.setActiveProject(id: beta.id)
+
+        let resolved = try vault.resolveProject(name: "alpha", workingDirectory: "/tmp/lokalite-beta")
+        XCTAssertEqual(resolved.id, alpha.id)
+    }
+
+    func testLinkedDirectoryBeatsActiveProject() throws {
+        let vault = try makeVault()
+        let alpha = try vault.addProject(name: "alpha")
+        let beta = try vault.addProject(name: "beta", path: "/tmp/lokalite-beta")
+        try vault.setActiveProject(id: alpha.id)
+
+        let resolved = try vault.resolveProject(workingDirectory: "/tmp/lokalite-beta")
+        XCTAssertEqual(resolved.id, beta.id)
+    }
+
+    func testContextUsesExplicitEnvironmentName() throws {
+        let vault = try makeVault()
+        _ = try vault.addProject(name: "alpha")
+        let workspace = SecretWorkspace(vault: vault)
+
+        let ctx = try workspace.resolveContext(projectName: "alpha", environmentName: "staging")
+        XCTAssertEqual(ctx.environmentName, "staging")
+    }
+
+    func testContextFallsBackToActiveEnvironment() throws {
+        let vault = try makeVault()
+        _ = try vault.addProject(name: "alpha")
+        let workspace = SecretWorkspace(vault: vault)
+
+        let ctx = try workspace.resolveContext(projectName: "alpha")
+        XCTAssertEqual(ctx.environmentName, "Default")
+    }
+
+    private func makeVault() throws -> Vault {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: directory)
+        }
+        let store = try VaultStore(path: directory.appendingPathComponent("vault.db").path)
+        return Vault(store: store)
+    }
+}
