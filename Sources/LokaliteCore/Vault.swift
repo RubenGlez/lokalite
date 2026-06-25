@@ -30,11 +30,12 @@ public final class Vault {
 
     private init() {}
 
-    /// Test seam: build a Vault over an explicit store so resolution and
-    /// project/environment logic can be exercised without the real vault file
-    /// or Keychain. Not used in production code.
-    init(store: VaultStore) {
+    /// Test seam: build a Vault over an explicit store (and optional key) so
+    /// resolution, import, and project/environment logic can be exercised
+    /// without the real vault file or Keychain. Not used in production code.
+    init(store: VaultStore, key: SymmetricKey? = nil) {
         self._store = store
+        self.key = key
     }
 
     // MARK: - Setup
@@ -307,6 +308,36 @@ public final class Vault {
             }
         }
         return ImportSummary(added: added, updated: updated, skipped: skipped)
+    }
+
+    /// Creates a project from parsed `.env` pairs and imports them, making the
+    /// new project the active project. A non-Default `environmentName` renames
+    /// the auto-created Default rather than leaving an empty one behind, so the
+    /// project ends with exactly one environment. Returns the refreshed project
+    /// (its `activeEnvironment` reflects any rename), the target environment
+    /// name, and the import summary.
+    public func createProjectFromEnv(
+        name: String,
+        environmentName: String,
+        linkPath: String?,
+        pairs: [(name: String, value: String)],
+        overwrite: Bool = false
+    ) throws -> (project: Project, environmentName: String, summary: ImportSummary) {
+        let created = try addProject(name: name, path: linkPath, icon: "folder")
+
+        var target = "Default"
+        if environmentName != "Default", !environmentName.isEmpty {
+            if let def = try environment(name: "Default", projectId: created.id) {
+                try renameEnvironment(id: def.id, newName: environmentName, projectId: created.id)
+            }
+            try setActiveEnvironment(name: environmentName, projectId: created.id)
+            target = environmentName
+        }
+
+        let summary = try importEnv(pairs: pairs, projectId: created.id,
+                                    environmentName: target, overwrite: overwrite)
+        try setActiveProject(id: created.id)
+        return (try project(id: created.id), target, summary)
     }
 
     public func moveSecretToEnvironment(name: String, projectId: String,

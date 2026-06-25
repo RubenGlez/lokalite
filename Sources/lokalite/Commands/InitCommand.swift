@@ -72,24 +72,9 @@ struct InitCommand: ParsableCommand {
 
         let projectName = name ?? projectDir.lastPathComponent
 
-        let (project, targetEnv, summary) = try withVault { vault -> (Project, String, ImportSummary) in
-            let project = try vault.addProject(name: projectName, path: projectDir.path)
-
-            // A chosen non-Default environment renames the project's auto-created
-            // Default rather than leaving an empty Default alongside it.
-            var target = "Default"
-            if let env, env != "Default" {
-                if let def = try vault.environment(name: "Default", projectId: project.id) {
-                    try vault.renameEnvironment(id: def.id, newName: env, projectId: project.id)
-                }
-                try vault.setActiveEnvironment(name: env, projectId: project.id)
-                target = env
-            }
-
-            let summary = try vault.importEnv(pairs: pairs, projectId: project.id,
-                                              environmentName: target, overwrite: overwrite)
-            try vault.setActiveProject(id: project.id)
-            return (project, target, summary)
+        let (project, targetEnv, summary) = try withVault { vault in
+            try vault.createProjectFromEnv(name: projectName, environmentName: env ?? "Default",
+                                           linkPath: projectDir.path, pairs: pairs, overwrite: overwrite)
         }
 
         print("Created project \"\(project.name)\" (environment \(targetEnv)) and linked it to \(projectDir.path).")

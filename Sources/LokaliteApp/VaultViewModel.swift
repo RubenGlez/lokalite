@@ -480,22 +480,13 @@ final class VaultViewModel {
                               pairs: [(name: String, value: String)], overwrite: Bool) -> ImportSummary? {
         renewSession()
         do {
-            let created = try Vault.shared.addProject(name: name, path: linkPath, icon: "folder")
-            var target = "Default"
-            if environmentName != "Default", !environmentName.isEmpty {
-                if let def = try Vault.shared.environment(name: "Default", projectId: created.id) {
-                    try Vault.shared.renameEnvironment(id: def.id, newName: environmentName, projectId: created.id)
-                }
-                try Vault.shared.setActiveEnvironment(name: environmentName, projectId: created.id)
-                target = environmentName
-            }
-            let summary = try Vault.shared.importEnv(pairs: pairs, projectId: created.id,
-                                                     environmentName: target, overwrite: overwrite)
-            let fresh = try Vault.shared.project(id: created.id)
-            projects.append(fresh)
-            selectProject(fresh)
+            let result = try Vault.shared.createProjectFromEnv(
+                name: name, environmentName: environmentName, linkPath: linkPath,
+                pairs: pairs, overwrite: overwrite)
+            projects.append(result.project)
+            selectProject(result.project)
             reloadDashboardSummaries()
-            return summary
+            return result.summary
         } catch {
             errorMessage = error.localizedDescription
             return nil

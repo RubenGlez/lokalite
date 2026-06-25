@@ -550,6 +550,71 @@ final class VaultResolutionTests: XCTestCase {
             try? FileManager.default.removeItem(at: directory)
         }
         let store = try VaultStore(path: directory.appendingPathComponent("vault.db").path)
-        return Vault(store: store)
+        return Vault(store: store, key: VaultCrypto.generateKey())
+    }
+}
+
+final class VaultImportCompositeTests: XCTestCase {
+    func testDefaultEnvironmentImportsIntoSeededDefault() throws {
+        let vault = try makeVault()
+
+        let result = try vault.createProjectFromEnv(
+            name: "alpha", environmentName: "Default", linkPath: "/tmp/alpha",
+            pairs: [("API_KEY", "k1"), ("DB_URL", "postgres://x")], overwrite: false)
+
+        XCTAssertEqual(result.environmentName, "Default")
+        XCTAssertEqual(result.summary, ImportSummary(added: 2, updated: 0, skipped: 0))
+        let envs = try vault.listEnvironments(projectId: result.project.id)
+        XCTAssertEqual(envs.map(\.name), ["Default"])
+        XCTAssertEqual(result.project.activeEnvironment, "Default")
+    }
+
+    func testNonDefaultEnvironmentRenamesDefaultLeavingNoOrphan() throws {
+        let vault = try makeVault()
+
+        let result = try vault.createProjectFromEnv(
+            name: "alpha", environmentName: "production", linkPath: nil,
+            pairs: [("API_KEY", "k1")], overwrite: false)
+
+        XCTAssertEqual(result.environmentName, "production")
+        let envs = try vault.listEnvironments(projectId: result.project.id)
+        XCTAssertEqual(envs.map(\.name), ["production"], "the auto-created Default must be renamed, not left as an orphan")
+        XCTAssertEqual(result.project.activeEnvironment, "production")
+        XCTAssertEqual(result.summary.added, 1)
+    }
+
+    func testNewProjectBecomesActiveProject() throws {
+        let vault = try makeVault()
+
+        let result = try vault.createProjectFromEnv(
+            name: "alpha", environmentName: "Default", linkPath: nil,
+            pairs: [("API_KEY", "k1")], overwrite: false)
+
+        XCTAssertEqual(try vault.activeProjectId(), result.project.id)
+    }
+
+    func testOverwriteCountsDuplicatesAsUpdated() throws {
+        let vault = try makeVault()
+        let first = try vault.createProjectFromEnv(
+            name: "alpha", environmentName: "Default", linkPath: nil,
+            pairs: [("API_KEY", "k1")], overwrite: false)
+
+        // Re-import into the same project: same key, overwrite on.
+        let summary = try vault.importEnv(
+            pairs: [("API_KEY", "k2"), ("NEW_KEY", "n1")],
+            projectId: first.project.id, environmentName: "Default", overwrite: true)
+
+        XCTAssertEqual(summary, ImportSummary(added: 1, updated: 1, skipped: 0))
+    }
+
+    private func makeVault() throws -> Vault {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: directory)
+        }
+        let store = try VaultStore(path: directory.appendingPathComponent("vault.db").path)
+        return Vault(store: store, key: VaultCrypto.generateKey())
     }
 }
