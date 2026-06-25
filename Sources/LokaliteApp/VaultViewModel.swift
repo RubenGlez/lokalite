@@ -174,6 +174,34 @@ final class VaultViewModel {
         reloadSecrets()
     }
 
+    /// The environment the CLI, shell, and MCP agents resolve for this project.
+    /// Distinct from `selectedEnvironment`, which only drives what the app shows.
+    var activeEnvironmentName: String? {
+        selectedProject?.activeEnvironment
+    }
+
+    func isActiveEnvironment(_ env: VaultEnvironment) -> Bool {
+        env.name == selectedProject?.activeEnvironment
+    }
+
+    /// Promote an environment to the project's active environment, so terminals
+    /// and agents resolve it. Also switches the app's view to match.
+    func makeEnvironmentActive(_ env: VaultEnvironment) {
+        renewSession()
+        guard let project = selectedProject else { return }
+        do {
+            try Vault.shared.setActiveEnvironment(name: env.name, projectId: project.id)
+            let updated = Project(id: project.id, name: project.name, path: project.path,
+                                  activeEnvironment: env.name, icon: project.icon,
+                                  createdAt: project.createdAt)
+            if let idx = projects.firstIndex(where: { $0.id == project.id }) { projects[idx] = updated }
+            selectedProject = updated
+            selectEnvironment(env)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     // MARK: - Data loading
 
     func refresh() {

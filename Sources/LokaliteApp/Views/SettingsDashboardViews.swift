@@ -27,7 +27,7 @@ struct DashboardSearchField: View {
                 .font(.system(size: 13))
                 .optionallyFocused(isFocused)
             Text(shortcut)
-                .font(.system(size: 11, weight: .medium))
+                .font(Theme.mono(11, .medium))
                 .foregroundStyle(Theme.textDim)
         }
         .padding(.horizontal, 9)
@@ -240,7 +240,7 @@ struct ShortcutHint: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(keys)
-                .font(.system(size: 12, weight: .medium))
+                .font(Theme.mono(12, .medium))
                 .foregroundStyle(Theme.textMuted)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
@@ -474,8 +474,9 @@ struct MCPPanel: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text("MCP Server")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Theme.text)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Theme.textMuted)
+                    .textCase(.uppercase)
                 Spacer()
                 StatusBadge(installed: isInstalled)
             }
@@ -535,8 +536,9 @@ struct DeveloperActionsPanel: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text("CLI")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Theme.text)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Theme.textMuted)
+                    .textCase(.uppercase)
                 Spacer()
                 StatusBadge(installed: isInstalled)
             }
@@ -613,8 +615,9 @@ struct InspectorCard<Content: View>: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text(title)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Theme.text)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Theme.textMuted)
+                    .textCase(.uppercase)
                 Spacer()
                 if let accessory {
                     Text(accessory)

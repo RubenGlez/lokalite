@@ -61,6 +61,12 @@ enum Theme {
         })
     }
 
+    /// Monospaced "terminal vault" voice. Used for the wordmark, keys, and
+    /// shortcut chips — the type that signals this tool lives next to your shell.
+    static func mono(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
+        .system(size: size, weight: weight, design: .monospaced)
+    }
+
     static let environmentPalette = ["#6DAFF1", "#F2CC60", "#FF7B72", "#9B87F1", "#ED85B0", "#ECB15D", "#62D2C3", "#909FAF"]
 
     static func envCircle(_ color: Color) -> Image {

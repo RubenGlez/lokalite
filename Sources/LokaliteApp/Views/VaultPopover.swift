@@ -93,23 +93,22 @@ struct VaultPopover: View {
 
             ZStack {
                 Circle()
-                    .fill(Theme.panelBackground)
-                    .frame(width: 48, height: 48)
-                Image(nsImage: MenuBarIcon.templateImage(size: 26))
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 26, height: 26)
+                    .fill(Theme.brand.opacity(0.12))
+                    .frame(width: 52, height: 52)
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 21, weight: .medium))
                     .foregroundStyle(Theme.brand)
             }
 
             VStack(spacing: 6) {
-                Text("Workspace locked")
-                    .font(.system(size: 14, weight: .semibold))
+                Text("Lokalite")
+                    .font(Theme.mono(14, .semibold))
                     .foregroundStyle(.primary)
-                Text("Unlock to search projects and environments")
+                Text("Vault locked. Unlock to reach your secrets.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 230)
             }
 
             Button("Unlock") {
@@ -202,30 +201,37 @@ struct VaultPopover: View {
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(.tertiary)
 
-            // Environment switcher (viewing filter only — does not change the active environment)
+            // Environment switcher — the active environment terminals and agents resolve.
             Menu {
                 ForEach(vault.environments, id: \.id) { env in
-                    Button { vault.selectEnvironment(env) } label: {
-                        Label { Text(env.name) } icon: { Theme.envCircle(Theme.color(hex: env.color)) }
+                    Button { vault.makeEnvironmentActive(env) } label: {
+                        HStack {
+                            Theme.envCircle(Theme.color(hex: env.color))
+                            Text(env.name)
+                            if vault.isActiveEnvironment(env) {
+                                Spacer()
+                                Image(systemName: "checkmark")
+                            }
+                        }
                     }
                 }
             } label: {
                 HStack(spacing: 4) {
-                    Image(systemName: "line.3.horizontal.decrease")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(.tertiary)
                     Theme.envCircle(environmentColor)
                     Text(vault.selectedEnvironment?.name ?? "No environment")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(.tertiary)
                 }
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
             .fixedSize()
             .disabled(vault.selectedProject == nil || vault.environments.isEmpty)
-            .help("Viewing filter — does not change the active environment")
+            .help("Active environment — what terminals and agents resolve")
 
             Spacer()
 
@@ -355,7 +361,7 @@ struct VaultPopover: View {
 
     private var emptyView: some View {
         ContentUnavailableView {
-            Label("No Secrets", systemImage: "key")
+            Label("No secrets yet", systemImage: "key")
         } actions: {
             Button("Add your first secret") {
                 showingAddSecret = true
@@ -461,14 +467,7 @@ private struct PopoverSecretRow: View {
         HStack(spacing: 0) {
             Button(action: copyFromClick) {
                 HStack(spacing: 11) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Theme.brand.opacity(0.15))
-                        Image(systemName: secret.category.systemImage)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(Theme.brand)
-                    }
-                    .frame(width: 28, height: 28)
+                    CategoryIconTile(category: secret.category, size: 28)
 
                     VStack(alignment: .leading, spacing: 3) {
                         Text(secret.name)

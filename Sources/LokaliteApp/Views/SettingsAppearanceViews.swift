@@ -2,26 +2,6 @@ import SwiftUI
 import LokaliteCore
 import SymbolPicker
 
-// MARK: - Identity
-
-struct IdentityBadge: View {
-    let icon: String
-    let color: Color
-    let size: CGFloat
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: min(8, size * 0.24))
-                .fill(color.opacity(0.16))
-            RoundedRectangle(cornerRadius: min(8, size * 0.24))
-                .strokeBorder(color.opacity(0.22), lineWidth: 1)
-            Text(icon)
-                .font(.system(size: size * 0.5))
-        }
-        .frame(width: size, height: size)
-    }
-}
-
 struct CategoryPill: View {
     let category: SecretCategory
 
@@ -29,12 +9,12 @@ struct CategoryPill: View {
         Label(category.label, systemImage: category.systemImage)
             .font(.system(size: 10, weight: .semibold))
             .labelStyle(.titleAndIcon)
-            .foregroundStyle(Theme.brand)
+            .foregroundStyle(category.color)
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
             .background(
                 Capsule()
-                    .fill(Theme.brand.opacity(0.12))
+                    .fill(category.color.opacity(0.14))
             )
     }
 }
@@ -455,7 +435,7 @@ struct SecretRow: View {
 
     var body: some View {
         HStack(spacing: 9) {
-            IdentityBadge(icon: secret.category.defaultIcon, color: Theme.text, size: 26)
+            CategoryIconTile(category: secret.category, size: 26)
             VStack(alignment: .leading, spacing: 2) {
                 Text(secret.name)
                     .font(.system(size: 12, design: .monospaced).weight(.medium))

@@ -79,7 +79,7 @@ struct SettingsView: View {
                 name: environment.name,
                 color: Theme.color(hex: environment.color),
                 count: vault.environmentSecretCounts[environment.id] ?? 0,
-                isActive: vault.selectedEnvironment?.id == environment.id
+                isActive: vault.activeEnvironmentName == environment.name
             )
         }
     }
@@ -250,7 +250,7 @@ struct SettingsView: View {
     private var redesignedSidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Lokalite")
-                .font(.system(size: 22, weight: .bold))
+                .font(Theme.mono(20, .semibold))
                 .foregroundStyle(Theme.text)
                 .padding(.top, 28)
                 .padding(.horizontal, 20)
@@ -477,7 +477,7 @@ struct SettingsView: View {
                     ForEach(environmentCards) { environment in
                         EnvironmentSummaryCard(environment: environment) {
                             if let match = vault.environments.first(where: { $0.id == environment.id }) {
-                                vault.selectEnvironment(match)
+                                vault.makeEnvironmentActive(match)
                             }
                         }
                         .frame(width: 210)
@@ -560,13 +560,25 @@ struct SettingsView: View {
     // MARK: - States
 
     private var lockedView: some View {
-        VStack(spacing: 16) {
-            Text("Lokalite")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(Theme.text)
-            Text("Unlock your local workspace context.")
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(Theme.textMuted)
+        VStack(spacing: 18) {
+            ZStack {
+                Circle()
+                    .fill(Theme.brand.opacity(0.12))
+                    .frame(width: 64, height: 64)
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 26, weight: .medium))
+                    .foregroundStyle(Theme.brand)
+            }
+
+            VStack(spacing: 7) {
+                Text("Lokalite")
+                    .font(Theme.mono(20, .semibold))
+                    .foregroundStyle(Theme.text)
+                Text("Vault locked. Unlock to reach your projects and secrets.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.textMuted)
+            }
+
             Button("Unlock") {
                 vault.unlock()
             }
