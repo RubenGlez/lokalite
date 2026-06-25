@@ -29,7 +29,7 @@ final class LokaliteMCPTools {
             let envName = args["environment"] as? String
             let path = args["path"] as? String
             do {
-                let ctx = try resolveContext(projectFlag: projectName, envFlag: envName, pathFlag: path)
+                let ctx = try resolveContext(projectFlag: projectName, envFlag: envName, pathFlag: path, using: workspace)
                 let secret = try workspace.get(name: secretName, context: ctx, accessSource: .mcp)
                 return .success(content(secret.value))
             } catch {
@@ -41,7 +41,7 @@ final class LokaliteMCPTools {
             let envName = args["environment"] as? String
             let path = args["path"] as? String
             do {
-                let ctx = try resolveContext(projectFlag: projectName, envFlag: envName, pathFlag: path)
+                let ctx = try resolveContext(projectFlag: projectName, envFlag: envName, pathFlag: path, using: workspace)
                 let secrets = try workspace.listInfo(context: ctx)
                 if secrets.isEmpty {
                     return .success(content("No secrets found."))
@@ -71,7 +71,7 @@ final class LokaliteMCPTools {
             let envName = args["environment"] as? String
             let path = args["path"] as? String
             do {
-                let ctx = try resolveContext(projectFlag: projectName, envFlag: envName, pathFlag: path)
+                let ctx = try resolveContext(projectFlag: projectName, envFlag: envName, pathFlag: path, using: workspace)
                 _ = try workspace.add(name: secretName, value: value, description: description, context: ctx)
                 return .success(content("Secret '\(secretName)' created."))
             } catch {
@@ -92,7 +92,7 @@ final class LokaliteMCPTools {
             let envName = args["environment"] as? String
             let path = args["path"] as? String
             do {
-                let ctx = try resolveContext(projectFlag: projectName, envFlag: envName, pathFlag: path)
+                let ctx = try resolveContext(projectFlag: projectName, envFlag: envName, pathFlag: path, using: workspace)
                 _ = try workspace.set(name: secretName, value: value, context: ctx)
                 return .success(content("Secret '\(secretName)' updated."))
             } catch {
@@ -109,7 +109,7 @@ final class LokaliteMCPTools {
             let projectName = args["project"] as? String
             let path = args["path"] as? String
             do {
-                let ctx = try resolveContext(projectFlag: projectName, envFlag: nil, pathFlag: path)
+                let ctx = try resolveContext(projectFlag: projectName, envFlag: nil, pathFlag: path, using: workspace)
                 try workspace.delete(name: secretName, context: ctx)
                 return .success(content("Secret '\(secretName)' deleted."))
             } catch {
@@ -201,17 +201,6 @@ final class LokaliteMCPTools {
         }
 
         return tools
-    }
-
-    private func resolveContext(projectFlag: String?, envFlag: String?, pathFlag: String? = nil) throws -> SecretWorkspaceContext {
-        let projectName = projectFlag ?? ProcessInfo.processInfo.environment["LOKALITE_PROJECT"]
-        let envName = envFlag ?? ProcessInfo.processInfo.environment["LOKALITE_ENV"]
-        let workingDirectory = pathFlag ?? FileManager.default.currentDirectoryPath
-        return try workspace.resolveContext(
-            projectName: projectName,
-            environmentName: envName,
-            workingDirectory: workingDirectory
-        )
     }
 
     private func content(_ text: String) -> [String: Any] {

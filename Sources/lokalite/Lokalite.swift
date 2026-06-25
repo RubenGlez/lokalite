@@ -60,6 +60,7 @@ func importSummaryLine(_ summary: ImportSummary) -> String {
 func resolveContext(
     projectFlag: String?,
     envFlag: String?,
+    pathFlag: String? = nil,
     using workspace: SecretWorkspace
 ) throws -> SecretWorkspaceContext {
     let projectName = projectFlag ?? ProcessInfo.processInfo.environment["LOKALITE_PROJECT"]
@@ -68,7 +69,7 @@ func resolveContext(
     return try workspace.resolveContext(
         projectName: projectName,
         environmentName: envName,
-        workingDirectory: FileManager.default.currentDirectoryPath
+        workingDirectory: pathFlag ?? FileManager.default.currentDirectoryPath
     )
 }
 
