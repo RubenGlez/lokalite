@@ -7,7 +7,7 @@ extension SecretCategory {
         case .token: return "ticket"
         case .apiKey: return "key"
         case .password: return "lock"
-        case .secret: return "text.badge.key"
+        case .secret: return "lock.shield"
         case .certificate: return "checkmark.seal"
         case .database: return "cylinder.split.1x2"
         case .webhook: return "point.3.connected.trianglepath.dotted"
