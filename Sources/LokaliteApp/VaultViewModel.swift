@@ -429,6 +429,13 @@ final class VaultViewModel {
         }
     }
 
+    /// Builds the workspace context for secret operations from the current
+    /// selection. The app resolves context from its own selection rather than
+    /// the env-var/working-directory tiers the CLI uses.
+    private func makeContext(_ project: Project) -> SecretWorkspaceContext {
+        SecretWorkspaceContext(project: project, environmentName: selectedEnvironment?.name)
+    }
+
     func add(
         name: String,
         value: String,
@@ -445,9 +452,8 @@ final class VaultViewModel {
             return
         }
         do {
-            _ = try Vault.shared.add(name: name, value: value, description: description, category: category,
-                                     projectId: project.id,
-                                     environmentName: selectedEnvironment?.name)
+            _ = try workspace.add(name: name, value: value, description: description,
+                                  category: category, context: makeContext(project))
             reloadSecrets()
             reloadDashboardSummaries()
         } catch {
@@ -504,8 +510,7 @@ final class VaultViewModel {
         do {
             let desc = description.flatMap { $0.isEmpty ? nil : $0 }
             try Vault.shared.setDescription(name: name, description: desc, projectId: project.id)
-            _ = try Vault.shared.set(name: name, value: value, projectId: project.id,
-                                     environmentName: selectedEnvironment?.name)
+            _ = try workspace.set(name: name, value: value, context: makeContext(project))
             try Vault.shared.setSecretCategory(name: name, category: category, projectId: project.id)
             reloadSecrets()
             reloadDashboardSummaries()
@@ -518,7 +523,7 @@ final class VaultViewModel {
         renewSession()
         guard let project = selectedProject else { return }
         do {
-            try Vault.shared.delete(name: secret.name, projectId: project.id)
+            try workspace.delete(name: secret.name, context: makeContext(project))
             secrets.removeAll { $0.id == secret.id }
             reloadDashboardSummaries()
         } catch {
@@ -555,8 +560,7 @@ final class VaultViewModel {
         renewSession()
         recordRecent(secret)
         if let selectedProject {
-            let context = SecretWorkspaceContext(project: selectedProject, environmentName: selectedEnvironment?.name)
-            workspace.logAccess(secretName: secret.name, context: context, source: .app)
+            workspace.logAccess(secretName: secret.name, context: makeContext(selectedProject), source: .app)
         }
         reloadActivity()
         let text: String
