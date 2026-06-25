@@ -188,7 +188,7 @@ eval $(lokalite shell --keys OPENAI_API_KEY,ANTHROPIC_API_KEY)
 
 ## Menu Bar App
 
-Click the armadillo icon in your menu bar (or press the global shortcut, default `⌘⇧Space`) to open the vault popover. The popover shows recently copied secrets at the top, then all secrets for the active project and environment. Use the project and environment menus in the header to switch context, and click **Manage** in the footer to open the full secrets manager window.
+Click the armadillo icon in your menu bar (or press the global shortcut, default `⌘⇧Space`) to open the vault popover. The popover shows recently copied secrets at the top, then all secrets for the active project and environment. Use the project and environment menus in the header to switch context, and click **Open Lokalite** in the footer to open the full secrets manager window.
 
 The secrets manager is a three-column layout:
 - **Left sidebar**: project list; create, rename, and delete projects; set icon and link to a local directory
