@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-06-25
+
+### Changed
+- Visual refresh: semantic colors per secret category, a unified environment model across the app, and a refreshed terminal-vault identity
+- Importing a `.env` to create a project in the menu bar app now sets it as the active project, matching the CLI
+
+### Fixed
+- Use a valid SF Symbol for the Secret category icon
+
 ## [1.7.1] - 2026-06-24
 
 ### Fixed
