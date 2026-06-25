@@ -1,8 +1,8 @@
 class Lokalite < Formula
   desc "Local-first secrets manager for developers — vault, CLI, and MCP server"
   homepage "https://github.com/RubenGlez/lokalite"
-  url "https://github.com/RubenGlez/lokalite/archive/refs/tags/v1.7.1.tar.gz"
-  sha256 "e5f66c4d3820087591deee586cd8786c670afe829259b8905188732d9f376f0b"
+  url "https://github.com/RubenGlez/lokalite/archive/refs/tags/v1.8.0.tar.gz"
+  sha256 "a077001407bac43cfa656a2ff257eac9ce881fa37d47a3474b518e2370068e4c"
   license "MIT"
   head "https://github.com/RubenGlez/lokalite.git", branch: "main"
 
