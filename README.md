@@ -65,47 +65,9 @@ brew install --cask RubenGlez/lokalite/lokalite-app
 Download from the [Releases page](https://github.com/RubenGlez/lokalite/releases):
 
 - **CLI**: run the `.pkg` installer, then `lokalite install`
-- **Menu bar app**: drag the `.dmg` to Applications, then run `xattr -cr /Applications/Lokalite.app` once to clear the macOS quarantine flag
+- **Menu bar app**: drag the `.dmg` to Applications, then run `xattr -cr /Applications/LokaliteApp.app` once to clear the macOS quarantine flag
 
-  The app is not yet signed with an Apple Developer ID, so Gatekeeper quarantines it on first launch. The source is fully open and every release ships a `SHA256SUMS` file you can verify against the artifacts; if you'd rather not run `xattr`, build from source instead (below). Developer ID signing and notarization are planned.
-
-### Build from source
-
-Requires Swift 5.9 or later.
-
-```bash
-git clone https://github.com/RubenGlez/lokalite
-cd lokalite
-make install
-```
-
-This builds a release binary, copies it to `/usr/local/bin/lokalite`, and registers it as an MCP server in `~/.claude.json`.
-
-If `/usr/local/bin` requires elevated permissions:
-
-```bash
-swift build -c release
-sudo .build/release/lokalite install
-```
-
-## Release
-
-The standard release flow is:
-
-1. Run a local release bump from a clean checkout on `main`:
-
-   ```bash
-   make release BUMP=patch
-   ```
-
-   You can also use `minor` or `major` instead of `patch`.
-
-2. The script creates an annotated tag and pushes it to GitHub.
-3. GitHub Actions builds the release artifacts and publishes the GitHub release.
-4. If the repository secret `HOMEBREW_PR_TOKEN` is configured, the workflow also opens a draft PR to update the Homebrew formula and cask.
-5. Merge the Homebrew PR after CI passes. If the token is not configured, the workflow leaves the Homebrew branch pushed and prints the branch URL so you can open the PR manually.
-
-That keeps `main` protected while still making releases a one-command local operation.
+  The app is not yet signed with an Apple Developer ID, so Gatekeeper quarantines it on first launch. The source is fully open and every release ships a `SHA256SUMS` file you can verify against the artifacts. Developer ID signing and notarization are planned.
 
 ## CLI
 
