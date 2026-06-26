@@ -370,13 +370,13 @@ struct VaultPopover: View {
             }
             .disabled(vault.selectedProject == nil || vault.selectedEnvironment == nil)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(24)
     }
 
     private var noResultsView: some View {
         ContentUnavailableView.search(text: searchText)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(24)
     }
 
