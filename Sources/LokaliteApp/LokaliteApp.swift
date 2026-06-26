@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import LokaliteCore
 
 @main
 struct LokaliteApp: App {
@@ -12,6 +13,9 @@ struct LokaliteApp: App {
                 .frame(width: 360, height: 420)
         } label: {
             MenuBarIcon()
+            if VaultConfiguration.isDevelopmentBuild {
+                Text("DEV")
+            }
         }
         .menuBarExtraStyle(.window)
 

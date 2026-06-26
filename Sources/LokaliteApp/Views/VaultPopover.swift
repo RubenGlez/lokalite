@@ -235,6 +235,8 @@ struct VaultPopover: View {
 
             Spacer()
 
+            DevBadge()
+
             Button {
                 showingAddSecret = true
             } label: {

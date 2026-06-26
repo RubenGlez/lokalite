@@ -249,11 +249,14 @@ struct SettingsView: View {
 
     private var redesignedSidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Lokalite")
-                .font(Theme.mono(20, .semibold))
-                .foregroundStyle(Theme.text)
-                .padding(.top, 28)
-                .padding(.horizontal, 20)
+            HStack(spacing: 8) {
+                Text("Lokalite")
+                    .font(Theme.mono(20, .semibold))
+                    .foregroundStyle(Theme.text)
+                DevBadge()
+            }
+            .padding(.top, 28)
+            .padding(.horizontal, 20)
 
             DashboardSearchField(
                 placeholder: "Search projects...",
