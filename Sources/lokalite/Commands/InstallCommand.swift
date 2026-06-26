@@ -21,7 +21,6 @@ struct InstallCommand: ParsableCommand {
             .appendingPathComponent("lokalite")
 
         try installBinary(to: destination)
-        print("✓ Binary installed to \(destination.path)")
 
         if !skipMcp {
             let configURL = try registerMCPServer()
@@ -34,8 +33,19 @@ struct InstallCommand: ParsableCommand {
     // MARK: - Binary installation
 
     private func installBinary(to destination: URL) throws {
-        let source = resolvedBinaryURL()
+        let sourcePath = (resolvedBinaryURL().path as NSString).resolvingSymlinksInPath
+
+        // When invoked through a package-managed binary (Homebrew, .pkg) the
+        // executable we're running is already reachable on PATH, so copying it
+        // elsewhere is redundant and would leave a stale duplicate. Skip the
+        // copy in that case; from-source installs (run from .build/) still copy.
+        if let onPath = lokaliteOnPath(), onPath == sourcePath {
+            print("✓ Binary already on PATH at \(onPath), skipping copy.")
+            return
+        }
+
         let fm = FileManager.default
+        let source = URL(fileURLWithPath: sourcePath)
 
         do {
             if fm.fileExists(atPath: destination.path) {
@@ -49,10 +59,24 @@ struct InstallCommand: ParsableCommand {
         } catch CocoaError.fileWriteNoPermission {
             throw InstallError.permissionDenied(destination.path)
         }
+        print("✓ Binary installed to \(destination.path)")
     }
 
     private func resolvedBinaryURL() -> URL {
         Bundle.main.executableURL ?? URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL
+    }
+
+    /// Resolved path of a `lokalite` already reachable on PATH, if any.
+    private func lokaliteOnPath() -> String? {
+        guard let path = ProcessInfo.processInfo.environment["PATH"] else { return nil }
+        let fm = FileManager.default
+        for dir in path.split(separator: ":") {
+            let candidate = "\(dir)/lokalite"
+            if fm.isExecutableFile(atPath: candidate) {
+                return (candidate as NSString).resolvingSymlinksInPath
+            }
+        }
+        return nil
     }
 
     // MARK: - MCP config
