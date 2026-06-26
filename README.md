@@ -39,7 +39,7 @@ CLI, MCP server, and menu bar app via Homebrew:
 
 ```bash
 brew install RubenGlez/lokalite/lokalite
-brew install --cask RubenGlez/lokalite/lokalite
+brew install --cask RubenGlez/lokalite/lokalite-app
 lokalite install   # registers the MCP server in ~/.claude.json
 ```
 
@@ -57,7 +57,7 @@ lokalite install
 If you already have the CLI installed or don't need it:
 
 ```bash
-brew install --cask RubenGlez/lokalite/lokalite
+brew install --cask RubenGlez/lokalite/lokalite-app
 ```
 
 ### Without Homebrew

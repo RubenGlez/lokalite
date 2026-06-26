@@ -170,13 +170,13 @@ jobs:
           sed -i '' "s|url \"https://github.com/RubenGlez/lokalite/archive/refs/tags/.*\"|url \"${TARBALL_URL}\"|" Formula/lokalite.rb
           sed -i '' "s|sha256 \"[a-f0-9]*\"|sha256 \"${FORMULA_SHA}\"|" Formula/lokalite.rb
 
-          sed -i '' "s|version \".*\"|version \"${SHORT_VERSION}\"|" Casks/lokalite.rb
-          sed -i '' "s|sha256 \"[a-f0-9]*\"|sha256 \"${CASK_SHA}\"|" Casks/lokalite.rb
+          sed -i '' "s|version \".*\"|version \"${SHORT_VERSION}\"|" Casks/lokalite-app.rb
+          sed -i '' "s|sha256 \"[a-f0-9]*\"|sha256 \"${CASK_SHA}\"|" Casks/lokalite-app.rb
 
           git config user.email "action@github.com"
           git config user.name "GitHub Actions"
           git checkout -B "${BRANCH}"
-          git add Formula/lokalite.rb Casks/lokalite.rb
+          git add Formula/lokalite.rb Casks/lokalite-app.rb
           git commit -m "Update Homebrew formula and cask to ${VERSION}"
           git push -u origin "${BRANCH}"
 
@@ -185,7 +185,7 @@ jobs:
             "" \
             "This release workflow refreshes:" \
             "- \`Formula/lokalite.rb\`" \
-            "- \`Casks/lokalite.rb\`" \
+            "- \`Casks/lokalite-app.rb\`" \
             "" \
             "The branch was created automatically from the release tag and is ready to merge into \`main\`." \
             > /tmp/homebrew-pr-body.md
