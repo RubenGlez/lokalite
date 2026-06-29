@@ -65,9 +65,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var windowEventMonitor: Any?
     private var windowKeyObserver: NSObjectProtocol?
     private var statusItemMenuMonitor: Any?
+    private var daemonServer: VaultSocketServer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        startVaultDaemon()
         setupHotkey()
         setupWindowBehavior()
         setupStatusItemMenu()
@@ -84,6 +86,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        daemonServer?.stop()
+    }
+
+    // The app is the vault daemon (ADR 0014): it owns the only unlocked Vault and
+    // brokers requests from the CLI/MCP over a Unix socket so those processes never
+    // hold the key. NOTE: the server serves on background threads while the app's
+    // main thread also uses Vault.shared — verify/guard that concurrency before the
+    // CLI/MCP default to the daemon.
+    private func startVaultDaemon() {
+        let server = VaultSocketServer(
+            socketPath: VaultConfiguration.daemonSocketURL.path,
+            service: Vault.shared
+        )
+        do {
+            try server.start()
+            daemonServer = server
+        } catch {
+            NSLog("Lokalite: vault daemon failed to start: \(error.localizedDescription)")
+        }
     }
 
     private func setupWindowBehavior() {

@@ -1,5 +1,7 @@
 import Foundation
 
+import LokaliteCore
+
 final class MCPServer {
     private let tools: LokaliteMCPTools
 
@@ -21,8 +23,8 @@ final class MCPServer {
     Project resolution: tools auto-resolve the project from your working directory (the `path` argument). If resolution fails, call list_projects and pass `project` explicitly.
     """
 
-    init(allowWrites: Bool = false) {
-        tools = LokaliteMCPTools(allowWrites: allowWrites)
+    init(allowWrites: Bool = false, vault: VaultService = Vault.shared) {
+        tools = LokaliteMCPTools(allowWrites: allowWrites, vault: vault)
     }
 
     func run() throws {

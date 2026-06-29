@@ -8,11 +8,12 @@ enum MCPToolCallResult {
 }
 
 final class LokaliteMCPTools {
-    private let workspace = SecretWorkspace()
+    private let workspace: SecretWorkspace
     private let allowWrites: Bool
 
-    init(allowWrites: Bool = false) {
+    init(allowWrites: Bool = false, vault: VaultService = Vault.shared) {
         self.allowWrites = allowWrites
+        self.workspace = SecretWorkspace(vault: vault)
     }
 
     func unlock() throws {
