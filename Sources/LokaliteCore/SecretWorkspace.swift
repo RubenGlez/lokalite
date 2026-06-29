@@ -15,9 +15,9 @@ public struct SecretWorkspaceContext {
 }
 
 public final class SecretWorkspace {
-    private let vault: Vault
+    private let vault: VaultService
 
-    public init(vault: Vault = .shared) {
+    public init(vault: VaultService = Vault.shared) {
         self.vault = vault
     }
 
@@ -48,6 +48,7 @@ public final class SecretWorkspace {
             name: name,
             value: value,
             description: description,
+            icon: nil,
             category: category,
             projectId: context.project.id,
             environmentName: context.environmentName
@@ -76,6 +77,10 @@ public final class SecretWorkspace {
 
     public func listInfo(context: SecretWorkspaceContext) throws -> [SecretInfo] {
         try vault.listInfo(projectId: context.project.id)
+    }
+
+    public func listProjects() throws -> [Project] {
+        try vault.listProjects()
     }
 
     public func set(

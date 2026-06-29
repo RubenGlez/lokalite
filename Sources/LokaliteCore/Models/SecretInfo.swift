@@ -1,6 +1,6 @@
 import Foundation
 
-public struct SecretInfo {
+public struct SecretInfo: Codable, Equatable {
     public var name: String
     public var description: String?
     public var icon: String?

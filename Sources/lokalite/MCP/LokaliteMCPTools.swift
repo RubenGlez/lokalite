@@ -31,7 +31,25 @@ final class LokaliteMCPTools {
             do {
                 let ctx = try resolveContext(projectFlag: projectName, envFlag: envName, pathFlag: path, using: workspace)
                 let secret = try workspace.get(name: secretName, context: ctx, accessSource: .mcp)
-                return .success(content(secret.value))
+                let command = try MCPSecretHandoff.write([(secret.name, secret.value)])
+                return .success(content("Run this in your shell to load \(secret.name) into the environment — the value is never shown here:\n\(command)"))
+            } catch {
+                return .success(contentError(forResolution: error))
+            }
+
+        case "list_projects":
+            do {
+                let projects = try workspace.listProjects()
+                if projects.isEmpty {
+                    return .success(content("No projects found."))
+                }
+                let text = projects.map { project -> String in
+                    var line = project.name
+                    line += project.path.map { "  — \($0)" } ?? "  — (not linked to a directory)"
+                    if let env = project.activeEnvironment { line += "  [env: \(env)]" }
+                    return line
+                }.joined(separator: "\n")
+                return .success(content(text))
             } catch {
                 return .success(contentError(error.localizedDescription))
             }
@@ -53,7 +71,7 @@ final class LokaliteMCPTools {
                 }.joined(separator: "\n")
                 return .success(content(text))
             } catch {
-                return .success(contentError(error.localizedDescription))
+                return .success(contentError(forResolution: error))
             }
 
         case "add_secret":
@@ -75,7 +93,7 @@ final class LokaliteMCPTools {
                 _ = try workspace.add(name: secretName, value: value, description: description, context: ctx)
                 return .success(content("Secret '\(secretName)' created."))
             } catch {
-                return .success(contentError(error.localizedDescription))
+                return .success(contentError(forResolution: error))
             }
 
         case "set_secret":
@@ -96,7 +114,7 @@ final class LokaliteMCPTools {
                 _ = try workspace.set(name: secretName, value: value, context: ctx)
                 return .success(content("Secret '\(secretName)' updated."))
             } catch {
-                return .success(contentError(error.localizedDescription))
+                return .success(contentError(forResolution: error))
             }
 
         case "delete_secret":
@@ -113,7 +131,7 @@ final class LokaliteMCPTools {
                 try workspace.delete(name: secretName, context: ctx)
                 return .success(content("Secret '\(secretName)' deleted."))
             } catch {
-                return .success(contentError(error.localizedDescription))
+                return .success(contentError(forResolution: error))
             }
 
         default:
@@ -125,7 +143,7 @@ final class LokaliteMCPTools {
         var tools: [[String: Any]] = [
             [
                 "name": "get_secret",
-                "description": "Retrieve a secret value from the Lokalite vault by name. Use this when you need the actual value of a credential, API key, or other secret. Call list_secrets first if you don't know the exact name.",
+                "description": "Load a secret from the Lokalite vault into your shell environment WITHOUT exposing its value. This does NOT return the value — it returns a one-time `source '<path>'` command. Run that command in your shell (Bash) to set the environment variable, then run your program in the same shell so it inherits it. The raw value never appears in this conversation; the handoff script is single-use and self-deletes. Do not print the loaded variable, and never copy the value into a file (.env, config, source). Call list_secrets first if you don't know the exact name.",
                 "inputSchema": [
                     "type": "object",
                     "properties": [
@@ -147,6 +165,14 @@ final class LokaliteMCPTools {
                         "environment": ["type": "string", "description": "Environment name. Omit to use the active environment."],
                         "path": ["type": "string", "description": "Absolute path of the caller's working directory; used to auto-resolve the project when omitted."]
                     ]
+                ] as [String: Any]
+            ],
+            [
+                "name": "list_projects",
+                "description": "List the projects in the Lokalite vault, with their linked directories and active environment. No secret values are returned. Use this when a tool reports that no project could be resolved, then pass the project name explicitly.",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": [:] as [String: Any]
                 ] as [String: Any]
             ]
         ]
@@ -209,5 +235,15 @@ final class LokaliteMCPTools {
 
     private func contentError(_ message: String) -> [String: Any] {
         ["content": [["type": "text", "text": message]], "isError": true]
+    }
+
+    /// Surfaces resolution failures with MCP-actionable guidance. The CLI's
+    /// `noActiveProject` message tells the user to `cd` into a linked directory,
+    /// which an agent cannot do; point it at list_projects instead.
+    private func contentError(forResolution error: Error) -> [String: Any] {
+        if let vaultError = error as? VaultError, case .noActiveProject = vaultError {
+            return contentError("No project could be resolved from the working directory. Call list_projects to see available projects, then pass `project` explicitly.")
+        }
+        return contentError(error.localizedDescription)
     }
 }

@@ -164,9 +164,10 @@ On first launch, an onboarding screen guides you through creating your first pro
 `lokalite install` registers the MCP server with Claude Code automatically (writing `~/.claude.json`). To register with a different client, pass `--client`:
 
 ```bash
-lokalite install --client claude     # ~/.claude.json (default)
-lokalite install --client cursor     # ~/.cursor/mcp.json
-lokalite install --client windsurf   # ~/.codeium/windsurf/mcp_config.json
+lokalite install --client claude          # ~/.claude.json (default)
+lokalite install --client claude-desktop  # ~/Library/Application Support/Claude/claude_desktop_config.json
+lokalite install --client cursor          # ~/.cursor/mcp.json
+lokalite install --client windsurf        # ~/.codeium/windsurf/mcp_config.json
 ```
 
 For any other MCP-compatible agent, add the same server block to its config manually:
@@ -182,12 +183,15 @@ For any other MCP-compatible agent, add the same server block to its config manu
 }
 ```
 
-By default the server is **read-only** and exposes two tools:
+By default the server is **read-only** and exposes three tools:
 
 | Tool | Description |
 |---|---|
 | `list_secrets` | List secret names, categories, and descriptions (values never exposed) |
-| `get_secret` | Retrieve a secret value by name |
+| `list_projects` | List projects and their linked directories (no values); use when no project resolves |
+| `get_secret` | Load a secret into the agent's shell environment via a one-time handoff — the value is never returned to the model |
+
+`get_secret` does **not** return the secret value. It writes the value to a single-use, owner-only shell script and returns a `source '<path>'` command; the agent runs that in its own shell to load the variable, then runs its program in the same shell. The raw value never enters the conversation/model context, the script self-deletes on first source, and any unsourced script is swept after 120s. The server also sends `instructions` on connect describing this flow and telling agents never to print a loaded variable or copy a secret into `.env`/config/source.
 
 When a tool call omits `project`, the server auto-resolves it from the caller's working directory using the project's linked path — the same way the CLI does. Pass an absolute `path` argument with the directory to resolve (preferred, since the server's own process may run elsewhere); otherwise it falls back to the server process's working directory. An explicit `project` argument (or `LOKALITE_PROJECT` in the server `env`) always wins.
 
@@ -203,7 +207,7 @@ Pass `--read-write` to also expose write tools:
 | `set_secret` | Update an existing secret's value |
 | `delete_secret` | Permanently delete a secret |
 
-> **Security note:** `get_secret` hands raw secret values to the connected agent with no per-access confirmation, so a prompt-injected agent can read any secret it can name (`list_secrets` gives it the names). Keep the server read-only (the default), scope it to a single project by setting `LOKALITE_PROJECT` in the server's `env` config, and prefer clients that ask for approval before tool calls. Every MCP access is recorded in the activity log.
+> **Security note:** the handoff keeps secret values out of the model's context, but an agent that can name a secret can still load it into a shell it controls (`list_secrets` gives it the names), and a sourced value is then visible to processes in that shell. Keep the server read-only (the default), scope it to a single project by setting `LOKALITE_PROJECT` in the server's `env` config, and prefer clients that ask for approval before tool calls. Every MCP access is recorded in the activity log.
 
 ## Security
 

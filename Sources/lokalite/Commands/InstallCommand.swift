@@ -13,7 +13,7 @@ struct InstallCommand: ParsableCommand {
     @Flag(name: .long, help: "Skip writing the MCP client config.")
     var skipMcp = false
 
-    @Option(name: .long, help: "MCP client to register with: claude, cursor, or windsurf.")
+    @Option(name: .long, help: "MCP client to register with: claude, claude-desktop, cursor, or windsurf.")
     var client: MCPClient = .claude
 
     func run() throws {
@@ -114,21 +114,27 @@ struct InstallCommand: ParsableCommand {
 // MARK: - MCP clients
 
 enum MCPClient: String, ExpressibleByArgument, CaseIterable {
-    case claude, cursor, windsurf
+    case claude
+    case claudeDesktop = "claude-desktop"
+    case cursor
+    case windsurf
 
     var displayName: String {
         switch self {
         case .claude: return "Claude Code"
+        case .claudeDesktop: return "Claude Desktop"
         case .cursor: return "Cursor"
         case .windsurf: return "Windsurf"
         }
     }
 
-    // All three clients use the same `{ "mcpServers": { ... } }` schema; only the
+    // All clients use the same `{ "mcpServers": { ... } }` schema; only the
     // config file location differs.
     func configURL(home: URL) -> URL {
         switch self {
         case .claude:   return home.appendingPathComponent(".claude.json")
+        case .claudeDesktop:
+            return home.appendingPathComponent("Library/Application Support/Claude/claude_desktop_config.json")
         case .cursor:   return home.appendingPathComponent(".cursor/mcp.json")
         case .windsurf: return home.appendingPathComponent(".codeium/windsurf/mcp_config.json")
         }

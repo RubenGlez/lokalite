@@ -48,7 +48,7 @@ let package = Package(
         ),
         .testTarget(
             name: "LokaliteCoreTests",
-            dependencies: ["LokaliteCore"],
+            dependencies: ["LokaliteCore", "lokalite"],
             path: "Tests/LokaliteCoreTests",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),

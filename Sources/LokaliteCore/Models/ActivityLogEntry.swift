@@ -8,7 +8,7 @@ public struct ActivityLogEntry: Identifiable, Sendable {
     public let source: AccessSource
     public let accessedAt: Date
 
-    public enum AccessSource: String, Sendable {
+    public enum AccessSource: String, Sendable, Codable {
         case app, cli, mcp
     }
 }

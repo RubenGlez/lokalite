@@ -4,7 +4,7 @@ import Security
 
 /// Outcome of importing `.env` pairs: how many secrets were created, replaced
 /// (with `overwrite`), or skipped because they already existed.
-public struct ImportSummary: Sendable, Equatable {
+public struct ImportSummary: Sendable, Equatable, Codable {
     public let added: Int
     public let updated: Int
     public let skipped: Int

@@ -1,6 +1,6 @@
 import Foundation
 
-public struct Project: Equatable, Hashable {
+public struct Project: Equatable, Hashable, Codable {
     public var id: String
     public var name: String
     public var path: String?
