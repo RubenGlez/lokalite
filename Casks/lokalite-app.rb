@@ -1,6 +1,6 @@
 cask "lokalite-app" do
-  version "2.0.1"
-  sha256 "72d1757e81c6fd2907e1bdc6e17f8e424ef6c92ad66df192298605f6d97f0f91"
+  version "2.1.0"
+  sha256 "428e3bdc066e7e24188917d16c715015518dbcb4c173e8ac8316e141668fe96f"
 
   url "https://github.com/RubenGlez/lokalite/releases/download/v#{version}/Lokalite-v#{version}.dmg"
   name "Lokalite"
