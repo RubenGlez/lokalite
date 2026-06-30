@@ -55,12 +55,40 @@ public struct CallerContext {
     public static let local = CallerContext(pid: nil, agent: nil)
 }
 
+/// A daemon's consent-on-read request for a `requiresApproval` secret (ADR 0014):
+/// who is asking (the agent token), and which secret, so the prompt can name both.
+public struct ApprovalRequest {
+    public let secretID: String
+    public let secretName: String
+    public let projectID: String
+    public let agent: String?
+
+    public init(secretID: String, secretName: String, projectID: String, agent: String?) {
+        self.secretID = secretID
+        self.secretName = secretName
+        self.projectID = projectID
+        self.agent = agent
+    }
+}
+
+/// Decides whether to release a `requiresApproval` secret to an agent caller.
+/// The app injects a Touch ID implementation; it may block while the user
+/// responds. Returns true to release the value.
+public typealias AgentApprovalHandler = (ApprovalRequest) -> Bool
+
 /// Applies a decoded request to a local `VaultService` and produces a response.
 /// Used by the daemon's socket server; pure and testable without any socket.
 /// `caller` lets the daemon enforce agent policy independently of the client —
-/// defense in depth, since the MCP layer also checks.
+/// defense in depth, since the MCP layer also checks. `approveAgentAccess` brokers
+/// consent for `requiresApproval` secrets; it defaults to deny (fail closed) so
+/// any path without a GUI broker — `--local`, headless, tests — refuses them.
 public enum VaultRequestDispatcher {
-    public static func handle(_ request: VaultRequest, using service: VaultService, caller: CallerContext = .local) -> VaultResponse {
+    public static func handle(
+        _ request: VaultRequest,
+        using service: VaultService,
+        caller: CallerContext = .local,
+        approveAgentAccess: AgentApprovalHandler = { _ in false }
+    ) -> VaultResponse {
         do {
             switch request {
             case .unlock:
@@ -74,8 +102,16 @@ public enum VaultRequestDispatcher {
                 return .secret(try service.add(name: name, value: value, description: description, icon: icon, category: category, projectId: projectId, environmentName: environmentName))
             case let .get(name, projectId, environmentName):
                 let secret = try service.get(name: name, projectId: projectId, environmentName: environmentName)
-                if caller.isAgent, secret.agentAccess.blocksAgents {
-                    return .failure(message: "Secret '\(name)' is marked off-limits to AI agents.")
+                if caller.isAgent {
+                    if secret.agentAccess.blocksAgents {
+                        return .failure(message: "Secret '\(name)' is marked off-limits to AI agents.")
+                    }
+                    if secret.agentAccess.requiresApprovalForAgents {
+                        let approval = ApprovalRequest(secretID: secret.id, secretName: name, projectID: projectId, agent: caller.agent)
+                        guard approveAgentAccess(approval) else {
+                            return .failure(message: "Access to '\(name)' was denied — approval is required to release it to an AI agent.")
+                        }
+                    }
                 }
                 return .secret(secret)
             case let .set(name, value, projectId, environmentName):

@@ -10,9 +10,14 @@ enum MCPToolCallResult {
 final class LokaliteMCPTools {
     private let workspace: SecretWorkspace
     private let allowWrites: Bool
+    /// True when this process brokers through the app daemon, which can show the
+    /// consent prompt. When false (`--local`/headless), `requiresApproval` secrets
+    /// fail closed — there is no GUI to obtain consent.
+    private let daemonBacked: Bool
 
-    init(allowWrites: Bool = false, vault: VaultService = Vault.shared) {
+    init(allowWrites: Bool = false, vault: VaultService = Vault.shared, daemonBacked: Bool = false) {
         self.allowWrites = allowWrites
+        self.daemonBacked = daemonBacked
         self.workspace = SecretWorkspace(vault: vault)
     }
 
@@ -32,8 +37,15 @@ final class LokaliteMCPTools {
             do {
                 let ctx = try resolveContext(projectFlag: projectName, envFlag: envName, pathFlag: path, using: workspace)
                 // Enforce per-secret agent policy before the value is ever loaded.
-                if try workspace.listInfo(context: ctx).first(where: { $0.name == secretName })?.agentAccess.blocksAgents == true {
+                let policy = try workspace.listInfo(context: ctx).first(where: { $0.name == secretName })?.agentAccess
+                if policy?.blocksAgents == true {
                     return .success(contentError("Secret '\(secretName)' is marked off-limits to AI agents and cannot be retrieved."))
+                }
+                // `requiresApproval` is brokered by the daemon (Touch ID). Without a
+                // daemon there is no way to obtain consent, so fail closed here;
+                // when daemon-backed, let the request reach the daemon to prompt.
+                if policy?.requiresApprovalForAgents == true && !daemonBacked {
+                    return .success(contentError("Secret '\(secretName)' requires per-read approval, which needs the Lokalite app. It cannot be retrieved with --local."))
                 }
                 let secret = try workspace.get(name: secretName, context: ctx, accessSource: .mcp)
                 let command = try MCPSecretHandoff.write([(secret.name, secret.value)])
@@ -72,6 +84,7 @@ final class LokaliteMCPTools {
                 let text = secrets.map { secret -> String in
                     var line = "[\(secret.category.label)] \(secret.name)"
                     if secret.agentAccess.blocksAgents { line += "  [off-limits to agents]" }
+                    else if secret.agentAccess.requiresApprovalForAgents { line += "  [approval required]" }
                     if let description = secret.description { line += "  — \(description)" }
                     return line
                 }.joined(separator: "\n")

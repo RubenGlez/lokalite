@@ -97,6 +97,12 @@ struct SecretDetailView: View {
                             .font(.system(size: 16, design: .monospaced).weight(.semibold))
                             .foregroundStyle(Theme.text)
                         CategoryPill(category: secret.category)
+                        if let badge = secret.agentAccess.detailBadge {
+                            Label(badge.label, systemImage: badge.symbol)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(Theme.textMuted)
+                                .help(secret.agentAccess.editorHelp)
+                        }
                     }
                     if let desc = secret.description, !desc.isEmpty {
                         Text(desc)
@@ -183,6 +189,7 @@ struct EditSecretView: View {
     @State private var value: String
     @State private var description: String
     @State private var category: SecretCategory
+    @State private var agentAccess: AgentAccessPolicy
     @State private var revealed = false
     @State private var confirmDelete = false
 
@@ -191,6 +198,7 @@ struct EditSecretView: View {
         _value = State(initialValue: secret.value)
         _description = State(initialValue: secret.description ?? "")
         _category = State(initialValue: secret.category)
+        _agentAccess = State(initialValue: secret.agentAccess)
     }
 
     private var isValid: Bool { !value.isEmpty }
@@ -234,6 +242,18 @@ struct EditSecretView: View {
 
                     TextField("Description", text: $description)
                 }
+
+                Section {
+                    Picker("Agent access", selection: $agentAccess) {
+                        ForEach(AgentAccessPolicy.editorCases, id: \.self) { policy in
+                            Text(policy.editorLabel).tag(policy)
+                        }
+                    }
+                } header: {
+                    Text("AI Agents")
+                } footer: {
+                    Text(agentAccess.editorHelp)
+                }
             }
             .formStyle(.grouped)
             .navigationTitle("Edit Secret")
@@ -253,7 +273,8 @@ struct EditSecretView: View {
                             name: secret.name,
                             value: value,
                             description: description,
-                            category: category
+                            category: category,
+                            agentAccess: agentAccess
                         )
                         dismiss()
                     }
@@ -275,6 +296,42 @@ struct EditSecretView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This cannot be undone.")
+        }
+    }
+}
+
+// MARK: - Agent access presentation
+
+extension AgentAccessPolicy {
+    /// Tiers offered in the editor, ordered by escalating restriction.
+    static var editorCases: [AgentAccessPolicy] { [.allowed, .requiresApproval, .blocked] }
+
+    var editorLabel: String {
+        switch self {
+        case .allowed: return "Allowed"
+        case .requiresApproval: return "Require approval"
+        case .blocked: return "Blocked"
+        }
+    }
+
+    var editorHelp: String {
+        switch self {
+        case .allowed:
+            return "Agents can retrieve this secret through the MCP handoff."
+        case .requiresApproval:
+            return "Agents must pass a Touch ID prompt each session before this secret is released."
+        case .blocked:
+            return "Agents are never given this secret."
+        }
+    }
+
+    /// A small indicator shown on the secret detail when access is restricted.
+    /// `nil` for `.allowed` (the default) to avoid badging every secret.
+    var detailBadge: (label: String, symbol: String)? {
+        switch self {
+        case .allowed: return nil
+        case .requiresApproval: return ("Approval", "touchid")
+        case .blocked: return ("Blocked", "hand.raised.slash")
         }
     }
 }

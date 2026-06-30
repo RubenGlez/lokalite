@@ -37,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var windowKeyObserver: NSObjectProtocol?
     private var statusItemMenuMonitor: Any?
     private var daemonServer: VaultSocketServer?
+    private let approvalCoordinator = AgentApprovalCoordinator()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -71,7 +72,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func startVaultDaemon() {
         let server = VaultSocketServer(
             socketPath: VaultConfiguration.daemonSocketURL.path,
-            service: Vault.shared
+            service: Vault.shared,
+            approveAgentAccess: approvalCoordinator.approve
         )
         do {
             try server.start()

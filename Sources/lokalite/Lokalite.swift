@@ -58,15 +58,24 @@ func ensureNotAgentExfil(allowAgent: Bool, action: String) throws {
     throw ExitCode.failure
 }
 
-/// Refuses to reveal a secret marked off-limits to agents when an AI agent is
-/// detected in the calling tree (ADR 0014) — the same per-secret policy the MCP
-/// and daemon enforce, applied to the CLI reveal paths (`get`, `copy`). The value
-/// has already been fetched but is never printed.
-func refuseIfOffLimitsToAgent(_ secret: Secret) throws {
-    guard secret.agentAccess.blocksAgents, let agent = AgentDetection.detectAgent() else { return }
-    print("Secret '\(secret.name)' is off-limits to AI agents (\(agent) detected); refusing to reveal it.")
-    print("Run `lokalite agent-access \(secret.name) allow` if this should be readable by agents.")
-    throw ExitCode.failure
+/// Enforces a secret's per-secret agent policy on the CLI reveal paths (`get`,
+/// `copy`) when an AI agent is detected in the calling tree (ADR 0014) — the same
+/// policy the MCP and daemon enforce. The value has already been fetched but is
+/// never printed. `blocked` secrets are refused outright; `requiresApproval`
+/// secrets are also refused here because the CLI cannot broker the consent prompt
+/// (only the app daemon can) — the agent should use the MCP `get_secret` path.
+func enforceAgentRevealPolicy(_ secret: Secret) throws {
+    guard let agent = AgentDetection.detectAgent() else { return }
+    if secret.agentAccess.blocksAgents {
+        print("Secret '\(secret.name)' is off-limits to AI agents (\(agent) detected); refusing to reveal it.")
+        print("Run `lokalite agent-access \(secret.name) allow` if this should be readable by agents.")
+        throw ExitCode.failure
+    }
+    if secret.agentAccess.requiresApprovalForAgents {
+        print("Secret '\(secret.name)' requires per-read approval (\(agent) detected); refusing to reveal it on the CLI.")
+        print("Approval prompts are shown only through the Lokalite app's MCP broker — use the MCP `get_secret` tool, or run `lokalite agent-access \(secret.name) allow` to remove the restriction.")
+        throw ExitCode.failure
+    }
 }
 
 /// One-line summary printed by `import` and `init --from-env`.

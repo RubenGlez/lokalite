@@ -23,8 +23,8 @@ final class MCPServer {
     Project resolution: tools auto-resolve the project from your working directory (the `path` argument). If resolution fails, call list_projects and pass `project` explicitly.
     """
 
-    init(allowWrites: Bool = false, vault: VaultService = Vault.shared) {
-        tools = LokaliteMCPTools(allowWrites: allowWrites, vault: vault)
+    init(allowWrites: Bool = false, vault: VaultService = Vault.shared, daemonBacked: Bool = false) {
+        tools = LokaliteMCPTools(allowWrites: allowWrites, vault: vault, daemonBacked: daemonBacked)
     }
 
     func run() throws {

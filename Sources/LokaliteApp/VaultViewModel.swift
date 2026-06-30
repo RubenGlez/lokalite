@@ -120,6 +120,7 @@ final class VaultViewModel {
         projectSecretCount = 0
         activityEntries = []
         isLocked = true
+        NotificationCenter.default.post(name: .vaultDidLock, object: nil)
         closeVisibleSurfaces()
     }
 
@@ -503,7 +504,8 @@ final class VaultViewModel {
         name: String,
         value: String,
         description: String?,
-        category: SecretCategory
+        category: SecretCategory,
+        agentAccess: AgentAccessPolicy
     ) {
         renewSession()
         guard let project = selectedProject else { return }
@@ -512,6 +514,7 @@ final class VaultViewModel {
             try Vault.shared.setDescription(name: name, description: desc, projectId: project.id)
             _ = try workspace.set(name: name, value: value, context: makeContext(project))
             try Vault.shared.setSecretCategory(name: name, category: category, projectId: project.id)
+            try Vault.shared.setAgentAccess(name: name, projectId: project.id, policy: agentAccess)
             reloadSecrets()
             reloadDashboardSummaries()
         } catch {

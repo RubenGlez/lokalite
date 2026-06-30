@@ -31,6 +31,7 @@ public enum VaultSocketError: Error, LocalizedError {
 public final class VaultSocketServer {
     private let socketPath: String
     private let service: VaultService
+    private let approveAgentAccess: AgentApprovalHandler
     // `listenFD` is written once in start() (before the accept loop is dispatched)
     // and only read afterwards, so it needs no lock. `running` is read by the
     // accept loop and written by stop() on another thread, so it is lock-guarded.
@@ -46,9 +47,14 @@ public final class VaultSocketServer {
     /// Vault access is serialized — the underlying store is not assumed thread-safe.
     private let dispatchQueue = DispatchQueue(label: "com.lokalite.daemon.dispatch")
 
-    public init(socketPath: String, service: VaultService) {
+    public init(
+        socketPath: String,
+        service: VaultService,
+        approveAgentAccess: @escaping AgentApprovalHandler = { _ in false }
+    ) {
         self.socketPath = socketPath
         self.service = service
+        self.approveAgentAccess = approveAgentAccess
     }
 
     public func start() throws {
@@ -103,7 +109,7 @@ public final class VaultSocketServer {
         while let line = SocketIO.readLine(fd: fd) {
             let response: VaultResponse
             if let request = try? JSONDecoder().decode(VaultRequest.self, from: line) {
-                response = dispatchQueue.sync { VaultRequestDispatcher.handle(request, using: service, caller: caller) }
+                response = dispatchQueue.sync { VaultRequestDispatcher.handle(request, using: service, caller: caller, approveAgentAccess: approveAgentAccess) }
             } else {
                 response = .failure(message: "Malformed request.")
             }

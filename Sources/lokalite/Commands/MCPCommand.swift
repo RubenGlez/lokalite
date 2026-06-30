@@ -14,7 +14,7 @@ struct MCPCommand: ParsableCommand {
     var local = false
 
     func run() throws {
-        let server = MCPServer(allowWrites: readWrite, vault: try vaultService())
+        let server = MCPServer(allowWrites: readWrite, vault: try vaultService(), daemonBacked: !local)
         try server.run()
     }
 

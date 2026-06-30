@@ -24,7 +24,7 @@ struct CopyCommand: ParsableCommand {
             let ctx = try resolveContext(projectFlag: project, envFlag: env, using: workspace)
             return try workspace.get(name: name, context: ctx, accessSource: .cli)
         }
-        try refuseIfOffLimitsToAgent(secret)
+        try enforceAgentRevealPolicy(secret)
         copyToPasteboard(secret.value)
         try clearClipboardLater(value: secret.value)
         print("Copied \(name) to clipboard.")
