@@ -35,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let hotkeyManager = GlobalHotkeyManager()
     private var windowEventMonitor: Any?
     private var windowKeyObserver: NSObjectProtocol?
+    private var activationPolicyObservers: [NSObjectProtocol] = []
     private var statusItemMenuMonitor: Any?
     private var daemonServer: VaultSocketServer?
     private let approvalCoordinator = AgentApprovalCoordinator()
@@ -112,6 +113,47 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     self?.windowKeyObserver = nil
                 }
             }
+        }
+        setupActivationPolicyBehavior()
+    }
+
+    // The app is a menu-bar accessory (no Dock icon, absent from Cmd+Tab). The
+    // manager window is heavy enough that users expect to reach it via Cmd+Tab and
+    // the Dock, so promote the app to a regular app while that window is open and
+    // demote it back to accessory once it closes.
+    private func setupActivationPolicyBehavior() {
+        let opened = NotificationCenter.default.addObserver(
+            forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main
+        ) { [weak self] note in
+            guard let window = note.object as? NSWindow,
+                  window.identifier?.rawValue == "settings" else { return }
+            self?.updateActivationPolicy()
+        }
+        let closed = NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification, object: nil, queue: .main
+        ) { [weak self] note in
+            guard let window = note.object as? NSWindow,
+                  window.identifier?.rawValue == "settings" else { return }
+            self?.updateActivationPolicy(excluding: window)
+        }
+        activationPolicyObservers = [opened, closed]
+    }
+
+    // `excluded` is the window that is about to close (still listed in NSApp.windows
+    // during willClose), so it must not count toward "a manager window is visible".
+    private func updateActivationPolicy(excluding excluded: NSWindow? = nil) {
+        let managerVisible = NSApp.windows.contains { window in
+            window.identifier?.rawValue == "settings"
+                && window !== excluded
+                && window.isVisible
+        }
+        let desired: NSApplication.ActivationPolicy = managerVisible ? .regular : .accessory
+        guard NSApp.activationPolicy() != desired else { return }
+        NSApp.setActivationPolicy(desired)
+        // Promotion to .regular only surfaces the Dock icon / Cmd+Tab entry once the
+        // app is the active app, so reactivate it explicitly.
+        if desired == .regular {
+            NSApp.activate(ignoringOtherApps: true)
         }
     }
 
