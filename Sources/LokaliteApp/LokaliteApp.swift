@@ -23,38 +23,9 @@ struct LokaliteApp: App {
             SettingsView()
                 .environment(appDelegate.vault)
                 .frame(minWidth: 980, minHeight: 620)
-                .background(WindowButtonPositioner())
         }
         .defaultSize(width: 1180, height: 720)
         .windowStyle(.hiddenTitleBar)
-    }
-}
-
-private struct WindowButtonPositioner: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async { positionButtons(from: view) }
-        return view
-    }
-
-    func updateNSView(_ view: NSView, context: Context) {}
-
-    private func positionButtons(from view: NSView) {
-        guard let window = view.window,
-              let close = window.standardWindowButton(.closeButton),
-              let minimize = window.standardWindowButton(.miniaturizeButton),
-              let zoom = window.standardWindowButton(.zoomButton),
-              let container = close.superview
-        else { return }
-
-        let topInset: CGFloat = 20
-        let leadingInset: CGFloat = 20
-        let spacing: CGFloat = 26
-        let y = container.bounds.height - topInset - close.frame.height
-
-        close.setFrameOrigin(NSPoint(x: leadingInset, y: y))
-        minimize.setFrameOrigin(NSPoint(x: leadingInset + spacing, y: y))
-        zoom.setFrameOrigin(NSPoint(x: leadingInset + spacing * 2, y: y))
     }
 }
 
