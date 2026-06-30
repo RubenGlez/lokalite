@@ -84,7 +84,12 @@ public enum VaultRequestDispatcher {
                 try service.delete(name: name, projectId: projectId)
                 return .ok
             case let .list(projectId, environmentName):
-                return .secrets(try service.list(projectId: projectId, environmentName: environmentName))
+                var secrets = try service.list(projectId: projectId, environmentName: environmentName)
+                if caller.isAgent {
+                    // An agent never receives off-limits values, even via bulk list.
+                    secrets = secrets.filter { !$0.agentAccess.blocksAgents }
+                }
+                return .secrets(secrets)
             case let .listInfo(projectId):
                 return .secretInfos(try service.listInfo(projectId: projectId))
             case let .importEnv(pairs, projectId, environmentName, overwrite):

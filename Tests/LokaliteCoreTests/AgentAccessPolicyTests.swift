@@ -91,6 +91,23 @@ final class AgentAccessPolicyTests: XCTestCase {
         XCTAssertEqual(secret.value, "v-secret")
     }
 
+    func testDaemonBulkListExcludesBlockedSecretsForAgentsOnly() throws {
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        _ = try vault.add(name: "OPEN", value: "a", projectId: project.id)
+        _ = try vault.add(name: "LOCKED", value: "b", projectId: project.id)
+        try vault.setAgentAccess(name: "LOCKED", projectId: project.id, policy: .blocked)
+        let request = VaultRequest.list(projectId: project.id, environmentName: nil)
+
+        let agentResponse = VaultRequestDispatcher.handle(request, using: vault, caller: CallerContext(pid: 1, agent: "claude"))
+        guard case let .secrets(agentSecrets) = agentResponse else { return XCTFail("expected secrets") }
+        XCTAssertEqual(agentSecrets.map(\.name), ["OPEN"], "agent bulk list must omit blocked secrets")
+
+        let humanResponse = VaultRequestDispatcher.handle(request, using: vault, caller: .local)
+        guard case let .secrets(humanSecrets) = humanResponse else { return XCTFail("expected secrets") }
+        XCTAssertEqual(Set(humanSecrets.map(\.name)), ["OPEN", "LOCKED"], "a human still gets everything")
+    }
+
     private func successPayload(_ result: MCPToolCallResult) throws -> [String: Any] {
         guard case let .success(payload) = result else {
             throw XCTSkip("expected .success, got \(result)")
