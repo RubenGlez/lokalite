@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-06-30
+
+### Changed
+- **Breaking:** the MCP `get_secret` tool no longer returns the secret value. It returns a one-time `source <path>` command to a single-use, self-deleting shell script; the agent loads the value into its shell environment and the raw value never enters the model's context. Update any client that read the value from the tool response.
+- `lokalite mcp` now brokers vault access through the running Lokalite app by default, so the MCP server process never holds the vault key; pass `--local` to open the vault in-process (CI/headless).
+
+### Added
+- Per-secret agent policy: `lokalite agent-access <name> block|allow` marks a secret off-limits to AI agents — refused on every reveal path (MCP, daemon, CLI `get`/`copy`) and flagged in `list_secrets`.
+- Agent exfil-guard: `lokalite shell` and plaintext `export` refuse to run when an AI agent is detected in the calling process tree (`--allow-agent` overrides).
+- `list_projects` MCP tool for project discovery.
+- Claude Desktop MCP registration: `lokalite install --client claude-desktop`.
+
 ## [1.8.2] - 2026-06-26
 
 ### Fixed
