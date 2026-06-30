@@ -49,7 +49,7 @@ final class MCPToolDefinitionsTests: XCTestCase {
         let instructions = MCPServer.instructions
         XCTAssertTrue(instructions.contains("source '<path>'"))
         XCTAssertTrue(instructions.contains("list_projects"))
-        XCTAssertTrue(instructions.lowercased().contains("never enter this conversation"))
+        XCTAssertTrue(instructions.lowercased().contains("never this chat"))
     }
 }
 

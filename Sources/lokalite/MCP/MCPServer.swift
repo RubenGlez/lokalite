@@ -8,7 +8,7 @@ final class MCPServer {
     static let instructions = """
     Lokalite is an encrypted local vault for a project's secrets (API keys, tokens, credentials).
 
-    Core principle: a secret's value must never enter this conversation. You load secrets into your shell environment and run programs there; you do not read values into context or write them to disk.
+    Core principle: a secret's value reaches your shell runtime, never this chat. You load secrets into your shell environment and run programs there; the value never enters the conversation or the model's context, and you never read it into context or write it to disk.
 
     To use a secret:
       1. Call get_secret. It does NOT return the value — it returns a one-time `source '<path>'` command.

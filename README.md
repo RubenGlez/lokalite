@@ -2,13 +2,13 @@
   <img src="assets/banner.png" alt="Lokalite" width="100%"/>
 </p>
 
-Lokalite is a local-first secrets manager for macOS, built for how developers work with AI coding agents. Your API keys, tokens, and credentials live in an encrypted vault on your machine, and reach Claude Code, Cursor, and Windsurf through MCP, on your terms, with every access logged. Menu bar app, CLI, and MCP server in one. No cloud, no accounts, no telemetry.
+Lokalite is a local-first secrets manager for macOS, built for how developers work with AI coding agents. Your API keys, tokens, and credentials live in an encrypted vault on your machine. When an agent needs one, the value is delivered into its shell runtime, never into the chat — so secrets stay out of the model's context and your conversation history. Reaches Claude Code, Cursor, and Windsurf through MCP, on your terms, with every access logged. Menu bar app, CLI, and MCP server in one. No cloud, no accounts, no telemetry.
 
 ## Why Lokalite
 
 - **vs. `.env` files**: values are encrypted at rest instead of sitting in plaintext, access is logged, and the same secrets are available to your shell, the CLI, and your AI agents without copy-pasting between files.
 - **vs. cloud secret managers** (Doppler, Infisical, 1Password): nothing leaves your machine. No account to create, no per-seat billing, no vendor to trust with your credentials. Local-first is the point, not a limitation.
-- **Built for agents**: MCP support means an AI agent can read the secrets it needs through a logged, read-only-by-default server, scoped per project, instead of you pasting keys into a chat.
+- **Built for agents**: an AI agent loads the secrets it needs through MCP — the value reaches its shell runtime via a one-time handoff, never the chat transcript or the model's context. Logged, read-only by default, scoped per project; no pasting keys into a conversation.
 
 ## Features
 

@@ -162,7 +162,7 @@ final class LokaliteMCPTools {
         var tools: [[String: Any]] = [
             [
                 "name": "get_secret",
-                "description": "Load a secret from the Lokalite vault into your shell environment WITHOUT exposing its value. This does NOT return the value — it returns a one-time `source '<path>'` command. Run that command in your shell (Bash) to set the environment variable, then run your program in the same shell so it inherits it. The raw value never appears in this conversation; the handoff script is single-use and self-deletes. Do not print the loaded variable, and never copy the value into a file (.env, config, source). Call list_secrets first if you don't know the exact name.",
+                "description": "Load a secret from the Lokalite vault into your shell environment WITHOUT exposing its value. This does NOT return the value — it returns a one-time `source '<path>'` command. Run that command in your shell (Bash) to set the environment variable, then run your program in the same shell so it inherits it. The value reaches your shell runtime only, never this conversation or the model's context; the handoff script is single-use and self-deletes. Do not print the loaded variable, and never copy the value into a file (.env, config, source). Call list_secrets first if you don't know the exact name.",
                 "inputSchema": [
                     "type": "object",
                     "properties": [
