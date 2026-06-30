@@ -88,10 +88,14 @@ public final class VaultSocketServer {
 
     private func serve(_ fd: Int32) {
         defer { close(fd) }
+        // The peer is fixed for the connection; resolve its identity once.
+        let peerPID = SocketIO.peerPID(fd: fd)
+        let caller = CallerContext(pid: peerPID, agent: peerPID.flatMap { AgentDetection.detectAgent(startingFrom: $0) })
+
         while let line = SocketIO.readLine(fd: fd) {
             let response: VaultResponse
             if let request = try? JSONDecoder().decode(VaultRequest.self, from: line) {
-                response = dispatchQueue.sync { VaultRequestDispatcher.handle(request, using: service) }
+                response = dispatchQueue.sync { VaultRequestDispatcher.handle(request, using: service, caller: caller) }
             } else {
                 response = .failure(message: "Malformed request.")
             }
@@ -148,7 +152,7 @@ private func makeUnixSockaddr(path: String) throws -> sockaddr_un {
     return addr
 }
 
-private enum SocketIO {
+enum SocketIO {
     /// Reads one newline-delimited frame (without the newline). Returns nil at EOF
     /// with no data.
     static func readLine(fd: Int32) -> Data? {
@@ -160,6 +164,15 @@ private enum SocketIO {
             if byte == 0x0A { return data }
             data.append(byte)
         }
+    }
+
+    /// The PID of the connected peer, from the kernel (`LOCAL_PEERPID`) — not
+    /// anything the peer can forge.
+    static func peerPID(fd: Int32) -> pid_t? {
+        var pid: pid_t = 0
+        var length = socklen_t(MemoryLayout<pid_t>.size)
+        let result = getsockopt(fd, SOL_LOCAL, LOCAL_PEERPID, &pid, &length)
+        return result == 0 ? pid : nil
     }
 
     static func writeAll(fd: Int32, _ data: Data) -> Bool {

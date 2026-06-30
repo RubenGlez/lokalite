@@ -71,6 +71,26 @@ final class AgentAccessPolicyTests: XCTestCase {
         XCTAssertFalse(openLine.contains("off-limits"))
     }
 
+    func testDaemonRefusesBlockedSecretForAgentCallerButNotForHuman() throws {
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        _ = try vault.add(name: "K", value: "v-secret", projectId: project.id)
+        try vault.setAgentAccess(name: "K", projectId: project.id, policy: .blocked)
+        let request = VaultRequest.get(name: "K", projectId: project.id, environmentName: nil)
+
+        let agentResponse = VaultRequestDispatcher.handle(request, using: vault, caller: CallerContext(pid: 999, agent: "claude"))
+        guard case let .failure(message) = agentResponse else {
+            return XCTFail("agent caller should be refused, got \(agentResponse)")
+        }
+        XCTAssertTrue(message.contains("off-limits"))
+
+        let humanResponse = VaultRequestDispatcher.handle(request, using: vault, caller: .local)
+        guard case let .secret(secret) = humanResponse else {
+            return XCTFail("non-agent caller should get the value, got \(humanResponse)")
+        }
+        XCTAssertEqual(secret.value, "v-secret")
+    }
+
     private func successPayload(_ result: MCPToolCallResult) throws -> [String: Any] {
         guard case let .success(payload) = result else {
             throw XCTSkip("expected .success, got \(result)")

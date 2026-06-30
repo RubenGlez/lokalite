@@ -1,5 +1,8 @@
 import XCTest
 @testable import LokaliteCore
+#if canImport(Darwin)
+import Darwin
+#endif
 
 /// Exercises the real Unix-socket transport in-process: a VaultSocketServer
 /// backed by a temp-store Vault, driven by a RemoteVaultService over a
@@ -58,5 +61,13 @@ final class VaultSocketTests: XCTestCase {
     func testClientFailsWhenDaemonNotRunning() {
         let client = VaultSocketClient(socketPath: "/tmp/lokalite-missing-\(UUID().uuidString).sock")
         XCTAssertThrowsError(try client.send(.listProjects))
+    }
+
+    func testPeerPIDReadsTheConnectedProcess() throws {
+        var fds: [Int32] = [0, 0]
+        XCTAssertEqual(socketpair(AF_UNIX, SOCK_STREAM, 0, &fds), 0)
+        defer { close(fds[0]); close(fds[1]) }
+        // Both ends live in this process, so the peer PID is our own.
+        XCTAssertEqual(SocketIO.peerPID(fd: fds[0]), getpid())
     }
 }

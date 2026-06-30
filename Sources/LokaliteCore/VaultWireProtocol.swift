@@ -39,10 +39,28 @@ public enum VaultResponse: Codable, Equatable {
     case failure(message: String)
 }
 
+/// Identity of a socket peer, resolved by the daemon from the kernel (ADR 0014):
+/// the connecting PID and, if an AI agent is in its process tree, the agent token.
+public struct CallerContext {
+    public let pid: pid_t?
+    public let agent: String?
+    public var isAgent: Bool { agent != nil }
+
+    public init(pid: pid_t?, agent: String?) {
+        self.pid = pid
+        self.agent = agent
+    }
+
+    /// An in-process caller (no socket); used by tests and non-brokered paths.
+    public static let local = CallerContext(pid: nil, agent: nil)
+}
+
 /// Applies a decoded request to a local `VaultService` and produces a response.
 /// Used by the daemon's socket server; pure and testable without any socket.
+/// `caller` lets the daemon enforce agent policy independently of the client —
+/// defense in depth, since the MCP layer also checks.
 public enum VaultRequestDispatcher {
-    public static func handle(_ request: VaultRequest, using service: VaultService) -> VaultResponse {
+    public static func handle(_ request: VaultRequest, using service: VaultService, caller: CallerContext = .local) -> VaultResponse {
         do {
             switch request {
             case .unlock:
@@ -55,7 +73,11 @@ public enum VaultRequestDispatcher {
             case let .add(name, value, description, icon, category, projectId, environmentName):
                 return .secret(try service.add(name: name, value: value, description: description, icon: icon, category: category, projectId: projectId, environmentName: environmentName))
             case let .get(name, projectId, environmentName):
-                return .secret(try service.get(name: name, projectId: projectId, environmentName: environmentName))
+                let secret = try service.get(name: name, projectId: projectId, environmentName: environmentName)
+                if caller.isAgent, secret.agentAccess.blocksAgents {
+                    return .failure(message: "Secret '\(name)' is marked off-limits to AI agents.")
+                }
+                return .secret(secret)
             case let .set(name, value, projectId, environmentName):
                 return .secret(try service.set(name: name, value: value, projectId: projectId, environmentName: environmentName))
             case let .delete(name, projectId):
