@@ -26,9 +26,11 @@ enum VaultDaemonLauncher {
     }
 
     private static func launchApp() {
+        // Launch by bundle identifier (stable) rather than display name. The
+        // shipped bundle is LokaliteApp.app with id com.lokalite.app.
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-        process.arguments = ["-a", "Lokalite"]
+        process.arguments = ["-b", "com.lokalite.app"]
         try? process.run()
         process.waitUntilExit()
     }
