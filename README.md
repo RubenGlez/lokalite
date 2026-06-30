@@ -209,7 +209,13 @@ Pass `--read-write` to also expose write tools:
 | `set_secret` | Update an existing secret's value |
 | `delete_secret` | Permanently delete a secret |
 
-> **Security note:** the handoff keeps secret values out of the model's context, but an agent that can name a secret can still load it into a shell it controls (`list_secrets` gives it the names), and a sourced value is then visible to processes in that shell. Mark individual secrets off-limits to agents with `lokalite agent-access <name> block` — `get_secret` then refuses them, `list_secrets` flags them, and even the CLI `get`/`copy` refuse them when an AI agent is detected in the calling process tree. Also keep the server read-only (the default), scope it to a single project by setting `LOKALITE_PROJECT` in the server's `env` config, and prefer clients that ask for approval before tool calls. Every MCP access is recorded in the activity log.
+> **Security note:** the handoff keeps secret values out of the model's context, but an agent that can name a secret can still load it into a shell it controls (`list_secrets` gives it the names), and a sourced value is then visible to processes in that shell. Set a per-secret agent-access tier with `lokalite agent-access <name> allow|approve|block` (or from the app's secret editor):
+>
+> - **block** — off-limits: `get_secret` refuses it, `list_secrets` flags it `[off-limits to agents]`.
+> - **approve** — consent-on-read: an agent's `get_secret` through the app broker prompts for Touch ID before the value is released; the approval then lasts for the rest of the unlock session. `list_secrets` flags it `[approval required]`. With `--local` (no app to prompt) it fails closed, like block.
+> - **allow** — the default.
+>
+> The CLI `get`/`copy` refuse a `block` or `approve` secret when an AI agent is detected in the calling process tree (only the app can broker the consent prompt). Also keep the server read-only (the default), scope it to a single project by setting `LOKALITE_PROJECT` in the server's `env` config, and prefer clients that ask for approval before tool calls. Every MCP access is recorded in the activity log.
 
 ## Security
 

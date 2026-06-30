@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Per-secret `requiresApproval` agent-access tier (consent-on-read): `lokalite agent-access <name> approve`, or the **AI Agents** picker in the app's secret editor. An agent requesting an approval-gated secret through the app broker triggers a Touch ID prompt; a successful approval lasts for the rest of the unlock session and is cleared on lock. `list_secrets` flags such secrets `[approval required]`; `--local`/headless fails closed, and the CLI `get`/`copy` refuse a detected agent since only the app can broker the prompt.
+
 ## [2.0.1] - 2026-06-30
 
 ### Fixed
