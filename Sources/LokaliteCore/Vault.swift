@@ -391,8 +391,19 @@ public final class Vault {
 
     public func listInfo(projectId: String) throws -> [SecretInfo] {
         try store.fetchAllSecrets(projectId: projectId).map {
-            SecretInfo(name: $0.name, description: $0.description, icon: $0.icon, category: category(from: $0))
+            SecretInfo(name: $0.name, description: $0.description, icon: $0.icon,
+                       category: category(from: $0), agentAccess: agentAccess(from: $0))
         }
+    }
+
+    /// Sets whether AI agents may read a secret (ADR 0014).
+    public func setAgentAccess(name: String, projectId: String, policy: AgentAccessPolicy) throws {
+        guard var record = try store.fetchSecret(name: name, projectId: projectId) else {
+            throw VaultError.secretNotFound(name)
+        }
+        record.agentAccess = policy.rawValue
+        record.updatedAt = iso8601()
+        try store.updateSecret(record)
     }
 
     public func secretCount(projectId: String, environmentName: String? = nil) throws -> Int {
@@ -574,11 +585,15 @@ public final class Vault {
 
     private func secretFromRecord(_ record: SecretRecord, value: String) -> Secret {
         Secret(id: record.id, name: record.name, value: value, description: record.description,
-               icon: record.icon, category: category(from: record))
+               icon: record.icon, category: category(from: record), agentAccess: agentAccess(from: record))
     }
 
     private func category(from record: SecretRecord) -> SecretCategory {
         SecretCategory(rawValue: record.category) ?? .other
+    }
+
+    private func agentAccess(from record: SecretRecord) -> AgentAccessPolicy {
+        AgentAccessPolicy(rawValue: record.agentAccess) ?? .allowed
     }
 
     private func vaultFileURL() -> URL {

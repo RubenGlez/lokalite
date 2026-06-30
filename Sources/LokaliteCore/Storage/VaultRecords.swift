@@ -53,6 +53,7 @@ struct SecretRecord: Codable, FetchableRecord, PersistableRecord {
     var category: String
     var createdAt: String
     var updatedAt: String
+    var agentAccess: String = AgentAccessPolicy.allowed.rawValue
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -60,6 +61,7 @@ struct SecretRecord: Codable, FetchableRecord, PersistableRecord {
         case name, description, icon, category
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+        case agentAccess = "agent_access"
     }
 }
 

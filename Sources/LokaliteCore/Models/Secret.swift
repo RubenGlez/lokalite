@@ -7,6 +7,7 @@ public struct Secret: Codable, Equatable, Hashable {
     public var description: String?
     public var icon: String?
     public var category: SecretCategory
+    public var agentAccess: AgentAccessPolicy
 
     public init(
         id: String = UUID().uuidString,
@@ -14,7 +15,8 @@ public struct Secret: Codable, Equatable, Hashable {
         value: String,
         description: String? = nil,
         icon: String? = nil,
-        category: SecretCategory = .other
+        category: SecretCategory = .other,
+        agentAccess: AgentAccessPolicy = .allowed
     ) {
         self.id = id
         self.name = name
@@ -22,5 +24,6 @@ public struct Secret: Codable, Equatable, Hashable {
         self.description = description
         self.icon = icon
         self.category = category
+        self.agentAccess = agentAccess
     }
 }

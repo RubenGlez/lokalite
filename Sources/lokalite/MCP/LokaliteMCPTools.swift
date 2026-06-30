@@ -31,6 +31,10 @@ final class LokaliteMCPTools {
             let path = args["path"] as? String
             do {
                 let ctx = try resolveContext(projectFlag: projectName, envFlag: envName, pathFlag: path, using: workspace)
+                // Enforce per-secret agent policy before the value is ever loaded.
+                if try workspace.listInfo(context: ctx).first(where: { $0.name == secretName })?.agentAccess.blocksAgents == true {
+                    return .success(contentError("Secret '\(secretName)' is marked off-limits to AI agents and cannot be retrieved."))
+                }
                 let secret = try workspace.get(name: secretName, context: ctx, accessSource: .mcp)
                 let command = try MCPSecretHandoff.write([(secret.name, secret.value)])
                 return .success(content("Run this in your shell to load \(secret.name) into the environment — the value is never shown here:\n\(command)"))
@@ -67,6 +71,7 @@ final class LokaliteMCPTools {
                 }
                 let text = secrets.map { secret -> String in
                     var line = "[\(secret.category.label)] \(secret.name)"
+                    if secret.agentAccess.blocksAgents { line += "  [off-limits to agents]" }
                     if let description = secret.description { line += "  — \(description)" }
                     return line
                 }.joined(separator: "\n")

@@ -118,6 +118,14 @@ extension VaultStore {
             }
         }
 
+        migrator.registerMigration("v5") { db in
+            try db.alter(table: "secrets") { t in
+                t.add(column: "agent_access", .text)
+                    .notNull()
+                    .defaults(to: AgentAccessPolicy.allowed.rawValue)
+            }
+        }
+
         try migrator.migrate(db)
     }
 }
