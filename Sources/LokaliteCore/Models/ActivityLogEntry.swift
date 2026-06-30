@@ -7,8 +7,37 @@ public struct ActivityLogEntry: Identifiable, Sendable {
     public let environmentName: String
     public let source: AccessSource
     public let accessedAt: Date
+    /// The detected AI agent token (e.g. `claude`, `cursor`), or nil for a human
+    /// or unattributed caller. Stamped by the daemon from the kernel peer-PID.
+    public let agent: String?
+    /// What the caller did to the secret.
+    public let action: Action
+
+    public init(
+        id: String,
+        secretName: String,
+        projectName: String,
+        environmentName: String,
+        source: AccessSource,
+        accessedAt: Date,
+        agent: String? = nil,
+        action: Action = .read
+    ) {
+        self.id = id
+        self.secretName = secretName
+        self.projectName = projectName
+        self.environmentName = environmentName
+        self.source = source
+        self.accessedAt = accessedAt
+        self.agent = agent
+        self.action = action
+    }
 
     public enum AccessSource: String, Sendable, Codable {
         case app, cli, mcp
+    }
+
+    public enum Action: String, Sendable, Codable {
+        case read, created, updated, deleted, denied
     }
 }

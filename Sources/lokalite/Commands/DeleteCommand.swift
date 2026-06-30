@@ -26,7 +26,7 @@ struct DeleteCommand: ParsableCommand {
             }
         }
         try withWorkspace { workspace in
-            try workspace.delete(name: name, context: ctx)
+            try workspace.delete(name: name, context: ctx, accessSource: .cli)
         }
         print("Deleted \(name).")
     }

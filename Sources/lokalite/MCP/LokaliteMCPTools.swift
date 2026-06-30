@@ -39,12 +39,15 @@ final class LokaliteMCPTools {
                 // Enforce per-secret agent policy before the value is ever loaded.
                 let policy = try workspace.listInfo(context: ctx).first(where: { $0.name == secretName })?.agentAccess
                 if policy?.blocksAgents == true {
+                    workspace.logAccess(secretName: secretName, context: ctx, source: .mcp, action: .denied)
                     return .success(contentError("Secret '\(secretName)' is marked off-limits to AI agents and cannot be retrieved."))
                 }
                 // `requiresApproval` is brokered by the daemon (Touch ID). Without a
                 // daemon there is no way to obtain consent, so fail closed here;
-                // when daemon-backed, let the request reach the daemon to prompt.
+                // when daemon-backed, let the request reach the daemon to prompt (it
+                // logs its own approval denial).
                 if policy?.requiresApprovalForAgents == true && !daemonBacked {
+                    workspace.logAccess(secretName: secretName, context: ctx, source: .mcp, action: .denied)
                     return .success(contentError("Secret '\(secretName)' requires per-read approval, which needs the Lokalite app. It cannot be retrieved with --local."))
                 }
                 let secret = try workspace.get(name: secretName, context: ctx, accessSource: .mcp)
@@ -109,7 +112,7 @@ final class LokaliteMCPTools {
             let path = args["path"] as? String
             do {
                 let ctx = try resolveContext(projectFlag: projectName, envFlag: envName, pathFlag: path, using: workspace)
-                _ = try workspace.add(name: secretName, value: value, description: description, context: ctx)
+                _ = try workspace.add(name: secretName, value: value, description: description, context: ctx, accessSource: .mcp)
                 return .success(content("Secret '\(secretName)' created."))
             } catch {
                 return .success(contentError(forResolution: error))
@@ -130,7 +133,7 @@ final class LokaliteMCPTools {
             let path = args["path"] as? String
             do {
                 let ctx = try resolveContext(projectFlag: projectName, envFlag: envName, pathFlag: path, using: workspace)
-                _ = try workspace.set(name: secretName, value: value, context: ctx)
+                _ = try workspace.set(name: secretName, value: value, context: ctx, accessSource: .mcp)
                 return .success(content("Secret '\(secretName)' updated."))
             } catch {
                 return .success(contentError(forResolution: error))
@@ -147,7 +150,7 @@ final class LokaliteMCPTools {
             let path = args["path"] as? String
             do {
                 let ctx = try resolveContext(projectFlag: projectName, envFlag: nil, pathFlag: path, using: workspace)
-                try workspace.delete(name: secretName, context: ctx)
+                try workspace.delete(name: secretName, context: ctx, accessSource: .mcp)
                 return .success(content("Secret '\(secretName)' deleted."))
             } catch {
                 return .success(contentError(forResolution: error))

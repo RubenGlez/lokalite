@@ -42,9 +42,10 @@ public final class SecretWorkspace {
         value: String,
         description: String? = nil,
         category: SecretCategory? = nil,
-        context: SecretWorkspaceContext
+        context: SecretWorkspaceContext,
+        accessSource: ActivityLogEntry.AccessSource? = nil
     ) throws -> Secret {
-        try vault.add(
+        let secret = try vault.add(
             name: name,
             value: value,
             description: description,
@@ -53,6 +54,10 @@ public final class SecretWorkspace {
             projectId: context.project.id,
             environmentName: context.environmentName
         )
+        if let accessSource {
+            logAccess(secretName: secret.name, context: context, source: accessSource, action: .created)
+        }
+        return secret
     }
 
     public func get(
@@ -86,18 +91,26 @@ public final class SecretWorkspace {
     public func set(
         name: String,
         value: String,
-        context: SecretWorkspaceContext
+        context: SecretWorkspaceContext,
+        accessSource: ActivityLogEntry.AccessSource? = nil
     ) throws -> Secret {
-        try vault.set(
+        let secret = try vault.set(
             name: name,
             value: value,
             projectId: context.project.id,
             environmentName: context.environmentName
         )
+        if let accessSource {
+            logAccess(secretName: secret.name, context: context, source: accessSource, action: .updated)
+        }
+        return secret
     }
 
-    public func delete(name: String, context: SecretWorkspaceContext) throws {
+    public func delete(name: String, context: SecretWorkspaceContext, accessSource: ActivityLogEntry.AccessSource? = nil) throws {
         try vault.delete(name: name, projectId: context.project.id)
+        if let accessSource {
+            logAccess(secretName: name, context: context, source: accessSource, action: .deleted)
+        }
     }
 
     @discardableResult
@@ -127,12 +140,14 @@ public final class SecretWorkspace {
         return secrets
     }
 
-    public func logAccess(secretName: String, context: SecretWorkspaceContext, source: ActivityLogEntry.AccessSource) {
+    public func logAccess(secretName: String, context: SecretWorkspaceContext, source: ActivityLogEntry.AccessSource, action: ActivityLogEntry.Action = .read) {
         vault.logAccess(
             secretName: secretName,
             projectName: context.project.name,
             environmentName: context.displayEnvironmentName,
-            source: source
+            source: source,
+            agent: nil,
+            action: action
         )
     }
 }

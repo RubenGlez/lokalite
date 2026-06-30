@@ -90,6 +90,8 @@ struct ActivityLogRecord: Codable, FetchableRecord, PersistableRecord {
     var environmentName: String
     var source: String
     var accessedAt: String
+    var agent: String?
+    var action: String
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -98,6 +100,8 @@ struct ActivityLogRecord: Codable, FetchableRecord, PersistableRecord {
         case environmentName = "environment_name"
         case source
         case accessedAt = "accessed_at"
+        case agent
+        case action
     }
 }
 

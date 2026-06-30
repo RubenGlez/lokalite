@@ -23,7 +23,7 @@ public enum VaultRequest: Codable, Equatable {
     case list(projectId: String, environmentName: String?)
     case listInfo(projectId: String)
     case importEnv(pairs: [EnvPair], projectId: String, environmentName: String?, overwrite: Bool)
-    case logAccess(secretName: String, projectName: String, environmentName: String, source: ActivityLogEntry.AccessSource)
+    case logAccess(secretName: String, projectName: String, environmentName: String, source: ActivityLogEntry.AccessSource, action: ActivityLogEntry.Action)
 }
 
 /// The daemon's reply. `.failure` carries a human-readable message; everything
@@ -104,11 +104,13 @@ public enum VaultRequestDispatcher {
                 let secret = try service.get(name: name, projectId: projectId, environmentName: environmentName)
                 if caller.isAgent {
                     if secret.agentAccess.blocksAgents {
+                        logDenial(service, secretName: name, projectId: projectId, environmentName: environmentName, agent: caller.agent)
                         return .failure(message: "Secret '\(name)' is marked off-limits to AI agents.")
                     }
                     if secret.agentAccess.requiresApprovalForAgents {
                         let approval = ApprovalRequest(secretID: secret.id, secretName: name, projectID: projectId, agent: caller.agent)
                         guard approveAgentAccess(approval) else {
+                            logDenial(service, secretName: name, projectId: projectId, environmentName: environmentName, agent: caller.agent)
                             return .failure(message: "Access to '\(name)' was denied — approval is required to release it to an AI agent.")
                         }
                     }
@@ -131,12 +133,23 @@ public enum VaultRequestDispatcher {
             case let .importEnv(pairs, projectId, environmentName, overwrite):
                 let tuples = pairs.map { (name: $0.name, value: $0.value) }
                 return .importSummary(try service.importEnv(pairs: tuples, projectId: projectId, environmentName: environmentName, overwrite: overwrite))
-            case let .logAccess(secretName, projectName, environmentName, source):
-                service.logAccess(secretName: secretName, projectName: projectName, environmentName: environmentName, source: source)
+            case let .logAccess(secretName, projectName, environmentName, source, action):
+                // Agent identity is authoritative from the kernel (peer-PID), not
+                // the client — override whatever the client sent with caller.agent.
+                service.logAccess(secretName: secretName, projectName: projectName, environmentName: environmentName, source: source, agent: caller.agent, action: action)
                 return .ok
             }
         } catch {
             return .failure(message: error.localizedDescription)
         }
+    }
+
+    /// Records a `.denied` audit entry when an agent is refused a secret at the
+    /// daemon. Resolves the project name from its id (the request carries only
+    /// the id); best-effort, so a lookup failure falls back to the id.
+    private static func logDenial(_ service: VaultService, secretName: String, projectId: String, environmentName: String?, agent: String?) {
+        let projects = (try? service.listProjects()) ?? []
+        let projectName = projects.first { $0.id == projectId }?.name ?? projectId
+        service.logAccess(secretName: secretName, projectName: projectName, environmentName: environmentName ?? "Default", source: .mcp, agent: agent, action: .denied)
     }
 }

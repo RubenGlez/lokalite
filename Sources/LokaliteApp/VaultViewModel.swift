@@ -454,9 +454,10 @@ final class VaultViewModel {
         }
         do {
             _ = try workspace.add(name: name, value: value, description: description,
-                                  category: category, context: makeContext(project))
+                                  category: category, context: makeContext(project), accessSource: .app)
             reloadSecrets()
             reloadDashboardSummaries()
+            reloadActivity()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -512,11 +513,12 @@ final class VaultViewModel {
         do {
             let desc = description.flatMap { $0.isEmpty ? nil : $0 }
             try Vault.shared.setDescription(name: name, description: desc, projectId: project.id)
-            _ = try workspace.set(name: name, value: value, context: makeContext(project))
+            _ = try workspace.set(name: name, value: value, context: makeContext(project), accessSource: .app)
             try Vault.shared.setSecretCategory(name: name, category: category, projectId: project.id)
             try Vault.shared.setAgentAccess(name: name, projectId: project.id, policy: agentAccess)
             reloadSecrets()
             reloadDashboardSummaries()
+            reloadActivity()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -526,9 +528,10 @@ final class VaultViewModel {
         renewSession()
         guard let project = selectedProject else { return }
         do {
-            try workspace.delete(name: secret.name, context: makeContext(project))
+            try workspace.delete(name: secret.name, context: makeContext(project), accessSource: .app)
             secrets.removeAll { $0.id == secret.id }
             reloadDashboardSummaries()
+            reloadActivity()
         } catch {
             errorMessage = error.localizedDescription
         }

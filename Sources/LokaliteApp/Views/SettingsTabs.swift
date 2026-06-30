@@ -305,10 +305,18 @@ struct ActivityRow: View {
             .frame(width: 28, height: 28)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(entry.secretName)
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Theme.text)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(entry.secretName)
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Theme.text)
+                        .lineLimit(1)
+                    Text(actionLabel)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(actionColor)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(actionColor.opacity(0.14), in: .rect(cornerRadius: 3))
+                }
                 Text("\(entry.projectName) / \(entry.environmentName)")
                     .font(.system(size: 11))
                     .foregroundStyle(Theme.textMuted)
@@ -318,12 +326,22 @@ struct ActivityRow: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 3) {
-                Text(sourceLabel)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(sourceColor)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(sourceColor.opacity(0.13), in: .rect(cornerRadius: 4))
+                HStack(spacing: 4) {
+                    if let agent = entry.agent {
+                        Text(agent)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Theme.violet)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Theme.violet.opacity(0.13), in: .rect(cornerRadius: 4))
+                    }
+                    Text(sourceLabel)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(sourceColor)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(sourceColor.opacity(0.13), in: .rect(cornerRadius: 4))
+                }
                 Text(relativeTime)
                     .font(.system(size: 11))
                     .foregroundStyle(Theme.textDim)
@@ -331,6 +349,26 @@ struct ActivityRow: View {
         }
         .padding(.horizontal, 16)
         .frame(height: Theme.rowHeight)
+    }
+
+    private var actionLabel: String {
+        switch entry.action {
+        case .read: return "read"
+        case .created: return "created"
+        case .updated: return "updated"
+        case .deleted: return "deleted"
+        case .denied: return "denied"
+        }
+    }
+
+    private var actionColor: Color {
+        switch entry.action {
+        case .read: return Theme.textMuted
+        case .created: return Theme.brand
+        case .updated: return Theme.blue
+        case .deleted: return Theme.orange
+        case .denied: return Theme.red
+        }
     }
 
     private var sourceIcon: String {

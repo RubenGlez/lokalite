@@ -14,6 +14,9 @@ struct LogCommand: ParsableCommand {
     @Option(name: .shortAndLong, help: "Filter by source: app, cli, or mcp.")
     var source: String?
 
+    @Option(name: .shortAndLong, help: "Filter by the AI agent that read the secret (e.g. claude).")
+    var agent: String?
+
     func run() throws {
         let filter = try source.map { raw -> ActivityLogEntry.AccessSource in
             guard let value = ActivityLogEntry.AccessSource(rawValue: raw.lowercased()) else {
@@ -27,6 +30,10 @@ struct LogCommand: ParsableCommand {
         if let filter {
             entries = entries.filter { $0.source == filter }
         }
+        if let agent {
+            let needle = agent.lowercased()
+            entries = entries.filter { $0.agent?.lowercased() == needle }
+        }
 
         if entries.isEmpty {
             print("No activity recorded yet.")
@@ -38,8 +45,11 @@ struct LogCommand: ParsableCommand {
 
         for entry in entries {
             let timestamp = formatter.string(from: entry.accessedAt)
+            let source = entry.source.rawValue.padding(toLength: 3, withPad: " ", startingAt: 0)
+            let who = (entry.agent ?? "-").padding(toLength: 8, withPad: " ", startingAt: 0)
+            let action = entry.action.rawValue.padding(toLength: 7, withPad: " ", startingAt: 0)
             let scope = "\(entry.projectName)/\(entry.environmentName)"
-            print("\(timestamp)  \(entry.source.rawValue.padding(toLength: 3, withPad: " ", startingAt: 0))  \(scope)  \(entry.secretName)")
+            print("\(timestamp)  \(source)  \(who)  \(action)  \(scope)  \(entry.secretName)")
         }
     }
 }

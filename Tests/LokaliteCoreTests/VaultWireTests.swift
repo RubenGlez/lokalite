@@ -13,7 +13,7 @@ final class VaultWireProtocolTests: XCTestCase {
             .delete(name: "K", projectId: "p1"),
             .listInfo(projectId: "p1"),
             .importEnv(pairs: [EnvPair(name: "A", value: "1")], projectId: "p1", environmentName: nil, overwrite: true),
-            .logAccess(secretName: "K", projectName: "App", environmentName: "Default", source: .mcp),
+            .logAccess(secretName: "K", projectName: "App", environmentName: "Default", source: .mcp, action: .read),
         ]
         for request in requests {
             let data = try JSONEncoder().encode(request)

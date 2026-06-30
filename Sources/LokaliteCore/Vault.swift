@@ -474,14 +474,16 @@ public final class Vault {
 
     // MARK: - Activity Log
 
-    public func logAccess(secretName: String, projectName: String, environmentName: String, source: ActivityLogEntry.AccessSource) {
+    public func logAccess(secretName: String, projectName: String, environmentName: String, source: ActivityLogEntry.AccessSource, agent: String? = nil, action: ActivityLogEntry.Action = .read) {
         let record = ActivityLogRecord(
             id: UUID().uuidString,
             secretName: secretName,
             projectName: projectName,
             environmentName: environmentName,
             source: source.rawValue,
-            accessedAt: iso8601()
+            accessedAt: iso8601(),
+            agent: agent,
+            action: action.rawValue
         )
         try? store.insertActivityLog(record)
     }
@@ -494,7 +496,9 @@ public final class Vault {
                 projectName: record.projectName,
                 environmentName: record.environmentName,
                 source: ActivityLogEntry.AccessSource(rawValue: record.source) ?? .app,
-                accessedAt: Self.dateFormatter.date(from: record.accessedAt) ?? Date()
+                accessedAt: Self.dateFormatter.date(from: record.accessedAt) ?? Date(),
+                agent: record.agent,
+                action: ActivityLogEntry.Action(rawValue: record.action) ?? .read
             )
         }
     }

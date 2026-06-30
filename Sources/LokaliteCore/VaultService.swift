@@ -39,7 +39,9 @@ public protocol VaultService: AnyObject {
         secretName: String,
         projectName: String,
         environmentName: String,
-        source: ActivityLogEntry.AccessSource
+        source: ActivityLogEntry.AccessSource,
+        agent: String?,
+        action: ActivityLogEntry.Action
     )
 }
 

@@ -26,7 +26,7 @@ struct AddCommand: ParsableCommand {
         let resolvedValue = try resolveSecretValue(value)
         let secret = try withWorkspace { workspace in
             let ctx = try resolveContext(projectFlag: project, envFlag: env, using: workspace)
-            return try workspace.add(name: name, value: resolvedValue, description: description, context: ctx)
+            return try workspace.add(name: name, value: resolvedValue, description: description, context: ctx, accessSource: .cli)
         }
         print("Added \(secret.name).")
     }

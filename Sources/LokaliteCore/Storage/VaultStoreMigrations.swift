@@ -126,6 +126,15 @@ extension VaultStore {
             }
         }
 
+        migrator.registerMigration("v6") { db in
+            try db.alter(table: "activity_log") { t in
+                t.add(column: "agent", .text)
+                t.add(column: "action", .text)
+                    .notNull()
+                    .defaults(to: ActivityLogEntry.Action.read.rawValue)
+            }
+        }
+
         try migrator.migrate(db)
     }
 }

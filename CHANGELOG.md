@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Per-secret `requiresApproval` agent-access tier (consent-on-read): `lokalite agent-access <name> approve`, or the **AI Agents** picker in the app's secret editor. An agent requesting an approval-gated secret through the app broker triggers a Touch ID prompt; a successful approval lasts for the rest of the unlock session and is cleared on lock. `list_secrets` flags such secrets `[approval required]`; `--local`/headless fails closed, and the CLI `get`/`copy` refuse a detected agent since only the app can broker the prompt.
+- Agent-attributed access dashboard: the activity log now records which AI agent (e.g. `claude`, `cursor`) read, created, updated, deleted, or was denied which secret — the agent is stamped by the daemon from the kernel peer-PID, so a client cannot forge or hide it. `lokalite log` shows the agent and action and gains an `--agent` filter; the app's Activity tab shows an agent badge and a colored action tag (denials in red).
+
+### Changed
+- Write operations (add/set/delete) and denied agent reads are now recorded in the activity log, not just successful reads.
 
 ## [2.0.1] - 2026-06-30
 
