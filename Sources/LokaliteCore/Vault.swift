@@ -19,9 +19,22 @@ public struct ImportSummary: Sendable, Equatable, Codable {
 public final class Vault {
     public static let shared = Vault()
 
-    private var key: SymmetricKey?
+    // The daemon serves on background threads while the app uses Vault.shared on
+    // the main thread (ADR 0014), so the shared key/store are lock-guarded. The
+    // lock is never held across a Keychain or DB call (GRDB serializes the DB
+    // itself) and never re-entered, so it can't deadlock.
+    private let stateLock = NSLock()
+    private var _key: SymmetricKey?
     private var _store: VaultStore?
+
+    private var key: SymmetricKey? {
+        get { stateLock.lock(); defer { stateLock.unlock() }; return _key }
+        set { stateLock.lock(); defer { stateLock.unlock() }; _key = newValue }
+    }
+
     private var store: VaultStore {
+        stateLock.lock()
+        defer { stateLock.unlock() }
         if let _store { return _store }
         let opened = try! openStore(at: vaultFileURL())
         _store = opened

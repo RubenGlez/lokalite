@@ -31,8 +31,16 @@ public enum VaultSocketError: Error, LocalizedError {
 public final class VaultSocketServer {
     private let socketPath: String
     private let service: VaultService
+    // `listenFD` is written once in start() (before the accept loop is dispatched)
+    // and only read afterwards, so it needs no lock. `running` is read by the
+    // accept loop and written by stop() on another thread, so it is lock-guarded.
     private var listenFD: Int32 = -1
-    private var running = false
+    private let runningLock = NSLock()
+    private var _running = false
+    private var running: Bool {
+        get { runningLock.lock(); defer { runningLock.unlock() }; return _running }
+        set { runningLock.lock(); defer { runningLock.unlock() }; _running = newValue }
+    }
     private let acceptQueue = DispatchQueue(label: "com.lokalite.daemon.accept")
     private let connectionQueue = DispatchQueue(label: "com.lokalite.daemon.conn", attributes: .concurrent)
     /// Vault access is serialized — the underlying store is not assumed thread-safe.
@@ -72,7 +80,7 @@ public final class VaultSocketServer {
 
     public func stop() {
         running = false
-        if listenFD >= 0 { close(listenFD); listenFD = -1 }
+        if listenFD >= 0 { close(listenFD) } // closing breaks the blocked accept()
         unlink(socketPath)
     }
 

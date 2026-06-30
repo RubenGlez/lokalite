@@ -63,6 +63,28 @@ final class VaultSocketTests: XCTestCase {
         XCTAssertThrowsError(try client.send(.listProjects))
     }
 
+    func testConcurrentClientsAreServedWithoutRaces() throws {
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        _ = try vault.add(name: "K", value: "v", projectId: project.id)
+        let socketPath = try makeSocketPath()
+
+        let server = VaultSocketServer(socketPath: socketPath, service: vault)
+        try server.start()
+        addTeardownBlock { server.stop() }
+
+        let group = DispatchGroup()
+        let queue = DispatchQueue(label: "clients", attributes: .concurrent)
+        for _ in 0..<20 {
+            queue.async(group: group) {
+                let remote = RemoteVaultService(transport: VaultSocketClient(socketPath: socketPath).send)
+                _ = try? remote.get(name: "K", projectId: project.id, environmentName: nil)
+                _ = try? remote.listProjects()
+            }
+        }
+        XCTAssertEqual(group.wait(timeout: .now() + 15), .success)
+    }
+
     func testPeerPIDReadsTheConnectedProcess() throws {
         var fds: [Int32] = [0, 0]
         XCTAssertEqual(socketpair(AF_UNIX, SOCK_STREAM, 0, &fds), 0)
