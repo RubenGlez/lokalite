@@ -21,6 +21,7 @@ struct GetCommand: ParsableCommand {
             let ctx = try resolveContext(projectFlag: project, envFlag: env, using: workspace)
             return try workspace.get(name: name, context: ctx, accessSource: .cli)
         }
+        try refuseIfOffLimitsToAgent(secret)
         print(secret.value, terminator: "")
     }
 }

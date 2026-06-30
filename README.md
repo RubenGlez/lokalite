@@ -207,7 +207,7 @@ Pass `--read-write` to also expose write tools:
 | `set_secret` | Update an existing secret's value |
 | `delete_secret` | Permanently delete a secret |
 
-> **Security note:** the handoff keeps secret values out of the model's context, but an agent that can name a secret can still load it into a shell it controls (`list_secrets` gives it the names), and a sourced value is then visible to processes in that shell. Mark individual secrets off-limits to agents with `lokalite agent-access <name> block` — `get_secret` then refuses them and `list_secrets` flags them. Also keep the server read-only (the default), scope it to a single project by setting `LOKALITE_PROJECT` in the server's `env` config, and prefer clients that ask for approval before tool calls. Every MCP access is recorded in the activity log.
+> **Security note:** the handoff keeps secret values out of the model's context, but an agent that can name a secret can still load it into a shell it controls (`list_secrets` gives it the names), and a sourced value is then visible to processes in that shell. Mark individual secrets off-limits to agents with `lokalite agent-access <name> block` — `get_secret` then refuses them, `list_secrets` flags them, and even the CLI `get`/`copy` refuse them when an AI agent is detected in the calling process tree. Also keep the server read-only (the default), scope it to a single project by setting `LOKALITE_PROJECT` in the server's `env` config, and prefer clients that ask for approval before tool calls. Every MCP access is recorded in the activity log.
 
 ## Security
 

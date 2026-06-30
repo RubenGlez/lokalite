@@ -58,6 +58,17 @@ func ensureNotAgentExfil(allowAgent: Bool, action: String) throws {
     throw ExitCode.failure
 }
 
+/// Refuses to reveal a secret marked off-limits to agents when an AI agent is
+/// detected in the calling tree (ADR 0014) — the same per-secret policy the MCP
+/// and daemon enforce, applied to the CLI reveal paths (`get`, `copy`). The value
+/// has already been fetched but is never printed.
+func refuseIfOffLimitsToAgent(_ secret: Secret) throws {
+    guard secret.agentAccess.blocksAgents, let agent = AgentDetection.detectAgent() else { return }
+    print("Secret '\(secret.name)' is off-limits to AI agents (\(agent) detected); refusing to reveal it.")
+    print("Run `lokalite agent-access \(secret.name) allow` if this should be readable by agents.")
+    throw ExitCode.failure
+}
+
 /// One-line summary printed by `import` and `init --from-env`.
 func importSummaryLine(_ summary: ImportSummary) -> String {
     var parts: [String] = []
