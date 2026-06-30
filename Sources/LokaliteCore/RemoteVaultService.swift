@@ -94,6 +94,17 @@ public final class RemoteVaultService: VaultService {
         return infos
     }
 
+    public func listEnvironments(projectId: String) throws -> [VaultEnvironment] {
+        guard case let .environments(environments) = try send(.listEnvironments(projectId: projectId)) else {
+            throw RemoteVaultError.unexpectedResponse
+        }
+        return environments
+    }
+
+    public func setActiveEnvironment(name: String?, projectId: String) throws {
+        _ = try send(.setActiveEnvironment(name: name, projectId: projectId))
+    }
+
     public func importEnv(pairs: [(name: String, value: String)], projectId: String, environmentName: String?, overwrite: Bool) throws -> ImportSummary {
         let wirePairs = pairs.map { EnvPair(name: $0.name, value: $0.value) }
         guard case let .importSummary(summary) = try send(.importEnv(pairs: wirePairs, projectId: projectId, environmentName: environmentName, overwrite: overwrite)) else {

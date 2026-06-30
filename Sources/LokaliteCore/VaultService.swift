@@ -29,6 +29,8 @@ public protocol VaultService: AnyObject {
     func delete(name: String, projectId: String) throws
     func list(projectId: String, environmentName: String?) throws -> [Secret]
     func listInfo(projectId: String) throws -> [SecretInfo]
+    func listEnvironments(projectId: String) throws -> [VaultEnvironment]
+    func setActiveEnvironment(name: String?, projectId: String) throws
     func importEnv(
         pairs: [(name: String, value: String)],
         projectId: String,

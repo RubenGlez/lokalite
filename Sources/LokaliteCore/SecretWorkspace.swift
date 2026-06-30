@@ -88,6 +88,14 @@ public final class SecretWorkspace {
         try vault.listProjects()
     }
 
+    public func listEnvironments(context: SecretWorkspaceContext) throws -> [VaultEnvironment] {
+        try vault.listEnvironments(projectId: context.project.id)
+    }
+
+    public func setActiveEnvironment(name: String, context: SecretWorkspaceContext) throws {
+        try vault.setActiveEnvironment(name: name, projectId: context.project.id)
+    }
+
     public func set(
         name: String,
         value: String,

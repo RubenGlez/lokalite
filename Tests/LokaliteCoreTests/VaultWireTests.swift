@@ -14,6 +14,9 @@ final class VaultWireProtocolTests: XCTestCase {
             .listInfo(projectId: "p1"),
             .importEnv(pairs: [EnvPair(name: "A", value: "1")], projectId: "p1", environmentName: nil, overwrite: true),
             .logAccess(secretName: "K", projectName: "App", environmentName: "Default", source: .mcp, action: .read),
+            .listEnvironments(projectId: "p1"),
+            .setActiveEnvironment(name: "staging", projectId: "p1"),
+            .setActiveEnvironment(name: nil, projectId: "p1"),
         ]
         for request in requests {
             let data = try JSONEncoder().encode(request)
@@ -29,6 +32,7 @@ final class VaultWireProtocolTests: XCTestCase {
             .project(Project(id: "p1", name: "App")),
             .projects([Project(id: "p1", name: "App")]),
             .secretInfos([SecretInfo(name: "K", description: nil, icon: nil, category: .other)]),
+            .environments([VaultEnvironment(id: "e1", projectId: "p1", name: "staging", color: nil)]),
             .importSummary(ImportSummary(added: 1, updated: 0, skipped: 2)),
             .failure(message: "nope"),
         ]

@@ -141,6 +141,10 @@ public final class Vault {
         record.activeEnvironment = name.flatMap { $0.isEmpty ? nil : $0 }
         record.updatedAt = iso8601()
         try store.updateProject(record)
+        // One synced active environment (ADR 0016): a switch from any caller — the
+        // app, the CLI, or an agent via the daemon — notifies in-process observers
+        // so the menu bar + manager refresh. Only the app process has observers.
+        NotificationCenter.default.post(name: .lokaliteActiveEnvironmentDidChange, object: nil)
     }
 
     // MARK: - Environment Management
@@ -643,4 +647,11 @@ private extension Data {
         offset += 4
         return bytes.reduce(UInt32(0)) { ($0 << 8) | UInt32($1) }
     }
+}
+
+public extension Notification.Name {
+    /// Posted by `Vault.setActiveEnvironment` whenever a project's active
+    /// environment changes, so the app can refresh the menu bar + manager when an
+    /// agent (via the daemon) or the CLI switches it (ADR 0016).
+    static let lokaliteActiveEnvironmentDidChange = Notification.Name("lokaliteActiveEnvironmentDidChange")
 }

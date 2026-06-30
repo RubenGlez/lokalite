@@ -74,6 +74,43 @@ final class LokaliteMCPTools {
                 return .success(contentError(error.localizedDescription))
             }
 
+        case "list_environments":
+            let projectName = args["project"] as? String
+            let path = args["path"] as? String
+            do {
+                let ctx = try resolveContext(projectFlag: projectName, envFlag: nil, pathFlag: path, using: workspace)
+                let environments = try workspace.listEnvironments(context: ctx)
+                if environments.isEmpty {
+                    return .success(content("No environments found."))
+                }
+                let active = ctx.project.activeEnvironment
+                let text = environments.map { env in
+                    env.name == active ? "\(env.name)  [active]" : env.name
+                }.joined(separator: "\n")
+                return .success(content(text))
+            } catch {
+                return .success(contentError(forResolution: error))
+            }
+
+        case "use_environment":
+            guard let envName = args["name"] as? String, !envName.isEmpty else {
+                return .invalidArguments("Missing required argument: name")
+            }
+            let projectName = args["project"] as? String
+            let path = args["path"] as? String
+            do {
+                let ctx = try resolveContext(projectFlag: projectName, envFlag: nil, pathFlag: path, using: workspace)
+                let environments = try workspace.listEnvironments(context: ctx)
+                guard environments.contains(where: { $0.name == envName }) else {
+                    let available = environments.map(\.name).joined(separator: ", ")
+                    return .success(contentError("Environment '\(envName)' not found in project '\(ctx.project.name)'. Available: \(available)."))
+                }
+                try workspace.setActiveEnvironment(name: envName, context: ctx)
+                return .success(content("Active environment set to '\(envName)' for project '\(ctx.project.name)'. This is the project's single active environment — the app, CLI, and agents all resolve it now."))
+            } catch {
+                return .success(contentError(forResolution: error))
+            }
+
         case "list_secrets":
             let projectName = args["project"] as? String
             let envName = args["environment"] as? String
@@ -82,9 +119,10 @@ final class LokaliteMCPTools {
                 let ctx = try resolveContext(projectFlag: projectName, envFlag: envName, pathFlag: path, using: workspace)
                 let secrets = try workspace.listInfo(context: ctx)
                 if secrets.isEmpty {
-                    return .success(content("No secrets found."))
+                    return .success(content("No secrets found in environment '\(ctx.displayEnvironmentName)'."))
                 }
-                let text = secrets.map { secret -> String in
+                let header = "Environment: \(ctx.displayEnvironmentName)\n"
+                let text = header + secrets.map { secret -> String in
                     var line = "[\(secret.category.label)] \(secret.name)"
                     if secret.agentAccess.blocksAgents { line += "  [off-limits to agents]" }
                     else if secret.agentAccess.requiresApprovalForAgents { line += "  [approval required]" }
@@ -195,6 +233,30 @@ final class LokaliteMCPTools {
                 "inputSchema": [
                     "type": "object",
                     "properties": [:] as [String: Any]
+                ] as [String: Any]
+            ],
+            [
+                "name": "list_environments",
+                "description": "List a project's environments (e.g. dev, staging, production), marking the active one. The active environment is what get_secret and list_secrets resolve by default. No secret values are returned. Use this before use_environment to see the options.",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": [
+                        "project": ["type": "string", "description": "Project name. Omit to auto-resolve the project from the working directory (path)."],
+                        "path": ["type": "string", "description": "Absolute path of the caller's working directory; used to auto-resolve the project when omitted."]
+                    ]
+                ] as [String: Any]
+            ],
+            [
+                "name": "use_environment",
+                "description": "Switch the project's active environment — the one get_secret and list_secrets resolve by default. This is the single shared active environment: the menu bar app, the CLI, and agents all follow it, and the change persists. Call list_environments first to see the options. For a one-off read from a different environment without switching, pass the `environment` argument to get_secret instead.",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": [
+                        "name": ["type": "string", "description": "Environment name to make active, e.g. staging"],
+                        "project": ["type": "string", "description": "Project name. Omit to auto-resolve the project from the working directory (path)."],
+                        "path": ["type": "string", "description": "Absolute path of the caller's working directory; used to auto-resolve the project when omitted."]
+                    ],
+                    "required": ["name"]
                 ] as [String: Any]
             ]
         ]

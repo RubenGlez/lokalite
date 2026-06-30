@@ -1,6 +1,6 @@
 import Foundation
 
-public struct VaultEnvironment: Equatable, Hashable {
+public struct VaultEnvironment: Equatable, Hashable, Codable {
     public var id: String
     public var projectId: String
     public var name: String

@@ -22,6 +22,8 @@ public enum VaultRequest: Codable, Equatable {
     case delete(name: String, projectId: String)
     case list(projectId: String, environmentName: String?)
     case listInfo(projectId: String)
+    case listEnvironments(projectId: String)
+    case setActiveEnvironment(name: String?, projectId: String)
     case importEnv(pairs: [EnvPair], projectId: String, environmentName: String?, overwrite: Bool)
     case logAccess(secretName: String, projectName: String, environmentName: String, source: ActivityLogEntry.AccessSource, action: ActivityLogEntry.Action)
 }
@@ -35,6 +37,7 @@ public enum VaultResponse: Codable, Equatable {
     case project(Project)
     case projects([Project])
     case secretInfos([SecretInfo])
+    case environments([VaultEnvironment])
     case importSummary(ImportSummary)
     case failure(message: String)
 }
@@ -130,6 +133,11 @@ public enum VaultRequestDispatcher {
                 return .secrets(secrets)
             case let .listInfo(projectId):
                 return .secretInfos(try service.listInfo(projectId: projectId))
+            case let .listEnvironments(projectId):
+                return .environments(try service.listEnvironments(projectId: projectId))
+            case let .setActiveEnvironment(name, projectId):
+                try service.setActiveEnvironment(name: name, projectId: projectId)
+                return .ok
             case let .importEnv(pairs, projectId, environmentName, overwrite):
                 let tuples = pairs.map { (name: $0.name, value: $0.value) }
                 return .importSummary(try service.importEnv(pairs: tuples, projectId: projectId, environmentName: environmentName, overwrite: overwrite))

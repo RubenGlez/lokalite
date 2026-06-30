@@ -19,6 +19,7 @@ final class MCPServer {
     Discovery (no secret values are returned):
       list_secrets  — names and descriptions of the secrets in a project.
       list_projects — available projects and their linked directories. Call this when a tool reports that no project could be resolved.
+      list_environments — a project's environments; use_environment(name) switches the active one (the environment get_secret resolves by default). The active environment is shared with the app and CLI.
 
     Project resolution: tools auto-resolve the project from your working directory (the `path` argument). If resolution fails, call list_projects and pass `project` explicitly.
     """

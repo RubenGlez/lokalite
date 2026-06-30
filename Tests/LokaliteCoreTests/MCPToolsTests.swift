@@ -29,7 +29,7 @@ final class SecretWorkspaceProjectsTests: XCTestCase {
 final class MCPToolDefinitionsTests: XCTestCase {
     func testReadOnlyToolsExposeDiscoveryAndNoWriteTools() {
         let names = LokaliteMCPTools(allowWrites: false).definitions.compactMap { $0["name"] as? String }
-        XCTAssertEqual(Set(names), ["get_secret", "list_secrets", "list_projects"])
+        XCTAssertEqual(Set(names), ["get_secret", "list_secrets", "list_projects", "list_environments", "use_environment"])
     }
 
     func testWriteToolsAppearOnlyWithReadWrite() {
@@ -138,6 +138,8 @@ private final class StubVaultService: VaultService {
     func delete(name: String, projectId: String) throws { throw StubError.unexpected }
     func list(projectId: String, environmentName: String?) throws -> [Secret] { throw StubError.unexpected }
     func listInfo(projectId: String) throws -> [SecretInfo] { throw StubError.unexpected }
+    func listEnvironments(projectId: String) throws -> [VaultEnvironment] { throw StubError.unexpected }
+    func setActiveEnvironment(name: String?, projectId: String) throws { throw StubError.unexpected }
     func importEnv(pairs: [(name: String, value: String)], projectId: String, environmentName: String?, overwrite: Bool) throws -> ImportSummary { throw StubError.unexpected }
 
     enum StubError: Error { case unexpected }

@@ -55,6 +55,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.hotkeyManager.register(GlobalHotkeyManager.Shortcut.fromID(id))
             }
         }
+
+        // One synced active environment (ADR 0016): when an agent (via the daemon)
+        // or the CLI switches it, refresh so the menu bar + manager follow.
+        NotificationCenter.default.addObserver(
+            forName: .lokaliteActiveEnvironmentDidChange, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.vault.refresh()
+            }
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
