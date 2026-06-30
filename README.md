@@ -161,6 +161,8 @@ On first launch, an onboarding screen guides you through creating your first pro
 
 ## MCP Integration
 
+By default `lokalite mcp` **brokers vault access through the running Lokalite app** over a local Unix socket, so the MCP server process never holds the vault key — it asks the app, which is the only process that can decrypt. The app is launched automatically if it isn't running. Pass `--local` to open the vault in-process instead (for CI/headless use, where the value then passes through the MCP process).
+
 `lokalite install` registers the MCP server with Claude Code automatically (writing `~/.claude.json`). To register with a different client, pass `--client`:
 
 ```bash

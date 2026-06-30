@@ -10,8 +10,8 @@ struct MCPCommand: ParsableCommand {
     @Flag(name: .long, help: "Expose write tools (add_secret, set_secret, delete_secret). Off by default.")
     var readWrite = false
 
-    @Flag(name: .long, help: "Broker vault access through the running Lokalite app instead of opening the vault in-process; auto-launches the app if needed (ADR 0014). Opt-in while the daemon is being rolled out.")
-    var remote = false
+    @Flag(name: .long, help: "Open the vault in-process instead of brokering through the Lokalite app. Use for CI/headless; the secret value then passes through this process.")
+    var local = false
 
     func run() throws {
         let server = MCPServer(allowWrites: readWrite, vault: try vaultService())
@@ -19,9 +19,15 @@ struct MCPCommand: ParsableCommand {
     }
 
     private func vaultService() throws -> VaultService {
-        guard remote else { return Vault.shared }
+        // Default: broker through the Lokalite app so this process never holds the
+        // vault key (ADR 0014). `--local` opts back into in-process access.
+        if local { return Vault.shared }
         let socketPath = VaultConfiguration.daemonSocketURL.path
-        try VaultDaemonLauncher.ensureRunning(socketPath: socketPath)
+        do {
+            try VaultDaemonLauncher.ensureRunning(socketPath: socketPath)
+        } catch {
+            throw ValidationError("Could not reach or start the Lokalite app (the vault daemon): \(error.localizedDescription) Open Lokalite, or run with --local to open the vault in-process.")
+        }
         return RemoteVaultService(transport: VaultSocketClient(socketPath: socketPath).send)
     }
 }
