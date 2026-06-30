@@ -5,13 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.1.0] - 2026-07-01
 
 ### Added
 - Per-secret `requiresApproval` agent-access tier (consent-on-read): `lokalite agent-access <name> approve`, or the **AI Agents** picker in the app's secret editor. An agent requesting an approval-gated secret through the app broker triggers a Touch ID prompt; a successful approval lasts for the rest of the unlock session and is cleared on lock. `list_secrets` flags such secrets `[approval required]`; `--local`/headless fails closed, and the CLI `get`/`copy` refuse a detected agent since only the app can broker the prompt.
 - Agent-attributed access dashboard: the activity log now records which AI agent (e.g. `claude`, `cursor`) read, created, updated, deleted, or was denied which secret — the agent is stamped by the daemon from the kernel peer-PID, so a client cannot forge or hide it. `lokalite log` shows the agent and action and gains an `--agent` filter; the app's Activity tab shows an agent badge and a colored action tag (denials in red).
-
 - Per-environment agent workflow: `use_environment(name)` and `list_environments` MCP tools let an agent switch the project's active environment with one command. There's one active environment per project, shared across the menu bar app, the manager, the CLI (`env use`), and agents — switching anywhere updates everywhere, and the app refreshes live when an agent switches. A per-call `environment` argument still works for a one-off read without switching.
+- The manager window now appears in Cmd+Tab and the Dock while it is open — the app promotes from a menu-bar accessory to a regular app for the window's lifetime, then demotes back when it closes.
 
 ### Changed
 - Write operations (add/set/delete) and denied agent reads are now recorded in the activity log, not just successful reads.

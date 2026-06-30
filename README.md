@@ -79,10 +79,11 @@ lokalite init
 lokalite status
 lokalite status --json
 
-# View the secret access log (who read what, and from where)
+# View the secret access log (which agent read/changed what, and from where)
 lokalite log
 lokalite log --limit 20
 lokalite log --source cli       # filter by app, cli, or mcp
+lokalite log --agent claude     # filter by the AI agent that accessed the secret
 
 # Add a secret
 lokalite add OPENAI_API_KEY sk-...
@@ -185,13 +186,17 @@ For any other MCP-compatible agent, add the same server block to its config manu
 }
 ```
 
-By default the server is **read-only** and exposes three tools:
+By default the server is **read-only** and exposes these tools:
 
 | Tool | Description |
 |---|---|
 | `list_secrets` | List secret names, categories, and descriptions (values never exposed) |
 | `list_projects` | List projects and their linked directories (no values); use when no project resolves |
+| `list_environments` | List a project's environments, marking the active one (no values) |
+| `use_environment` | Switch the project's active environment — the one secrets resolve from by default |
 | `get_secret` | Load a secret into the agent's shell environment via a one-time handoff — the value is never returned to the model |
+
+`use_environment` switches the project's **single active environment**, the same one the menu bar app, the manager, and `lokalite env use` use — switching from the agent updates all of them, and the app refreshes live. For a one-off read from a different environment without switching, pass an `environment` argument to `get_secret` instead.
 
 `get_secret` does **not** return the secret value. It writes the value to a single-use, owner-only shell script and returns a `source '<path>'` command; the agent runs that in its own shell to load the variable, then runs its program in the same shell. The raw value never enters the conversation/model context, the script self-deletes on first source, and any unsourced script is swept after 120s. The server also sends `instructions` on connect describing this flow and telling agents never to print a loaded variable or copy a secret into `.env`/config/source.
 
