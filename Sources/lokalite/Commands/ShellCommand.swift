@@ -21,7 +21,12 @@ struct ShellCommand: ParsableCommand {
     @Option(name: .shortAndLong, help: "Environment name. Defaults to the active environment.")
     var env: String?
 
+    @Flag(name: .long, help: "Allow running even when an AI agent is detected in the calling process tree.")
+    var allowAgent = false
+
     func run() throws {
+        try ensureNotAgentExfil(allowAgent: allowAgent, action: "print secret values as shell exports")
+
         let secrets = try withWorkspace { workspace -> [Secret] in
             let ctx = try resolveContext(projectFlag: project, envFlag: env, using: workspace)
             if let keys {

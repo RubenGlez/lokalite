@@ -46,6 +46,17 @@ func withWorkspace<T>(_ body: (SecretWorkspace) throws -> T) throws -> T {
     return try body(workspace)
 }
 
+/// Refuses a bulk secret-reveal action when an AI agent is detected in the
+/// calling process tree (ADR 0014). Agents should inject with `lokalite run`
+/// or use the MCP handoff, never read raw values to stdout or a file.
+func ensureNotAgentExfil(allowAgent: Bool, action: String) throws {
+    guard !allowAgent, let agent = AgentDetection.detectAgent() else { return }
+    print("Refusing to \(action): an AI agent (\(agent)) was detected in the calling process tree.")
+    print("Secrets exposed this way can leak into the agent's context or a file on disk.")
+    print("Use `lokalite run -- <command>` to inject secrets without revealing them, or pass --allow-agent to override.")
+    throw ExitCode.failure
+}
+
 /// One-line summary printed by `import` and `init --from-env`.
 func importSummaryLine(_ summary: ImportSummary) -> String {
     var parts: [String] = []

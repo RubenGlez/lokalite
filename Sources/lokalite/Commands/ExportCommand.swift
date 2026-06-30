@@ -23,7 +23,16 @@ struct ExportCommand: ParsableCommand {
     @Option(name: .long, help: "Output format: json (default) or env.")
     var format: String = "json"
 
+    @Flag(name: .long, help: "Allow running even when an AI agent is detected in the calling process tree.")
+    var allowAgent = false
+
     func run() throws {
+        // Plaintext export (env format or --plain) reveals raw values; guard it
+        // against AI-agent callers. Encrypted export stays passphrase-protected.
+        if format == "env" || plain {
+            try ensureNotAgentExfil(allowAgent: allowAgent, action: "export secret values as plaintext")
+        }
+
         let ctx = try resolveContext(projectFlag: project, envFlag: env)
 
         if format == "env" {
