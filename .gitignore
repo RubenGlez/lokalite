@@ -7,6 +7,10 @@ DerivedData/
 xcuserdata/
 .claude/
 .agents/
-.harness/
 .dd/
 .claude/worktrees/
+
+# doctier:begin — managed by 'doctier init', do not edit
+**/_prototype-*
+**/_spike/**
+# doctier:end
