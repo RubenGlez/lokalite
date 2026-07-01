@@ -35,9 +35,9 @@ depends on the two structural advantages below.
 | Shell injection / session cache | ✅ | ✅ |
 | Hierarchical organization | Projects | `org/project/KEY` + `shared/KEY` |
 | **Per-environment values** (dev/staging/prod) | ✅ | ❌ not offered |
-| **DLP output guard** (redact leaked values) | 🟡 shipping (P0) | ✅ `noxkey guard` |
-| **Guided secret rotation** | ❌ (P1) | ✅ `noxkey rotate` |
-| **E2E secret sharing** | ❌ (P1) | ✅ `.noxkey` one-time files |
+| **DLP output guard** (redact leaked values) | ✅ `lokalite guard` | ✅ `noxkey guard` |
+| **Guided secret rotation** | ✅ `lokalite rotate` | ✅ `noxkey rotate` |
+| **E2E secret sharing** | ✅ `lokalite share` (`.lok`) | ✅ `.noxkey` one-time files |
 | **Developer ID signed / App Store** | ❌ (P0) | ✅ on the Mac App Store |
 | **Cross-platform (Windows/Linux)** | 🟡 possible by design | ❌ architecturally blocked |
 
@@ -73,10 +73,15 @@ depends on the two structural advantages below.
 
 ## Next — P1 (feature parity)
 
-- [ ] **Guided secret rotation** (`lokalite rotate`).
-- [ ] **E2E secret sharing** — single-use encrypted `.lok` files imported into
-      the recipient's vault under their Touch ID.
+- [x] **Guided secret rotation** (`lokalite rotate`) — supply or `--generate` a
+      new value, with a reminder to revoke the old credential upstream.
+- [x] **E2E secret sharing** (`lokalite share create` / `open`) — passphrase-
+      encrypted `.lok` files (same envelope as encrypted backups) that import
+      into the recipient's own vault; passphrase travels out of band.
 - [ ] **Per-access `strict` tier** — Touch ID on every read (no session cache).
+      App-side (needs the Touch ID broker), like notarization; not code-only.
+- [ ] **Share hardening** — true single-use (burn-on-open) and app-side Touch ID
+      import, to fully match NoxKey's `.noxkey` flow.
 
 ## Later — P2 (lean into the moat)
 

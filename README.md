@@ -105,6 +105,10 @@ lokalite list --search openai
 # Update a secret (also supports the prompt/stdin forms shown for `add`)
 lokalite set OPENAI_API_KEY sk-new-...
 
+# Rotate a secret: supply a new value or generate a strong one, then revoke the old
+lokalite rotate OPENAI_API_KEY sk-new-...     # also supports prompt/stdin like `set`
+lokalite rotate OPENAI_API_KEY --generate --show   # generate a value and print it once
+
 # Delete a secret
 lokalite delete OPENAI_API_KEY
 
@@ -141,6 +145,11 @@ lokalite backup                             # prompts for a passphrase, writes a
 lokalite backup --output backup.lokalite
 lokalite restore backup.lokalite            # prompts for the passphrase, skips existing secrets
 lokalite restore backup.lokalite --overwrite
+
+# Share secrets end-to-end encrypted (send the file and passphrase separately)
+lokalite share create OPENAI_API_KEY,DB_URL   # writes a passphrase-encrypted .lok file
+lokalite share create                          # share every secret in the environment
+lokalite share open lokalite-share-….lok       # recipient imports into their own vault
 
 # Inject secrets into the current shell session (see security note below)
 eval $(lokalite shell)

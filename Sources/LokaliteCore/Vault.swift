@@ -520,6 +520,14 @@ public final class Vault {
         return json
     }
 
+    /// Encrypts an explicit `[name: value]` map into the same passphrase-protected
+    /// envelope as `export`, for sharing a chosen subset of secrets (`lokalite
+    /// share`). Open it with `decryptExport`.
+    public func encryptSecrets(_ pairs: [String: String], passphrase: String) throws -> Data {
+        let json = try JSONSerialization.data(withJSONObject: pairs, options: .prettyPrinted)
+        return try encryptExport(json, passphrase: passphrase)
+    }
+
     /// Decrypts an encrypted export envelope produced by `export(projectId:passphrase:)`
     /// and returns the `[name: value]` map it contains. Throws `invalidExportPassphrase`
     /// when the passphrase is wrong or the file is not a valid encrypted export.

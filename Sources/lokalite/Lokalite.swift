@@ -25,6 +25,8 @@ struct LokaliteCLI: ParsableCommand {
             RestoreCommand.self,
             ShellCommand.self,
             GuardCommand.self,
+            RotateCommand.self,
+            ShareCommand.self,
             StatusCommand.self,
             LogCommand.self,
             InitCommand.self,
@@ -110,6 +112,21 @@ func resolveContext(projectFlag: String?, envFlag: String?) throws -> SecretWork
     try withWorkspace { workspace in
         try resolveContext(projectFlag: projectFlag, envFlag: envFlag, using: workspace)
     }
+}
+
+/// Reads a line from stdin without echoing it (for passphrases), then prints a
+/// trailing newline. Shared by the commands that prompt for a share/backup
+/// passphrase.
+func promptHiddenLine() -> String {
+    var term = termios()
+    tcgetattr(STDIN_FILENO, &term)
+    var noEcho = term
+    noEcho.c_lflag &= ~tcflag_t(ECHO)
+    tcsetattr(STDIN_FILENO, TCSANOW, &noEcho)
+    let line = readLine() ?? ""
+    tcsetattr(STDIN_FILENO, TCSANOW, &term)
+    print()
+    return line
 }
 
 /// Resolves a secret value from an optional argument. When the argument is
