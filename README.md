@@ -145,6 +145,11 @@ lokalite restore backup.lokalite --overwrite
 # Inject secrets into the current shell session (see security note below)
 eval $(lokalite shell)
 eval $(lokalite shell --keys OPENAI_API_KEY,ANTHROPIC_API_KEY)
+
+# DLP guard: redact leaked secret values from piped output before they reach
+# a model's context or a log. Exits non-zero when a leak is found.
+some-agent-command | lokalite guard
+some-agent-command | lokalite guard --block    # suppress output entirely on a leak
 ```
 
 > **Shell injection note:** `eval $(lokalite shell)` makes secrets visible to all child processes and shows up in `env` output for the duration of your session. Use `lokalite run` to scope secrets to a single subprocess instead.
