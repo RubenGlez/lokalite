@@ -130,7 +130,7 @@ private final class StubVaultService: VaultService {
         getCalls.append(name)
         return Secret(name: name, value: cannedValue)
     }
-    func logAccess(secretName: String, projectName: String, environmentName: String, source: ActivityLogEntry.AccessSource, agent: String?, action: ActivityLogEntry.Action) {
+    func logAccess(secretName: String, projectName: String, environmentName: String, source: ActivityLogEntry.AccessSource, agent: String?, peerTeamID: String?, action: ActivityLogEntry.Action) {
         loggedAccess.append(secretName)
     }
     func add(name: String, value: String, description: String?, icon: String?, category: SecretCategory?, projectId: String, environmentName: String?) throws -> Secret { throw StubError.unexpected }

@@ -478,7 +478,7 @@ public final class Vault {
 
     // MARK: - Activity Log
 
-    public func logAccess(secretName: String, projectName: String, environmentName: String, source: ActivityLogEntry.AccessSource, agent: String? = nil, action: ActivityLogEntry.Action = .read) {
+    public func logAccess(secretName: String, projectName: String, environmentName: String, source: ActivityLogEntry.AccessSource, agent: String? = nil, peerTeamID: String? = nil, action: ActivityLogEntry.Action = .read) {
         let record = ActivityLogRecord(
             id: UUID().uuidString,
             secretName: secretName,
@@ -487,6 +487,7 @@ public final class Vault {
             source: source.rawValue,
             accessedAt: iso8601(),
             agent: agent,
+            peerTeam: peerTeamID,
             action: action.rawValue
         )
         try? store.insertActivityLog(record)
@@ -502,6 +503,7 @@ public final class Vault {
                 source: ActivityLogEntry.AccessSource(rawValue: record.source) ?? .app,
                 accessedAt: Self.dateFormatter.date(from: record.accessedAt) ?? Date(),
                 agent: record.agent,
+                peerTeamID: record.peerTeam,
                 action: ActivityLogEntry.Action(rawValue: record.action) ?? .read
             )
         }

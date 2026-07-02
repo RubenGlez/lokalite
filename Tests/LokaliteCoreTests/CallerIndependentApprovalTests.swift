@@ -127,7 +127,7 @@ final class CallerIndependentApprovalTests: XCTestCase {
         func importEnv(pairs: [(name: String, value: String)], projectId: String, environmentName: String?, overwrite: Bool) throws -> ImportSummary {
             try wrapped.importEnv(pairs: pairs, projectId: projectId, environmentName: environmentName, overwrite: overwrite)
         }
-        func logAccess(secretName: String, projectName: String, environmentName: String, source: ActivityLogEntry.AccessSource, agent: String?, action: ActivityLogEntry.Action) {
+        func logAccess(secretName: String, projectName: String, environmentName: String, source: ActivityLogEntry.AccessSource, agent: String?, peerTeamID: String?, action: ActivityLogEntry.Action) {
             wrapped.logAccess(secretName: secretName, projectName: projectName, environmentName: environmentName, source: source, agent: agent, action: action)
         }
     }

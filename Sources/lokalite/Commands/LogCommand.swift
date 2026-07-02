@@ -49,7 +49,10 @@ struct LogCommand: ParsableCommand {
             let who = (entry.agent ?? "-").padding(toLength: 8, withPad: " ", startingAt: 0)
             let action = entry.action.rawValue.padding(toLength: 7, withPad: " ", startingAt: 0)
             let scope = "\(entry.projectName)/\(entry.environmentName)"
-            print("\(timestamp)  \(source)  \(who)  \(action)  \(scope)  \(entry.secretName)")
+            // A verified peer signature (ADR 0019) marks a read brokered by the
+            // genuine signed Lokalite binary; absent for app-local/dev reads.
+            let verified = entry.peerTeamID.map { " ✓\($0)" } ?? ""
+            print("\(timestamp)  \(source)  \(who)  \(action)  \(scope)  \(entry.secretName)\(verified)")
         }
     }
 }

@@ -116,7 +116,10 @@ public final class RemoteVaultService: VaultService {
     /// Logging is best-effort, mirroring the local `Vault.logAccess` (non-throwing).
     /// `agent` is intentionally not sent — the daemon stamps the caller's agent
     /// from the kernel peer-PID, which the client cannot forge.
-    public func logAccess(secretName: String, projectName: String, environmentName: String, source: ActivityLogEntry.AccessSource, agent: String? = nil, action: ActivityLogEntry.Action = .read) {
+    public func logAccess(secretName: String, projectName: String, environmentName: String, source: ActivityLogEntry.AccessSource, agent: String? = nil, peerTeamID: String? = nil, action: ActivityLogEntry.Action = .read) {
+        // `agent` and `peerTeamID` are intentionally not sent — the daemon stamps
+        // both from the kernel peer-PID / its code signature, which the client
+        // cannot forge.
         _ = try? send(.logAccess(secretName: secretName, projectName: projectName, environmentName: environmentName, source: source, action: action))
     }
 }
