@@ -11,8 +11,8 @@ final class LokaliteMCPTools {
     private let workspace: SecretWorkspace
     private let allowWrites: Bool
     /// True when this process brokers through the app daemon, which can show the
-    /// consent prompt. When false (`--local`/headless), `requiresApproval` secrets
-    /// fail closed — there is no GUI to obtain consent.
+    /// consent prompt. When false (`--local`/headless), approval-tier secrets
+    /// (`requiresApproval`/`strict`) fail closed — there is no GUI to obtain consent.
     private let daemonBacked: Bool
 
     init(allowWrites: Bool = false, vault: VaultService = Vault.shared, daemonBacked: Bool = false) {
@@ -42,8 +42,9 @@ final class LokaliteMCPTools {
                     workspace.logAccess(secretName: secretName, context: ctx, source: .mcp, action: .denied)
                     return .success(contentError("Secret '\(secretName)' is marked off-limits to AI agents and cannot be retrieved."))
                 }
-                // `requiresApproval` is brokered by the daemon (Touch ID). Without a
-                // daemon there is no way to obtain consent, so fail closed here;
+                // `requiresApproval` and `strict` are brokered by the daemon
+                // (Touch ID). Without a daemon there is no way to obtain consent,
+                // so fail closed here;
                 // when daemon-backed, let the request reach the daemon to prompt (it
                 // logs its own approval denial).
                 if policy?.requiresApprovalForAgents == true && !daemonBacked {
@@ -125,6 +126,7 @@ final class LokaliteMCPTools {
                 let text = header + secrets.map { secret -> String in
                     var line = "[\(secret.category.label)] \(secret.name)"
                     if secret.agentAccess.blocksAgents { line += "  [off-limits to agents]" }
+                    else if secret.agentAccess.promptsPerCall { line += "  [approval required every read]" }
                     else if secret.agentAccess.requiresApprovalForAgents { line += "  [approval required]" }
                     if let description = secret.description { line += "  — \(description)" }
                     return line

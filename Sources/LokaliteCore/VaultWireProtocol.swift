@@ -58,23 +58,64 @@ public struct CallerContext {
     public static let local = CallerContext(pid: nil, agent: nil)
 }
 
-/// A daemon's consent-on-read request for a `requiresApproval` secret (ADR 0014):
-/// who is asking (the agent token), and which secret, so the prompt can name both.
+/// A daemon's consent-on-read request for an approval-tier secret (ADR 0014):
+/// who is asking (the agent token) and what would be released — secret,
+/// environment, and project by name — so the prompt can state exactly what the
+/// user is approving. `perCall` is true for `strict` secrets, whose approvals
+/// must never be cached for the session.
 public struct ApprovalRequest {
     public let secretID: String
     public let secretName: String
     public let projectID: String
+    public let projectName: String
+    public let environmentName: String
+    public let perCall: Bool
     public let agent: String?
 
-    public init(secretID: String, secretName: String, projectID: String, agent: String?) {
+    public init(secretID: String, secretName: String, projectID: String, projectName: String, environmentName: String, perCall: Bool, agent: String?) {
         self.secretID = secretID
         self.secretName = secretName
         self.projectID = projectID
+        self.projectName = projectName
+        self.environmentName = environmentName
+        self.perCall = perCall
         self.agent = agent
     }
 }
 
-/// Decides whether to release a `requiresApproval` secret to an agent caller.
+/// Session-grant bookkeeping for approval-tier secrets, factored out of the
+/// app's Touch ID coordinator so the caching decision is testable without
+/// `LocalAuthentication`. A grant is keyed by secret id and lasts until
+/// `clear()` (the vault locking). Per-call (`strict`) requests bypass the cache
+/// entirely — never read, never recorded — so every read re-prompts.
+public final class ApprovalGrantCache {
+    private let lock = NSLock()
+    private var grantedSecretIDs: Set<String> = []
+
+    public init() {}
+
+    /// True if a cached session grant releases this request without prompting.
+    public func isGranted(_ request: ApprovalRequest) -> Bool {
+        guard !request.perCall else { return false }
+        lock.lock(); defer { lock.unlock() }
+        return grantedSecretIDs.contains(request.secretID)
+    }
+
+    /// Records a successful approval. Per-call requests are never cached.
+    public func recordGrant(_ request: ApprovalRequest) {
+        guard !request.perCall else { return }
+        lock.lock(); defer { lock.unlock() }
+        grantedSecretIDs.insert(request.secretID)
+    }
+
+    /// Drops all session grants (the vault locked or the session timed out).
+    public func clear() {
+        lock.lock(); defer { lock.unlock() }
+        grantedSecretIDs.removeAll()
+    }
+}
+
+/// Decides whether to release an approval-tier secret to an agent caller.
 /// The app injects a Touch ID implementation; it may block while the user
 /// responds. Returns true to release the value.
 public typealias AgentApprovalHandler = (ApprovalRequest) -> Bool
@@ -83,8 +124,9 @@ public typealias AgentApprovalHandler = (ApprovalRequest) -> Bool
 /// Used by the daemon's socket server; pure and testable without any socket.
 /// `caller` lets the daemon enforce agent policy independently of the client —
 /// defense in depth, since the MCP layer also checks. `approveAgentAccess` brokers
-/// consent for `requiresApproval` secrets; it defaults to deny (fail closed) so
-/// any path without a GUI broker — `--local`, headless, tests — refuses them.
+/// consent for approval-tier (`requiresApproval`/`strict`) secrets; it defaults to
+/// deny (fail closed) so any path without a GUI broker — `--local`, headless,
+/// tests — refuses them.
 public enum VaultRequestDispatcher {
     public static func handle(
         _ request: VaultRequest,
@@ -111,7 +153,18 @@ public enum VaultRequestDispatcher {
                         return .failure(message: "Secret '\(name)' is marked off-limits to AI agents.")
                     }
                     if secret.agentAccess.requiresApprovalForAgents {
-                        let approval = ApprovalRequest(secretID: secret.id, secretName: name, projectID: projectId, agent: caller.agent)
+                        // Resolve display names daemon-side (the service is in-process
+                        // here) so the consent prompt can say exactly what it releases.
+                        let project = (try? service.listProjects())?.first { $0.id == projectId }
+                        let approval = ApprovalRequest(
+                            secretID: secret.id,
+                            secretName: name,
+                            projectID: projectId,
+                            projectName: project?.name ?? projectId,
+                            environmentName: environmentName ?? project?.activeEnvironment ?? "Default",
+                            perCall: secret.agentAccess.promptsPerCall,
+                            agent: caller.agent
+                        )
                         guard approveAgentAccess(approval) else {
                             logDenial(service, secretName: name, projectId: projectId, environmentName: environmentName, agent: caller.agent)
                             return .failure(message: "Access to '\(name)' was denied — approval is required to release it to an AI agent.")

@@ -10,19 +10,20 @@ struct AgentAccessCommand: ParsableCommand {
     @Argument(help: "Secret name.")
     var name: String
 
-    @Argument(help: "allow, block, or approve (require per-read consent).")
+    @Argument(help: "allow, block, approve (consent once per session), or strict (consent on every read).")
     var state: State
 
     @Option(name: .shortAndLong, help: "Project name. Defaults to the active project.")
     var project: String?
 
     enum State: String, ExpressibleByArgument {
-        case allow, block, approve
+        case allow, block, approve, strict
         var policy: AgentAccessPolicy {
             switch self {
             case .allow: return .allowed
             case .block: return .blocked
             case .approve: return .requiresApproval
+            case .strict: return .strict
             }
         }
     }
@@ -36,6 +37,7 @@ struct AgentAccessCommand: ParsableCommand {
         switch state {
         case .block: status = "off-limits to AI agents"
         case .approve: status = "released to AI agents only after Touch ID approval"
+        case .strict: status = "released to AI agents only after Touch ID approval on every read"
         case .allow: status = "readable by AI agents"
         }
         print("Secret '\(name)' is now \(status).")
