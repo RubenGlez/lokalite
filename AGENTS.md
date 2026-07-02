@@ -12,13 +12,13 @@
 
 ### Signing & notarization
 
-The release workflow signs with Developer ID + hardened runtime and notarizes when these repo secrets are set; if any are missing it falls back to the old ad-hoc-signed, un-notarized artifacts (users then need `xattr -cr`). Secrets:
+The release workflow signs with Developer ID + hardened runtime and notarizes when these repo secrets are set; if any are missing it falls back to the old ad-hoc-signed, un-notarized artifacts (users then need `xattr -cr`). These are the account-wide Developer ID identity (Team `67S22M7P3P`), reused across projects — the same cert/key that signs any of the account's apps. Repo secrets (names match the vault's `Global` project):
 
-- `MACOS_CERT_P12_BASE64` / `MACOS_CERT_PASSWORD` — Developer ID **Application** cert+key as a base64 `.p12`, and its export password. Signs the app bundle, its nested `.bundle` resources, and the CLI binary.
-- `MACOS_INSTALLER_CERT_P12_BASE64` / `MACOS_INSTALLER_CERT_PASSWORD` — Developer ID **Installer** cert+key as base64 `.p12`. Signs the `.pkg`. Optional: without it the pkg ships unsigned, everything else still signs.
-- `NOTARY_KEY_P8_BASE64` / `NOTARY_KEY_ID` / `NOTARY_ISSUER_ID` — App Store Connect API key (base64 `.p8`, Key ID, Issuer ID) for `notarytool`. Notarization runs only when both the app cert and this key are present.
+- `MACOS_SIGN_P12` / `MACOS_SIGN_PASSWORD` — Developer ID **Application** cert+key as a base64 `.p12`, and its export password. Signs the app bundle, its nested `.bundle` resources, and the CLI binary.
+- `MACOS_NOTARY_KEY` / `MACOS_NOTARY_KEY_ID` / `MACOS_NOTARY_ISSUER_ID` — App Store Connect API key (base64 `.p8`, Key ID, Issuer ID) for `notarytool`. Notarization runs only when both the app cert and this key are present.
+- `MACOS_SIGN_INSTALLER_P12` / `MACOS_SIGN_INSTALLER_PASSWORD` — Developer ID **Installer** cert for signing the `.pkg`. Not currently set (no Installer cert exists), so the CLI pkg ships unsigned; everything else still signs and notarizes.
 
-The signing identity is discovered from the imported cert at build time (no identity name is hardcoded). `LokaliteApp.entitlements` is intentionally empty — the app is not sandboxed (Carbon hotkey + Unix socket) and needs no special entitlement under the hardened runtime. The canonical local copies of these credentials live in the `lokalite` vault (project `lokalite-release`); GitHub secrets are the CI mirror.
+The workflow maps these to descriptive internal job-env names; the signing identity itself is discovered from the imported cert at build time (no identity name is hardcoded). `LokaliteApp.entitlements` is intentionally empty — the app is not sandboxed (Carbon hotkey + Unix socket) and needs no special entitlement under the hardened runtime. Canonical copies of these credentials live in the `lokalite` vault's `Global` project; GitHub Actions secrets are the CI mirror.
 
 <!-- doctier:begin -->
 ## Project context

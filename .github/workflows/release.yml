@@ -16,14 +16,18 @@ jobs:
     # their presence (`if: env.X != ''`). When they are absent the workflow
     # falls back to the previous ad-hoc-signed, un-notarized artifacts — a
     # missing secret never hard-fails a release.
+    # Internal job-env names are kept descriptive; the right-hand side maps them
+    # to the account-wide signing secrets stored in the vault's Global project
+    # and mirrored to this repo's Actions secrets. No Developer ID Installer
+    # cert exists yet, so its secrets are unset and the pkg ships unsigned.
     env:
-      MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
-      MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
-      MACOS_INSTALLER_CERT_P12_BASE64: ${{ secrets.MACOS_INSTALLER_CERT_P12_BASE64 }}
-      MACOS_INSTALLER_CERT_PASSWORD: ${{ secrets.MACOS_INSTALLER_CERT_PASSWORD }}
-      NOTARY_KEY_P8_BASE64: ${{ secrets.NOTARY_KEY_P8_BASE64 }}
-      NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
-      NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+      MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_SIGN_P12 }}
+      MACOS_CERT_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
+      MACOS_INSTALLER_CERT_P12_BASE64: ${{ secrets.MACOS_SIGN_INSTALLER_P12 }}
+      MACOS_INSTALLER_CERT_PASSWORD: ${{ secrets.MACOS_SIGN_INSTALLER_PASSWORD }}
+      NOTARY_KEY_P8_BASE64: ${{ secrets.MACOS_NOTARY_KEY }}
+      NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+      NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
 
     steps:
       - uses: actions/checkout@v4.2.2
