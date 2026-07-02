@@ -11,14 +11,23 @@ public enum AgentDetection {
     /// Substrings matched (case-insensitively) against process names. Kept narrow
     /// to avoid false positives — e.g. no bare "code", which would match
     /// `xcodebuild`.
-    static let signatures = ["claude", "cursor", "windsurf", "codex", "copilot"]
+    static let signatures = ["claude", "cursor", "windsurf", "codex", "copilot", "aider"]
+
+    /// Plain English words that would over-match as substrings (`mongoose`,
+    /// `goosebumps`), so they match only an exact process name or an exact
+    /// path component (e.g. `.../bin/goose`).
+    static let exactSignatures = ["goose"]
 
     private static let maxHops = 20
 
     /// The matched agent token if `processName` looks like a known agent, else nil.
     public static func matchedAgent(processName: String) -> String? {
         let lowered = processName.lowercased()
-        return signatures.first { lowered.contains($0) }
+        if let match = signatures.first(where: { lowered.contains($0) }) { return match }
+        // A bare name is its own single "component", so one check covers both
+        // an exact p_comm and an exact path component.
+        let pathComponents = lowered.split(separator: "/")
+        return exactSignatures.first { pathComponents.contains(Substring($0)) }
     }
 
     /// Walks up the process tree from `pid` (default: this process) toward

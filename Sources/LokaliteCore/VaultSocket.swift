@@ -108,8 +108,11 @@ public final class VaultSocketServer {
 
         while let line = SocketIO.readLine(fd: fd) {
             let response: VaultResponse
-            if let request = try? JSONDecoder().decode(VaultRequest.self, from: line) {
-                response = dispatchQueue.sync { VaultRequestDispatcher.handle(request, using: service, caller: caller, approveAgentAccess: approveAgentAccess) }
+            if let frame = Self.decodeFrame(line) {
+                // Tighten-only merge (ADR 0018): the frame's envelope hint can add
+                // agent classification; kernel detection is never weakened by it.
+                let requestCaller = caller.merging(clientAgentHint: frame.agentContext)
+                response = dispatchQueue.sync { VaultRequestDispatcher.handle(frame.request, using: service, caller: requestCaller, approveAgentAccess: approveAgentAccess) }
             } else {
                 response = .failure(message: "Malformed request.")
             }
@@ -117,6 +120,20 @@ public final class VaultSocketServer {
             out.append(0x0A)
             if !SocketIO.writeAll(fd: fd, out) { return }
         }
+    }
+
+    /// Decodes one wire frame: `VaultEnvelope` first, bare `VaultRequest` as the
+    /// legacy fallback (ADR 0018). Returns nil for a frame that is neither —
+    /// `serve` answers those with the "Malformed request." failure.
+    static func decodeFrame(_ data: Data) -> (request: VaultRequest, agentContext: String?)? {
+        let decoder = JSONDecoder()
+        if let envelope = try? decoder.decode(VaultEnvelope.self, from: data) {
+            return (envelope.request, envelope.agentContext)
+        }
+        if let request = try? decoder.decode(VaultRequest.self, from: data) {
+            return (request, nil)
+        }
+        return nil
     }
 }
 
@@ -126,9 +143,14 @@ public final class VaultSocketServer {
 /// transport: `RemoteVaultService(transport: client.send)`.
 public final class VaultSocketClient {
     private let socketPath: String
+    /// Tighten-only agent hint stamped on every frame (ADR 0018). Nil keeps the
+    /// frames bare `VaultRequest`s — byte-identical to legacy clients, so a
+    /// hint-less client also stays compatible with an old daemon.
+    let agentContext: String?
 
-    public init(socketPath: String) {
+    public init(socketPath: String, agentContext: String? = nil) {
         self.socketPath = socketPath
+        self.agentContext = agentContext
     }
 
     public func send(_ request: VaultRequest) throws -> VaultResponse {
@@ -144,12 +166,20 @@ public final class VaultSocketClient {
         }
         guard connected == 0 else { throw VaultSocketError.notRunning }
 
-        var data = try JSONEncoder().encode(request)
+        var data = try encodeFrame(request)
         data.append(0x0A)
         guard SocketIO.writeAll(fd: fd, data) else { throw VaultSocketError.systemError("write", errno) }
 
         guard let line = SocketIO.readLine(fd: fd) else { throw VaultSocketError.noResponse }
         return try JSONDecoder().decode(VaultResponse.self, from: line)
+    }
+
+    /// One request as wire bytes (without the newline delimiter): wrapped in a
+    /// `VaultEnvelope` when the client carries a hint, a bare `VaultRequest`
+    /// otherwise.
+    func encodeFrame(_ request: VaultRequest) throws -> Data {
+        guard let agentContext else { return try JSONEncoder().encode(request) }
+        return try JSONEncoder().encode(VaultEnvelope(agentContext: agentContext, request: request))
     }
 }
 

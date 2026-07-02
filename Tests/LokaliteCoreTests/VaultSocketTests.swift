@@ -85,6 +85,70 @@ final class VaultSocketTests: XCTestCase {
         XCTAssertEqual(group.wait(timeout: .now() + 15), .success)
     }
 
+    // MARK: - Wire frames (ADR 0018: envelope-first decode, bare fallback)
+
+    func testDecodeFrameReadsEnvelopeWithHint() throws {
+        let request = VaultRequest.get(name: "K", projectId: "p1", environmentName: nil)
+        let data = try JSONEncoder().encode(VaultEnvelope(agentContext: "agent", request: request))
+        let frame = try XCTUnwrap(VaultSocketServer.decodeFrame(data))
+        XCTAssertEqual(frame.request, request)
+        XCTAssertEqual(frame.agentContext, "agent")
+    }
+
+    func testDecodeFrameFallsBackToBareRequest() throws {
+        // Legacy clients send bare VaultRequest frames; they must keep working.
+        let request = VaultRequest.listProjects
+        let data = try JSONEncoder().encode(request)
+        let frame = try XCTUnwrap(VaultSocketServer.decodeFrame(data))
+        XCTAssertEqual(frame.request, request)
+        XCTAssertNil(frame.agentContext)
+    }
+
+    func testDecodeFrameRejectsGarbage() {
+        // serve answers a nil decode with the "Malformed request." failure.
+        XCTAssertNil(VaultSocketServer.decodeFrame(Data("not json at all".utf8)))
+        XCTAssertNil(VaultSocketServer.decodeFrame(Data("{\"nope\":true}".utf8)))
+    }
+
+    func testHintlessClientFramesAreByteIdenticalToBareRequests() throws {
+        // A client without a hint must stay wire-compatible with an old daemon.
+        let request = VaultRequest.get(name: "K", projectId: "p1", environmentName: "prod")
+        let client = VaultSocketClient(socketPath: "/tmp/unused.sock")
+        XCTAssertNil(client.agentContext)
+        XCTAssertEqual(try client.encodeFrame(request), try JSONEncoder().encode(request))
+    }
+
+    func testHintedClientFramesAreEnvelopes() throws {
+        let request = VaultRequest.listProjects
+        let client = VaultSocketClient(socketPath: "/tmp/unused.sock", agentContext: "claude")
+        let envelope = try JSONDecoder().decode(VaultEnvelope.self, from: try client.encodeFrame(request))
+        XCTAssertEqual(envelope, VaultEnvelope(agentContext: "claude", request: request))
+    }
+
+    func testHintedClientIsEnforcedAsAgentOverRealSocket() throws {
+        // End-to-end: the envelope hint alone classifies the caller as an agent,
+        // so a blocked secret is refused whether or not the daemon's kernel-side
+        // tree walk detects anything for this test process.
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        _ = try vault.add(name: "K", value: "v-secret", projectId: project.id)
+        try vault.setAgentAccess(name: "K", projectId: project.id, policy: .blocked)
+        let socketPath = try makeSocketPath()
+
+        let server = VaultSocketServer(socketPath: socketPath, service: vault)
+        try server.start()
+        addTeardownBlock { server.stop() }
+
+        let remote = RemoteVaultService(transport: VaultSocketClient(socketPath: socketPath, agentContext: "agent").send)
+        XCTAssertThrowsError(try remote.get(name: "K", projectId: project.id, environmentName: nil)) { error in
+            guard case RemoteVaultError.daemon(let message) = error else {
+                return XCTFail("expected daemon error, got \(error)")
+            }
+            XCTAssertTrue(message.contains("off-limits"), "got: \(message)")
+            XCTAssertFalse(message.contains("v-secret"))
+        }
+    }
+
     func testPeerPIDReadsTheConnectedProcess() throws {
         var fds: [Int32] = [0, 0]
         XCTAssertEqual(socketpair(AF_UNIX, SOCK_STREAM, 0, &fds), 0)

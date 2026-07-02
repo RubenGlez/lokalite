@@ -28,6 +28,14 @@ struct MCPCommand: ParsableCommand {
         } catch {
             throw ValidationError("Could not reach or start the Lokalite app (the vault daemon): \(error.localizedDescription) Open Lokalite, or run with --local to open the vault in-process.")
         }
-        return RemoteVaultService(transport: VaultSocketClient(socketPath: socketPath).send)
+        return RemoteVaultService(transport: Self.socketClient(socketPath: socketPath).send)
+    }
+
+    /// The daemon client for the MCP server, stamped with a tighten-only agent
+    /// hint (ADR 0018). The MCP server fronts agents by definition, so the hint
+    /// is NEVER nil: self-detection's token when it fires, the literal "agent"
+    /// otherwise — the daemon enforces agent policy even on a detection miss.
+    static func socketClient(socketPath: String, detected: String? = AgentDetection.detectAgent()) -> VaultSocketClient {
+        VaultSocketClient(socketPath: socketPath, agentContext: detected ?? "agent")
     }
 }

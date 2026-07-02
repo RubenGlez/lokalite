@@ -42,16 +42,43 @@ public enum VaultResponse: Codable, Equatable {
     case failure(message: String)
 }
 
+/// Wire wrapper adding a tighten-only client agent hint to a request (ADR 0018):
+/// a client may declare "I am (fronting) an agent" via `agentContext`. The daemon
+/// decodes the envelope first and falls back to a bare `VaultRequest` frame, so
+/// legacy clients keep working; hint-less clients keep sending bare frames.
+public struct VaultEnvelope: Codable, Equatable {
+    public let agentContext: String?
+    public let request: VaultRequest
+
+    public init(agentContext: String?, request: VaultRequest) {
+        self.agentContext = agentContext
+        self.request = request
+    }
+}
+
 /// Identity of a socket peer, resolved by the daemon from the kernel (ADR 0014):
 /// the connecting PID and, if an AI agent is in its process tree, the agent token.
+/// `clientAgentHint` is the client-asserted envelope hint (ADR 0018): tighten-only,
+/// so it can turn a human-classified caller into an agent but never the reverse,
+/// and kernel detection wins the attribution label when both are present.
 public struct CallerContext {
     public let pid: pid_t?
     public let agent: String?
-    public var isAgent: Bool { agent != nil }
+    public let clientAgentHint: String?
+    /// The attribution label: kernel detection wins; the hint fills a miss.
+    public var effectiveAgent: String? { agent ?? clientAgentHint }
+    public var isAgent: Bool { effectiveAgent != nil }
 
-    public init(pid: pid_t?, agent: String?) {
+    public init(pid: pid_t?, agent: String?, clientAgentHint: String? = nil) {
         self.pid = pid
         self.agent = agent
+        self.clientAgentHint = clientAgentHint
+    }
+
+    /// Tighten-only merge of a frame's envelope hint: the hint can add agent
+    /// classification, but a kernel-detected agent stays an agent regardless.
+    public func merging(clientAgentHint: String?) -> CallerContext {
+        CallerContext(pid: pid, agent: agent, clientAgentHint: clientAgentHint)
     }
 
     /// An in-process caller (no socket); used by tests and non-brokered paths.
@@ -149,7 +176,7 @@ public enum VaultRequestDispatcher {
                 let secret = try service.get(name: name, projectId: projectId, environmentName: environmentName)
                 if caller.isAgent {
                     if secret.agentAccess.blocksAgents {
-                        logDenial(service, secretName: name, projectId: projectId, environmentName: environmentName, agent: caller.agent)
+                        logDenial(service, secretName: name, projectId: projectId, environmentName: environmentName, agent: caller.effectiveAgent)
                         return .failure(message: "Secret '\(name)' is marked off-limits to AI agents.")
                     }
                     if secret.agentAccess.requiresApprovalForAgents {
@@ -163,10 +190,10 @@ public enum VaultRequestDispatcher {
                             projectName: project?.name ?? projectId,
                             environmentName: environmentName ?? project?.activeEnvironment ?? "Default",
                             perCall: secret.agentAccess.promptsPerCall,
-                            agent: caller.agent
+                            agent: caller.effectiveAgent
                         )
                         guard approveAgentAccess(approval) else {
-                            logDenial(service, secretName: name, projectId: projectId, environmentName: environmentName, agent: caller.agent)
+                            logDenial(service, secretName: name, projectId: projectId, environmentName: environmentName, agent: caller.effectiveAgent)
                             return .failure(message: "Access to '\(name)' was denied — approval is required to release it to an AI agent.")
                         }
                     }
@@ -195,9 +222,10 @@ public enum VaultRequestDispatcher {
                 let tuples = pairs.map { (name: $0.name, value: $0.value) }
                 return .importSummary(try service.importEnv(pairs: tuples, projectId: projectId, environmentName: environmentName, overwrite: overwrite))
             case let .logAccess(secretName, projectName, environmentName, source, action):
-                // Agent identity is authoritative from the kernel (peer-PID), not
-                // the client — override whatever the client sent with caller.agent.
-                service.logAccess(secretName: secretName, projectName: projectName, environmentName: environmentName, source: source, agent: caller.agent, action: action)
+                // Agent attribution is the caller's, never the request body's —
+                // override whatever the client sent with caller.effectiveAgent
+                // (kernel detection wins; the envelope hint fills a miss).
+                service.logAccess(secretName: secretName, projectName: projectName, environmentName: environmentName, source: source, agent: caller.effectiveAgent, action: action)
                 return .ok
             }
         } catch {

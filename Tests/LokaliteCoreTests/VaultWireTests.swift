@@ -24,6 +24,15 @@ final class VaultWireProtocolTests: XCTestCase {
         }
     }
 
+    func testEnvelopeRoundTripsThroughJSON() throws {
+        let envelope = VaultEnvelope(
+            agentContext: "agent",
+            request: .get(name: "API_KEY", projectId: "p1", environmentName: nil)
+        )
+        let data = try JSONEncoder().encode(envelope)
+        XCTAssertEqual(try JSONDecoder().decode(VaultEnvelope.self, from: data), envelope)
+    }
+
     func testResponsesRoundTripThroughJSON() throws {
         let responses: [VaultResponse] = [
             .ok,

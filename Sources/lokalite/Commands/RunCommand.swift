@@ -141,7 +141,15 @@ struct RunCommand: ParsableCommand {
         } catch {
             throw ValidationError("Could not reach or start the Lokalite app (the vault daemon): \(error.localizedDescription) Open Lokalite, or run with --local to resolve references in-process.")
         }
-        return RemoteVaultService(transport: VaultSocketClient(socketPath: socketPath).send)
+        return RemoteVaultService(transport: Self.socketClient(socketPath: socketPath).send)
+    }
+
+    /// The daemon client for reference resolution, hinted only when the CLI's
+    /// own agent detection fires (ADR 0018): a detected agent's token rides the
+    /// envelope so daemon-side policy holds even if the daemon's tree walk
+    /// misses; a human run sends bare frames — byte-identical to before.
+    static func socketClient(socketPath: String, detected: String? = AgentDetection.detectAgent()) -> VaultSocketClient {
+        VaultSocketClient(socketPath: socketPath, agentContext: detected)
     }
 }
 

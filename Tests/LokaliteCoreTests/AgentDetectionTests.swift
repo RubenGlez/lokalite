@@ -24,6 +24,20 @@ final class AgentDetectionTests: XCTestCase {
         XCTAssertNil(AgentDetection.matchedAgent(processName: "/usr/bin/xcodebuild"))
     }
 
+    func testMatchesAiderAsSubstring() {
+        XCTAssertEqual(AgentDetection.matchedAgent(processName: "aider"), "aider")
+        XCTAssertEqual(AgentDetection.matchedAgent(processName: "/opt/homebrew/bin/aider"), "aider")
+    }
+
+    func testMatchesGooseOnlyAsExactNameOrPathComponent() {
+        // "goose" is a plain English word: exact-token match only, never substring.
+        XCTAssertEqual(AgentDetection.matchedAgent(processName: "goose"), "goose")
+        XCTAssertEqual(AgentDetection.matchedAgent(processName: "/opt/homebrew/bin/goose"), "goose")
+        XCTAssertNil(AgentDetection.matchedAgent(processName: "mongoose"))
+        XCTAssertNil(AgentDetection.matchedAgent(processName: "goosebumps"))
+        XCTAssertNil(AgentDetection.matchedAgent(processName: "/opt/mongoose/bin/server"))
+    }
+
     func testIgnoresNonAgents() {
         XCTAssertNil(AgentDetection.matchedAgent(processName: "zsh"))
         XCTAssertNil(AgentDetection.matchedAgent(processName: "node"))
