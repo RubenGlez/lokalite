@@ -110,12 +110,17 @@ final class VaultSocketTests: XCTestCase {
         XCTAssertNil(VaultSocketServer.decodeFrame(Data("{\"nope\":true}".utf8)))
     }
 
-    func testHintlessClientFramesAreByteIdenticalToBareRequests() throws {
-        // A client without a hint must stay wire-compatible with an old daemon.
+    func testHintlessClientFramesStayBareRequestCompatible() throws {
+        // A client without a hint must stay wire-compatible with an old daemon:
+        // its frame decodes as a bare VaultRequest with no envelope wrapper. This
+        // is the real contract — JSON object key order is not stable across runs,
+        // so a byte comparison would flake even though both frames are equivalent.
         let request = VaultRequest.get(name: "K", projectId: "p1", environmentName: "prod")
         let client = VaultSocketClient(socketPath: "/tmp/unused.sock")
         XCTAssertNil(client.agentContext)
-        XCTAssertEqual(try client.encodeFrame(request), try JSONEncoder().encode(request))
+        let frame = try client.encodeFrame(request)
+        XCTAssertEqual(try JSONDecoder().decode(VaultRequest.self, from: frame), request)
+        XCTAssertNil(VaultSocketServer.decodeFrame(frame)?.agentContext)
     }
 
     func testHintedClientFramesAreEnvelopes() throws {

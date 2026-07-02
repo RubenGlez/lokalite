@@ -66,9 +66,9 @@ brew install --cask RubenGlez/lokalite/lokalite-app
 Download from the [Releases page](https://github.com/RubenGlez/lokalite/releases):
 
 - **CLI**: run the `.pkg` installer, then `lokalite install`
-- **Menu bar app**: drag the `.dmg` to Applications, then run `xattr -cr /Applications/LokaliteApp.app` once to clear the macOS quarantine flag
+- **Menu bar app**: drag the `.dmg` to Applications and launch it — no quarantine workaround needed.
 
-  The app is not yet signed with an Apple Developer ID, so Gatekeeper quarantines it on first launch. The source is fully open and every release ships a `SHA256SUMS` file you can verify against the artifacts. Developer ID signing and notarization are planned.
+  Releases are signed with an Apple Developer ID and notarized by Apple, so Gatekeeper accepts the app on first launch. Every release also ships a `SHA256SUMS` file you can verify against the artifacts.
 
 ## CLI
 
