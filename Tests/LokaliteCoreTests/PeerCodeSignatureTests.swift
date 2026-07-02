@@ -69,6 +69,15 @@ final class PeerCodeSignatureTests: XCTestCase {
         XCTAssertNil(entries.first { $0.source == .app }?.peerTeamID)
     }
 
+    // MARK: - Dev-build skip (ADR 0019: dev peers are unsigned/ad-hoc)
+
+    func testDefaultPeerVerifierSkipsInDevBuild() {
+        // The suite runs in DEBUG (isDevelopmentBuild == true), so the daemon's
+        // default verifier must short-circuit to nil and never touch SecCode.
+        XCTAssertTrue(VaultConfiguration.isDevelopmentBuild)
+        XCTAssertNil(VaultSocketServer.defaultPeerVerifier(getpid()))
+    }
+
     // MARK: - Verification (macOS Security framework)
 
     #if canImport(Security)
