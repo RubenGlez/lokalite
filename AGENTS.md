@@ -53,11 +53,13 @@ Read these for project context:
 - `.harness/adr/0016-agent-environment-switching.md`
 - `.harness/adr/0017-secret-references.md`
 - `.harness/adr/0018-enforcement-never-rides-detection.md`
+- `.harness/adr/0019-code-signature-peer-verification.md`
 - `.harness/engineering/architecture.md`
 - `.harness/engineering/features/access-dashboard.md`
 - `.harness/engineering/features/caller-independent-approval.md`
 - `.harness/engineering/features/client-agent-context.md`
 - `.harness/engineering/features/env-import.md`
+- `.harness/engineering/features/peer-code-signature-verification.md`
 - `.harness/engineering/features/per-call-approval.md`
 - `.harness/engineering/features/per-environment-agent-workflow.md`
 - `.harness/engineering/features/popover-refactor.md`
