@@ -27,14 +27,14 @@ struct ShellCommand: ParsableCommand {
     func run() throws {
         try ensureNotAgentExfil(allowAgent: allowAgent, action: "print secret values as shell exports")
 
-        let secrets = try withWorkspace { workspace -> [Secret] in
+        // Approval-tier secrets are excluded from bulk reveals (ADR 0018);
+        // the skip notice goes to stderr because stdout is eval'd.
+        let (secrets, skipped) = try withWorkspace { workspace -> ([Secret], [String]) in
             let ctx = try resolveContext(projectFlag: project, envFlag: env, using: workspace)
-            if let keys {
-                let names = keys.split(separator: ",").map(String.init)
-                return try workspace.secrets(named: names, context: ctx, accessSource: .cli)
-            }
-            return try workspace.secrets(named: nil, context: ctx, accessSource: .cli)
+            let names = keys.map { $0.split(separator: ",").map(String.init) }
+            return try bulkRevealSecrets(named: names, context: ctx, workspace: workspace)
         }
+        printApprovalTierSkipNotice(skipped)
         for secret in secrets {
             let escaped = secret.value.replacingOccurrences(of: "'", with: "'\\''")
             print("export \(secret.name)='\(escaped)'")

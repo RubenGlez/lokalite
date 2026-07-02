@@ -55,14 +55,15 @@ struct RunCommand: ParsableCommand {
         var environment = inherited
 
         if !refsOnly {
-            let secrets = try withWorkspace { workspace -> [Secret] in
+            // Approval-tier secrets are never bulk-injected (ADR 0018) — the
+            // lokalite:// refs path is the per-secret consent escape hatch. The
+            // skip notice goes to stderr before the child spawns; stdout is its.
+            let (secrets, skippedApprovalTier) = try withWorkspace { workspace -> ([Secret], [String]) in
                 let ctx = try resolveContext(projectFlag: project, envFlag: env, using: workspace)
-                if let keys {
-                    let names = keys.split(separator: ",").map(String.init)
-                    return try workspace.secrets(named: names, context: ctx, accessSource: .cli)
-                }
-                return try workspace.secrets(named: nil, context: ctx, accessSource: .cli)
+                let names = keys.map { $0.split(separator: ",").map(String.init) }
+                return try bulkRevealSecrets(named: names, context: ctx, workspace: workspace)
             }
+            printApprovalTierSkipNotice(skippedApprovalTier)
             // Never overwrite a variable that carries a reference: the ref
             // string must survive until substitution below, so the resolved
             // reference — not the bulk value — wins a name collision.

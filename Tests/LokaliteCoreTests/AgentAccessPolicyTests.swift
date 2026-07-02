@@ -149,7 +149,7 @@ final class AgentAccessPolicyTests: XCTestCase {
         XCTAssertEqual(seen?.agent, "claude")
     }
 
-    func testDaemonDefaultHandlerDeniesApprovalSecretButHumanIsUnaffected() throws {
+    func testDaemonDefaultHandlerDeniesApprovalSecretForEveryCaller() throws {
         let vault = try makeVault()
         let project = try vault.addProject(name: "App", path: nil)
         _ = try vault.add(name: "K", value: "v-secret", projectId: project.id)
@@ -162,12 +162,14 @@ final class AgentAccessPolicyTests: XCTestCase {
             return XCTFail("default handler should deny an agent, got \(agentResponse)")
         }
 
-        // A human caller is never gated by approval.
+        // Approval tiers are caller-independent (ADR 0018): a human caller is
+        // gated by the same fail-closed handler.
         let humanResponse = VaultRequestDispatcher.handle(request, using: vault, caller: .local)
-        guard case let .secret(secret) = humanResponse else {
-            return XCTFail("human caller should get the value, got \(humanResponse)")
+        guard case let .failure(message) = humanResponse else {
+            return XCTFail("a human caller must also be gated, got \(humanResponse)")
         }
-        XCTAssertEqual(secret.value, "v-secret")
+        XCTAssertTrue(message.contains("approval"), "got: \(message)")
+        XCTAssertFalse(message.contains("v-secret"))
     }
 
     func testMCPGetSecretFailsClosedForApprovalSecretWhenNotDaemonBacked() throws {

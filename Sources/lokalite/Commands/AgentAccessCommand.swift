@@ -36,8 +36,8 @@ struct AgentAccessCommand: ParsableCommand {
         let status: String
         switch state {
         case .block: status = "off-limits to AI agents"
-        case .approve: status = "released to AI agents only after Touch ID approval"
-        case .strict: status = "released to AI agents only after Touch ID approval on every read"
+        case .approve: status = "released only after Touch ID approval, whoever asks"
+        case .strict: status = "released only after Touch ID approval on every read, whoever asks"
         case .allow: status = "readable by AI agents"
         }
         print("Secret '\(name)' is now \(status).")

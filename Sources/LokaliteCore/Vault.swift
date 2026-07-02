@@ -510,7 +510,22 @@ public final class Vault {
     // MARK: - Export
 
     public func export(projectId: String, passphrase: String?) throws -> Data {
+        try exportData(secrets: list(projectId: projectId), passphrase: passphrase)
+    }
+
+    /// Like `export(projectId:passphrase:)` but omits approval-tier
+    /// (`requiresApproval`/`strict`) secrets — bulk paths (`backup`, plain
+    /// export) must not release them without consent (ADR 0018). Returns the
+    /// payload plus the omitted names so the caller can print the skip notice
+    /// (never a value); a restore of the payload will not contain them.
+    public func exportExcludingApprovalTier(projectId: String, passphrase: String?) throws -> (data: Data, skippedNames: [String]) {
         let secrets = try list(projectId: projectId)
+        let released = secrets.filter { !$0.agentAccess.requiresApprovalForAgents }
+        let skipped = secrets.filter { $0.agentAccess.requiresApprovalForAgents }.map(\.name)
+        return (try exportData(secrets: released, passphrase: passphrase), skipped)
+    }
+
+    private func exportData(secrets: [Secret], passphrase: String?) throws -> Data {
         let dict = Dictionary(uniqueKeysWithValues: secrets.map { ($0.name, $0.value) })
         let json = try JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
 

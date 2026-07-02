@@ -133,13 +133,13 @@ lokalite import .env
 lokalite import .env --overwrite        # overwrite existing secrets
 
 # Export
-lokalite export --output backup.lk          # encrypted (default)
-lokalite export --plain --output secrets.json
-lokalite export --format env                # .env format, stdout
+lokalite export --output backup.lk          # encrypted (default), includes everything
+lokalite export --plain --output secrets.json   # plaintext: approve-tier secrets are skipped (named on stderr)
+lokalite export --format env                # .env format, stdout; approve-tier secrets are skipped
 lokalite export --format env --output .env
 
 # Encrypted backup / restore (a project's active environment)
-lokalite backup                             # prompts for a passphrase, writes a timestamped .lokalite file
+lokalite backup                             # prompts for a passphrase, writes a timestamped .lokalite file (approve-tier secrets are skipped)
 lokalite backup --output backup.lokalite
 lokalite restore backup.lokalite            # prompts for the passphrase, skips existing secrets
 lokalite restore backup.lokalite --overwrite
@@ -219,10 +219,10 @@ Pass `--read-write` to also expose write tools:
 > **Security note:** the handoff keeps secret values out of the model's context, but an agent that can name a secret can still load it into a shell it controls (`list_secrets` gives it the names), and a sourced value is then visible to processes in that shell. Set a per-secret agent-access tier with `lokalite agent-access <name> allow|approve|block` (or from the app's secret editor):
 >
 > - **block** — off-limits: `get_secret` refuses it, `list_secrets` flags it `[off-limits to agents]`.
-> - **approve** — consent-on-read: an agent's `get_secret` through the app broker prompts for Touch ID before the value is released; the approval then lasts for the rest of the unlock session. `list_secrets` flags it `[approval required]`. With `--local` (no app to prompt) it fails closed, like block.
+> - **approve** — consent-on-read: every read through the app broker — an agent's `get_secret`, a `lokalite://` reference, or the CLI's `get`/`copy` — prompts for Touch ID before the value is released, whoever is asking; the approval then lasts for the rest of the unlock session. `list_secrets` flags it `[approval required]`. With `--local` (no app to prompt) it fails closed, like block.
 > - **allow** — the default.
 >
-> The CLI `get`/`copy` refuse a `block` or `approve` secret when an AI agent is detected in the calling process tree (only the app can broker the consent prompt). Also keep the server read-only (the default), scope it to a single project by setting `LOKALITE_PROJECT` in the server's `env` config, and prefer clients that ask for approval before tool calls. Every MCP access is recorded in the activity log.
+> The CLI `get`/`copy` route an `approve` secret through the Lokalite app for the Touch ID prompt (and refuse, with no override, when the app isn't reachable); bulk reveals (`shell`, plaintext `export`, bulk `run` injection, `backup`) skip `approve` secrets and name them on stderr. A `block` secret is refused when an AI agent is detected in the calling process tree. Also keep the server read-only (the default), scope it to a single project by setting `LOKALITE_PROJECT` in the server's `env` config, and prefer clients that ask for approval before tool calls. Every MCP access is recorded in the activity log.
 
 ## Secret references
 
@@ -250,7 +250,7 @@ The primary use case is MCP server configs (`~/.claude.json`, a project's `.mcp.
 
 The MCP host puts the reference in the child environment; `lokalite run` replaces it with the real value before the server starts. The value never appears in the config file, the host's context, or the repo.
 
-References are resolved **through the Lokalite app** (the same broker the MCP server uses), so the per-secret agent-access tiers apply at spawn time — a `block`-tier reference is refused, an `approve`-tier reference prompts for Touch ID when an AI agent spawned the command — and every read lands in the activity log with agent attribution. Pass `--local` to resolve in-process for CI/headless use; approval-tier and blocked secrets are then unavailable when an AI agent is detected.
+References are resolved **through the Lokalite app** (the same broker the MCP server uses), so the per-secret agent-access tiers apply at spawn time — a `block`-tier reference is refused, an `approve`-tier reference prompts for Touch ID whoever spawned the command — and every read lands in the activity log with agent attribution. Pass `--local` to resolve in-process for CI/headless use; approval-tier and blocked secrets are then unavailable when an AI agent is detected.
 
 Resolution fails closed: if any reference is malformed, unknown, or denied, `lokalite run` prints the environment variable and the reference (never a value), exits non-zero, and the command is not run.
 

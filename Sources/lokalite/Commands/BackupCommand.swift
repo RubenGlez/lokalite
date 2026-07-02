@@ -30,10 +30,13 @@ struct BackupCommand: ParsableCommand {
             throw ExitCode.failure
         }
 
-        let data = try withVault { try $0.export(projectId: ctx.project.id, passphrase: passphrase) }
+        // The backup omits approval-tier secrets (ADR 0018) — a restore of this
+        // file will not contain them; the skip notice is the warning.
+        let result = try withVault { try $0.exportExcludingApprovalTier(projectId: ctx.project.id, passphrase: passphrase) }
+        printApprovalTierSkipNotice(result.skippedNames)
 
         let outputPath = output ?? defaultBackupPath()
-        try data.write(to: URL(fileURLWithPath: outputPath))
+        try result.data.write(to: URL(fileURLWithPath: outputPath))
         print("Encrypted backup of project '\(ctx.project.name)' written to \(outputPath).")
     }
 

@@ -17,9 +17,11 @@ struct GetCommand: ParsableCommand {
     var env: String?
 
     func run() throws {
+        // Approval-tier secrets are brokered through the daemon (Touch ID for
+        // every caller, ADR 0018); everything else stays in-process.
         let secret = try withWorkspace { workspace in
             let ctx = try resolveContext(projectFlag: project, envFlag: env, using: workspace)
-            return try workspace.get(name: name, context: ctx, accessSource: .cli)
+            return try CLIReveal.secret(named: name, in: workspace, context: ctx)
         }
         try enforceAgentRevealPolicy(secret)
         print(secret.value, terminator: "")

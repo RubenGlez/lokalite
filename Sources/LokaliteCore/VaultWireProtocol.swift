@@ -86,10 +86,10 @@ public struct CallerContext {
 }
 
 /// A daemon's consent-on-read request for an approval-tier secret (ADR 0014):
-/// who is asking (the agent token) and what would be released — secret,
-/// environment, and project by name — so the prompt can state exactly what the
-/// user is approving. `perCall` is true for `strict` secrets, whose approvals
-/// must never be cached for the session.
+/// who is asking (the agent token; nil means the human CLI, ADR 0018) and what
+/// would be released — secret, environment, and project by name — so the prompt
+/// can state exactly what the user is approving. `perCall` is true for `strict`
+/// secrets, whose approvals must never be cached for the session.
 public struct ApprovalRequest {
     public let secretID: String
     public let secretName: String
@@ -142,18 +142,19 @@ public final class ApprovalGrantCache {
     }
 }
 
-/// Decides whether to release an approval-tier secret to an agent caller.
-/// The app injects a Touch ID implementation; it may block while the user
-/// responds. Returns true to release the value.
+/// Decides whether to release an approval-tier secret to a caller — any caller,
+/// human CLI included (ADR 0018; the "Agent" in the name is historical). The app
+/// injects a Touch ID implementation; it may block while the user responds.
+/// Returns true to release the value.
 public typealias AgentApprovalHandler = (ApprovalRequest) -> Bool
 
 /// Applies a decoded request to a local `VaultService` and produces a response.
 /// Used by the daemon's socket server; pure and testable without any socket.
 /// `caller` lets the daemon enforce agent policy independently of the client —
 /// defense in depth, since the MCP layer also checks. `approveAgentAccess` brokers
-/// consent for approval-tier (`requiresApproval`/`strict`) secrets; it defaults to
-/// deny (fail closed) so any path without a GUI broker — `--local`, headless,
-/// tests — refuses them.
+/// consent for approval-tier (`requiresApproval`/`strict`) secrets — for EVERY
+/// caller, not only agents (ADR 0018); it defaults to deny (fail closed) so any
+/// path without a GUI broker — `--local`, headless, tests — refuses them.
 public enum VaultRequestDispatcher {
     public static func handle(
         _ request: VaultRequest,
@@ -174,28 +175,31 @@ public enum VaultRequestDispatcher {
                 return .secret(try service.add(name: name, value: value, description: description, icon: icon, category: category, projectId: projectId, environmentName: environmentName))
             case let .get(name, projectId, environmentName):
                 let secret = try service.get(name: name, projectId: projectId, environmentName: environmentName)
-                if caller.isAgent {
-                    if secret.agentAccess.blocksAgents {
+                if caller.isAgent, secret.agentAccess.blocksAgents {
+                    logDenial(service, secretName: name, projectId: projectId, environmentName: environmentName, agent: caller.effectiveAgent)
+                    return .failure(message: "Secret '\(name)' is marked off-limits to AI agents.")
+                }
+                if secret.agentAccess.requiresApprovalForAgents {
+                    // Consent is caller-independent (ADR 0018): the approval tiers
+                    // mean "every read needs approval", so this branch does NOT
+                    // consult caller.isAgent — a human CLI read prompts too. The
+                    // agent label (nil for the human CLI) is attribution only.
+                    // Resolve display names daemon-side (the service is in-process
+                    // here) so the consent prompt can say exactly what it releases.
+                    let project = (try? service.listProjects())?.first { $0.id == projectId }
+                    let approval = ApprovalRequest(
+                        secretID: secret.id,
+                        secretName: name,
+                        projectID: projectId,
+                        projectName: project?.name ?? projectId,
+                        environmentName: environmentName ?? project?.activeEnvironment ?? "Default",
+                        perCall: secret.agentAccess.promptsPerCall,
+                        agent: caller.effectiveAgent
+                    )
+                    guard approveAgentAccess(approval) else {
                         logDenial(service, secretName: name, projectId: projectId, environmentName: environmentName, agent: caller.effectiveAgent)
-                        return .failure(message: "Secret '\(name)' is marked off-limits to AI agents.")
-                    }
-                    if secret.agentAccess.requiresApprovalForAgents {
-                        // Resolve display names daemon-side (the service is in-process
-                        // here) so the consent prompt can say exactly what it releases.
-                        let project = (try? service.listProjects())?.first { $0.id == projectId }
-                        let approval = ApprovalRequest(
-                            secretID: secret.id,
-                            secretName: name,
-                            projectID: projectId,
-                            projectName: project?.name ?? projectId,
-                            environmentName: environmentName ?? project?.activeEnvironment ?? "Default",
-                            perCall: secret.agentAccess.promptsPerCall,
-                            agent: caller.effectiveAgent
-                        )
-                        guard approveAgentAccess(approval) else {
-                            logDenial(service, secretName: name, projectId: projectId, environmentName: environmentName, agent: caller.effectiveAgent)
-                            return .failure(message: "Access to '\(name)' was denied — approval is required to release it to an AI agent.")
-                        }
+                        let recipient = caller.isAgent ? " to an AI agent" : ""
+                        return .failure(message: "Access to '\(name)' was denied — approval is required to release it\(recipient).")
                     }
                 }
                 return .secret(secret)
@@ -233,9 +237,10 @@ public enum VaultRequestDispatcher {
         }
     }
 
-    /// Records a `.denied` audit entry when an agent is refused a secret at the
-    /// daemon. Resolves the project name from its id (the request carries only
-    /// the id); best-effort, so a lookup failure falls back to the id.
+    /// Records a `.denied` audit entry when a caller is refused a secret at the
+    /// daemon (a nil agent renders as the human/CLI). Resolves the project name
+    /// from its id (the request carries only the id); best-effort, so a lookup
+    /// failure falls back to the id.
     private static func logDenial(_ service: VaultService, secretName: String, projectId: String, environmentName: String?, agent: String?) {
         let projects = (try? service.listProjects()) ?? []
         let projectName = projects.first { $0.id == projectId }?.name ?? projectId

@@ -42,9 +42,12 @@ struct ExportCommand: ParsableCommand {
                 print("Cancelled.")
                 return
             }
-            let secrets = try withWorkspace { workspace in
-                try workspace.list(context: ctx)
+            // Approval-tier secrets are excluded from plaintext exports
+            // (ADR 0018); the skip notice goes to stderr, never the env output.
+            let (secrets, skipped) = try withWorkspace { workspace in
+                try bulkRevealSecrets(named: nil, context: ctx, workspace: workspace, accessSource: nil)
             }
+            printApprovalTierSkipNotice(skipped)
             let lines = secrets.map { EnvFileFormat.line(name: $0.name, value: $0.value) }.joined(separator: "\n")
             if let outputPath = output {
                 try (lines + "\n").write(toFile: outputPath, atomically: true, encoding: .utf8)
@@ -64,7 +67,11 @@ struct ExportCommand: ParsableCommand {
                 print("Cancelled.")
                 return
             }
-            data = try withVault { try $0.export(projectId: ctx.project.id, passphrase: nil) }
+            // Plain export excludes approval-tier secrets (ADR 0018); the
+            // encrypted (passphrase) export below is unchanged and keeps them.
+            let result = try withVault { try $0.exportExcludingApprovalTier(projectId: ctx.project.id, passphrase: nil) }
+            printApprovalTierSkipNotice(result.skippedNames)
+            data = result.data
         } else {
             print("Enter passphrase for encrypted export: ", terminator: "")
             let passphrase = readPassphrase()

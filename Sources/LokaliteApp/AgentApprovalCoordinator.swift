@@ -39,7 +39,9 @@ final class AgentApprovalCoordinator {
         guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &policyError) else {
             return false
         }
-        let who = request.agent.map { "“\($0)”" } ?? "an AI agent"
+        // A nil agent means the human CLI (ADR 0018): approval tiers prompt for
+        // every caller, and detection only supplies the agent label.
+        let who = request.agent.map { "“\($0)”" } ?? "the lokalite CLI"
         let reason = "release \(request.secretName) (\(request.environmentName)) in project \(request.projectName) to \(who)"
         let semaphore = DispatchSemaphore(value: 0)
         var approved = false
