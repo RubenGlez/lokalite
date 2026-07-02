@@ -10,6 +10,16 @@
 6. `HOMEBREW_PR_TOKEN` is not configured in repo secrets, so the workflow does NOT open the Homebrew PR — create it manually from the `homebrew/vX.Y.Z` branch, wait for the `build-and-test` status, and merge it. Until that PR merges, `brew` users keep getting the previous version.
 7. Record the release in the roadmap (Shipped section, version + date).
 
+### Signing & notarization
+
+The release workflow signs with Developer ID + hardened runtime and notarizes when these repo secrets are set; if any are missing it falls back to the old ad-hoc-signed, un-notarized artifacts (users then need `xattr -cr`). Secrets:
+
+- `MACOS_CERT_P12_BASE64` / `MACOS_CERT_PASSWORD` — Developer ID **Application** cert+key as a base64 `.p12`, and its export password. Signs the app bundle, its nested `.bundle` resources, and the CLI binary.
+- `MACOS_INSTALLER_CERT_P12_BASE64` / `MACOS_INSTALLER_CERT_PASSWORD` — Developer ID **Installer** cert+key as base64 `.p12`. Signs the `.pkg`. Optional: without it the pkg ships unsigned, everything else still signs.
+- `NOTARY_KEY_P8_BASE64` / `NOTARY_KEY_ID` / `NOTARY_ISSUER_ID` — App Store Connect API key (base64 `.p8`, Key ID, Issuer ID) for `notarytool`. Notarization runs only when both the app cert and this key are present.
+
+The signing identity is discovered from the imported cert at build time (no identity name is hardcoded). `LokaliteApp.entitlements` is intentionally empty — the app is not sandboxed (Carbon hotkey + Unix socket) and needs no special entitlement under the hardened runtime. The canonical local copies of these credentials live in the `lokalite` vault (project `lokalite-release`); GitHub secrets are the CI mirror.
+
 <!-- doctier:begin -->
 ## Project context
 

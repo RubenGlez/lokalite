@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!--
+    Lokalite is a Developer-ID app under the hardened runtime, NOT sandboxed:
+    it registers a Carbon global hotkey and brokers a Unix domain socket in
+    Application Support, both of which the App Sandbox forbids. Touch ID
+    (LocalAuthentication) and the vault-key Keychain item work under the
+    hardened runtime with no special entitlement. This dict is intentionally
+    empty — add an entitlement only when a capability actually requires one,
+    never a blanket cs.* relaxation.
+  -->
+</dict>
+</plist>

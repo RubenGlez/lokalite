@@ -12,8 +12,67 @@ jobs:
       contents: write
       pull-requests: write
 
+    # Signing/notarization secrets are mapped to job env so steps can gate on
+    # their presence (`if: env.X != ''`). When they are absent the workflow
+    # falls back to the previous ad-hoc-signed, un-notarized artifacts — a
+    # missing secret never hard-fails a release.
+    env:
+      MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+      MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+      MACOS_INSTALLER_CERT_P12_BASE64: ${{ secrets.MACOS_INSTALLER_CERT_P12_BASE64 }}
+      MACOS_INSTALLER_CERT_PASSWORD: ${{ secrets.MACOS_INSTALLER_CERT_PASSWORD }}
+      NOTARY_KEY_P8_BASE64: ${{ secrets.NOTARY_KEY_P8_BASE64 }}
+      NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+      NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+
     steps:
       - uses: actions/checkout@v4.2.2
+
+      - name: Import Apple signing certificates
+        if: env.MACOS_CERT_P12_BASE64 != ''
+        run: |
+          KEYCHAIN="${RUNNER_TEMP}/signing.keychain-db"
+          KEYCHAIN_PW="$(uuidgen)"
+
+          security create-keychain -p "${KEYCHAIN_PW}" "${KEYCHAIN}"
+          security set-keychain-settings -lut 21600 "${KEYCHAIN}"
+          security unlock-keychain -p "${KEYCHAIN_PW}" "${KEYCHAIN}"
+
+          echo "${MACOS_CERT_P12_BASE64}" | base64 --decode > "${RUNNER_TEMP}/app.p12"
+          security import "${RUNNER_TEMP}/app.p12" -k "${KEYCHAIN}" \
+            -P "${MACOS_CERT_PASSWORD}" -T /usr/bin/codesign
+
+          if [ -n "${MACOS_INSTALLER_CERT_P12_BASE64}" ]; then
+            echo "${MACOS_INSTALLER_CERT_P12_BASE64}" | base64 --decode > "${RUNNER_TEMP}/installer.p12"
+            security import "${RUNNER_TEMP}/installer.p12" -k "${KEYCHAIN}" \
+              -P "${MACOS_INSTALLER_CERT_PASSWORD}" -T /usr/bin/productsign -T /usr/bin/pkgbuild
+          fi
+
+          # Allow codesign/productsign to use the keys without an interactive prompt.
+          security set-key-partition-list -S apple-tool:,apple: -s -k "${KEYCHAIN_PW}" "${KEYCHAIN}" >/dev/null
+          # Prepend our keychain to the search list so the tools find the identities.
+          security list-keychains -d user -s "${KEYCHAIN}" $(security list-keychains -d user | sed s/\"//g)
+
+          APP_IDENTITY="$(security find-identity -v -p codesigning "${KEYCHAIN}" | grep 'Developer ID Application' | head -1 | awk '{print $2}')"
+          INSTALLER_IDENTITY="$(security find-identity -v "${KEYCHAIN}" | grep 'Developer ID Installer' | head -1 | awk '{print $2}')"
+
+          if [ -z "${APP_IDENTITY}" ]; then
+            echo "No Developer ID Application identity found in the imported certificate." >&2
+            exit 1
+          fi
+
+          echo "SIGN_KEYCHAIN=${KEYCHAIN}" >> "${GITHUB_ENV}"
+          echo "APP_IDENTITY=${APP_IDENTITY}" >> "${GITHUB_ENV}"
+          echo "INSTALLER_IDENTITY=${INSTALLER_IDENTITY}" >> "${GITHUB_ENV}"
+          echo "SIGNING=1" >> "${GITHUB_ENV}"
+          echo "Imported Developer ID Application identity ${APP_IDENTITY}."
+
+      - name: Prepare notarization credentials
+        if: env.MACOS_CERT_P12_BASE64 != '' && env.NOTARY_KEY_P8_BASE64 != ''
+        run: |
+          echo "${NOTARY_KEY_P8_BASE64}" | base64 --decode > "${RUNNER_TEMP}/notary.p8"
+          echo "NOTARY_KEY_PATH=${RUNNER_TEMP}/notary.p8" >> "${GITHUB_ENV}"
+          echo "NOTARIZE=1" >> "${GITHUB_ENV}"
 
       - name: Build release binaries
         run: |
@@ -25,6 +84,13 @@ jobs:
           xcodebuild build -scheme LokaliteApp -configuration Release \
             -derivedDataPath .dd -destination "platform=macOS" \
             CODE_SIGNING_ALLOWED=NO
+
+      - name: Sign CLI binary
+        if: env.SIGNING == '1'
+        run: |
+          codesign --force --options runtime --timestamp \
+            --sign "${APP_IDENTITY}" .build/release/lokalite
+          codesign --verify --strict --verbose=2 .build/release/lokalite
 
       - name: Create app bundle
         run: |
@@ -73,8 +139,36 @@ jobs:
 
           printf 'APPL????' > LokaliteApp.app/Contents/PkgInfo
 
+      - name: Sign app bundle (Developer ID)
+        if: env.SIGNING == '1'
+        run: |
+          # Sign inside-out: nested resource bundles first, then the main
+          # executable, then the bundle — all under the hardened runtime.
+          for bundle in LokaliteApp.app/Contents/Resources/*.bundle; do
+            [ -e "${bundle}" ] || continue
+            codesign --force --options runtime --timestamp \
+              --sign "${APP_IDENTITY}" "${bundle}"
+          done
+          codesign --force --options runtime --timestamp \
+            --entitlements LokaliteApp.entitlements \
+            --sign "${APP_IDENTITY}" LokaliteApp.app/Contents/MacOS/LokaliteApp
+          codesign --force --options runtime --timestamp \
+            --entitlements LokaliteApp.entitlements \
+            --sign "${APP_IDENTITY}" LokaliteApp.app
+          codesign --verify --strict --deep --verbose=2 LokaliteApp.app
+
       - name: Ad-hoc sign app bundle
+        if: env.MACOS_CERT_P12_BASE64 == ''
         run: codesign --force --deep --sign - LokaliteApp.app
+
+      - name: Notarize and staple app
+        if: env.NOTARIZE == '1'
+        run: |
+          ditto -c -k --keepParent LokaliteApp.app "${RUNNER_TEMP}/LokaliteApp-notarize.zip"
+          xcrun notarytool submit "${RUNNER_TEMP}/LokaliteApp-notarize.zip" \
+            --key "${NOTARY_KEY_PATH}" --key-id "${NOTARY_KEY_ID}" \
+            --issuer "${NOTARY_ISSUER_ID}" --wait
+          xcrun stapler staple LokaliteApp.app
 
       - name: Create DMG
         run: |
@@ -90,6 +184,15 @@ jobs:
             "Lokalite-${VERSION}.dmg" \
             LokaliteApp.app
 
+      - name: Notarize and staple DMG
+        if: env.NOTARIZE == '1'
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          xcrun notarytool submit "Lokalite-${VERSION}.dmg" \
+            --key "${NOTARY_KEY_PATH}" --key-id "${NOTARY_KEY_ID}" \
+            --issuer "${NOTARY_ISSUER_ID}" --wait
+          xcrun stapler staple "Lokalite-${VERSION}.dmg"
+
       - name: Create CLI PKG
         run: |
           VERSION="${GITHUB_REF_NAME}"
@@ -103,7 +206,26 @@ jobs:
             --identifier com.lokalite.cli \
             --version "${SHORT_VERSION}" \
             --install-location / \
-            "lokalite-cli-${VERSION}.pkg"
+            "lokalite-cli-${VERSION}-unsigned.pkg"
+
+          # Sign the installer with the Developer ID Installer identity when
+          # available; otherwise ship the unsigned package as before.
+          if [ "${SIGNING:-}" = "1" ] && [ -n "${INSTALLER_IDENTITY}" ]; then
+            productsign --sign "${INSTALLER_IDENTITY}" \
+              "lokalite-cli-${VERSION}-unsigned.pkg" "lokalite-cli-${VERSION}.pkg"
+            rm -f "lokalite-cli-${VERSION}-unsigned.pkg"
+          else
+            mv "lokalite-cli-${VERSION}-unsigned.pkg" "lokalite-cli-${VERSION}.pkg"
+          fi
+
+      - name: Notarize and staple PKG
+        if: env.NOTARIZE == '1' && env.INSTALLER_IDENTITY != ''
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          xcrun notarytool submit "lokalite-cli-${VERSION}.pkg" \
+            --key "${NOTARY_KEY_PATH}" --key-id "${NOTARY_KEY_ID}" \
+            --issuer "${NOTARY_ISSUER_ID}" --wait
+          xcrun stapler staple "lokalite-cli-${VERSION}.pkg"
 
       - name: Create ZIP archives
         run: |
@@ -120,6 +242,10 @@ jobs:
             "Lokalite-${VERSION}.zip" \
             "lokalite-cli-${VERSION}.zip" > SHA256SUMS
           cat SHA256SUMS
+
+      - name: Clean up signing keychain
+        if: always() && env.SIGN_KEYCHAIN != ''
+        run: security delete-keychain "${SIGN_KEYCHAIN}" || true
 
       - name: Create GitHub Release
         env:
