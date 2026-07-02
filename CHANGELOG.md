@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-07-02
+
+### Added
+- `strict` agent-access tier: `lokalite agent-access <name> strict`, or "Require approval every time" in the app's **AI Agents** picker. Like `approve` but the consent is never cached — an agent reading a `strict` secret triggers a Touch ID prompt on *every* read, not once per unlock session. `list_secrets` flags such secrets `[approval required every read]`.
+- `lokalite://` secret references: put a valueless reference — `lokalite://KEY`, `lokalite://project/KEY`, or `lokalite://project/env/KEY` — in an MCP server config's `env` block (or any environment variable) and wrap the command in `lokalite run --refs-only --`. Each reference resolves to the real value at spawn time, brokered through the app so agent-access tiers are enforced and the read is logged. No plaintext secret sits in the config, so it is safe to commit. `--local` resolves in-process for headless/CI (approval-tier secrets then fail closed).
+- Agent detection recognizes two more coding agents: `aider` and `goose`.
+
+### Changed
+- Approval tiers (`requiresApproval`, `strict`) are now **caller-independent**: every read outside the app — including a human at the CLI — requires daemon-brokered Touch ID consent. `lokalite get`/`copy` route approval-tier reads through the app and refuse (with no override) when it is not running; the app's own reveal/copy stays gated by the session unlock, as before. Bulk reveal paths (`shell`, `export --plain` / `--format env`, bulk `lokalite run` injection, and `backup`) now exclude approval-tier secrets and print which secrets were skipped and why. Use `get`/`copy` or a `lokalite://` reference for per-secret consent.
+- Daemon governance no longer depends on process-name heuristics alone: `lokalite mcp` now tells the daemon its caller is an agent — a hint that can only *tighten* policy, never weaken it — so blocked and approval-tier enforcement holds even when process-tree detection would miss the agent. Detection is now attribution-only for approval tiers (a miss costs a log label, not enforcement).
+
+### Fixed
+- **Security:** agent detection now matches the caller's executable path, not just the kernel process name. Claude Code execs a version-numbered binary (process name e.g. `2.1.198`), so the previous name-only match never detected it — leaving the daemon fail-open for `blocked`/`requiresApproval` secrets and attributing agent reads as human. Detection now fires for the current Claude Code, and the tighten-only MCP hint backstops it structurally.
+- `lokalite run` bulk injection no longer overwrites an environment variable that carries a `lokalite://` reference; the resolved reference wins the name collision as intended.
+
 ## [2.1.0] - 2026-07-01
 
 ### Added
