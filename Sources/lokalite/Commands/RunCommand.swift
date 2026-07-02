@@ -63,7 +63,11 @@ struct RunCommand: ParsableCommand {
                 }
                 return try workspace.secrets(named: nil, context: ctx, accessSource: .cli)
             }
-            for secret in secrets {
+            // Never overwrite a variable that carries a reference: the ref
+            // string must survive until substitution below, so the resolved
+            // reference — not the bulk value — wins a name collision.
+            let refVariables = Set(references.map(\.variable))
+            for secret in secrets where !refVariables.contains(secret.name) {
                 environment[secret.name] = secret.value
             }
         }
