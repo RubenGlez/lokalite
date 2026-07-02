@@ -33,12 +33,15 @@ Read these for project context:
 - `.harness/adr/0014-daemon-broker-vault-access.md`
 - `.harness/adr/0015-cli-local-process-boundary.md`
 - `.harness/adr/0016-agent-environment-switching.md`
+- `.harness/adr/0017-secret-references.md`
 - `.harness/engineering/architecture.md`
 - `.harness/engineering/features/access-dashboard.md`
 - `.harness/engineering/features/env-import.md`
+- `.harness/engineering/features/per-call-approval.md`
 - `.harness/engineering/features/per-environment-agent-workflow.md`
 - `.harness/engineering/features/popover-refactor.md`
 - `.harness/engineering/features/requires-approval-tier.md`
+- `.harness/engineering/features/secret-references.md`
 - `.harness/engineering/implementation-plan.md`
 - `.harness/product/CONTEXT.md`
 - `.harness/product/competitors.md`
