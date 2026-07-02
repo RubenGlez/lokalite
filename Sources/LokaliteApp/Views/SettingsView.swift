@@ -7,6 +7,7 @@ import SymbolPicker
 
 struct SettingsView: View {
     @Environment(VaultViewModel.self) private var vault
+    @Environment(SoftwareUpdater.self) private var softwareUpdater
     @State private var selectedSecret: Secret?
     @State private var selectedTab = "Overview"
     @State private var projectSearchText = ""
@@ -121,7 +122,7 @@ struct SettingsView: View {
             case .addSecret:
                 AddSecretView().environment(vault)
             case .appSettings:
-                AppSettingsView().environment(vault)
+                AppSettingsView().environment(vault).environment(softwareUpdater)
             case .editSecret(let secret):
                 EditSecretView(secret: secret).environment(vault)
             case .moveSecret(let secret):

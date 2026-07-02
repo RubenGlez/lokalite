@@ -14,6 +14,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.3.0"),
         .package(url: "https://github.com/P-H-C/phc-winner-argon2.git", revision: "f57e61e19229e23c4445b85494dbf7c07de721cb"),
         .package(url: "https://github.com/xnth97/SymbolPicker.git", .upToNextMajor(from: "1.6.0")),
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.6.0"),
     ],
     targets: [
         .target(
@@ -39,6 +40,7 @@ let package = Package(
             dependencies: [
                 "LokaliteCore",
                 .product(name: "SymbolPicker", package: "SymbolPicker"),
+                .product(name: "Sparkle", package: "Sparkle"),
             ],
             path: "Sources/LokaliteApp",
             resources: [

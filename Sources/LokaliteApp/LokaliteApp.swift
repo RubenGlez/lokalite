@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import Sparkle
 import LokaliteCore
 
 @main
@@ -22,6 +23,7 @@ struct LokaliteApp: App {
         Window("Lokalite", id: "settings") {
             SettingsView()
                 .environment(appDelegate.vault)
+                .environment(appDelegate.softwareUpdater)
                 .frame(minWidth: 980, minHeight: 620)
         }
         .defaultSize(width: 1180, height: 720)
@@ -32,6 +34,7 @@ struct LokaliteApp: App {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let vault = VaultViewModel()
+    let softwareUpdater = SoftwareUpdater()
     let hotkeyManager = GlobalHotkeyManager()
     private var windowEventMonitor: Any?
     private var windowKeyObserver: NSObjectProtocol?
@@ -176,6 +179,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                   let contentView = window.contentView else { return event }
 
             let menu = NSMenu()
+            if let updater = self.softwareUpdater.controller {
+                let checkForUpdates = NSMenuItem(
+                    title: "Check for Updates…",
+                    action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)),
+                    keyEquivalent: "")
+                checkForUpdates.target = updater
+                menu.addItem(checkForUpdates)
+                menu.addItem(.separator())
+            }
             menu.addItem(NSMenuItem(title: "Quit Lokalite",
                                     action: #selector(NSApplication.terminate(_:)),
                                     keyEquivalent: "q"))

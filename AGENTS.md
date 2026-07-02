@@ -6,9 +6,15 @@
 2. Prepend the new entry to `CHANGELOG.md` and commit it (the release script refuses a dirty tree). The link-reference list at the bottom is stale; recent releases don't add to it.
 3. Push the release commits to `main` (`git push origin main`). The release script only pushes the tag, not the branch — and its safety check only catches being *behind* `origin/main`, not *ahead* — so unpushed local commits would otherwise live only under the tag.
 4. `scripts/release.sh [patch|minor|major]` — computes the next tag from the latest `v*` tag, tags, and pushes the tag.
-5. The tag triggers `.github/workflows/release.yml`: builds the app with xcodebuild, creates DMG/PKG/ZIP + `SHA256SUMS`, publishes the GitHub Release, and pushes a `homebrew/vX.Y.Z` branch updating `Formula/lokalite.rb` and `Casks/lokalite-app.rb`.
-6. `HOMEBREW_PR_TOKEN` is not configured in repo secrets, so the workflow does NOT open the Homebrew PR — create it manually from the `homebrew/vX.Y.Z` branch, wait for the `build-and-test` status, and merge it. Until that PR merges, `brew` users keep getting the previous version.
+5. The tag triggers `.github/workflows/release.yml`: builds the app with xcodebuild, embeds + signs Sparkle.framework, creates DMG/PKG/ZIP + `SHA256SUMS`, publishes the GitHub Release, and pushes a `homebrew/vX.Y.Z` branch updating `Formula/lokalite.rb`, `Casks/lokalite-app.rb`, and `appcast.xml` (the signed Sparkle item for this version, prepended after the `<!-- BEGIN ITEMS -->` marker).
+6. Homebrew + appcast merge together in one PR off the `homebrew/vX.Y.Z` branch. When `HOMEBREW_PR_TOKEN` is set, the workflow opens that PR and enables auto-merge (squash), so it merges itself once the branch's `build-and-test` status passes — no manual step. If the token is unset, the workflow only pushes the branch; open and merge the PR manually. Until it merges, `brew` users get the previous version **and** the Sparkle feed (served from `appcast.xml` on `main` via raw.githubusercontent) still advertises the previous version.
 7. Record the release in the roadmap (Shipped section, version + date).
+
+### In-app updates (Sparkle)
+
+The app self-updates via [Sparkle](https://sparkle-project.org): a menu-bar "Check for Updates…" item (right-click the status icon, or Settings → Updates) plus automatic background checks after the user opts in on first launch. The updater only runs in signed release builds — `SoftwareUpdater` returns an inert controller in dev builds (no `SUFeedURL`, no embedded framework), so `swift run`/Xcode debugging never hits the release feed.
+
+`SUFeedURL` points at `appcast.xml` on `main` served over raw.githubusercontent, so the feed advances only when the release PR (step 6) merges — same cadence as the cask. `SUPublicEDKey` is hardcoded in the Info.plist the workflow generates; the matching EdDSA private key signs each DMG via Sparkle's `sign_update` (key from `.build/artifacts` after `swift build`). The key pair is the account-wide Sparkle signing key (`generate_keys`, stored in the login Keychain); if the appcast ever needs re-signing locally, `sign_update` reads that key automatically.
 
 ### Signing & notarization
 
@@ -17,6 +23,8 @@ The release workflow signs with Developer ID + hardened runtime and notarizes wh
 - `MACOS_SIGN_P12` / `MACOS_SIGN_PASSWORD` — Developer ID **Application** cert+key as a base64 `.p12`, and its export password. Signs the app bundle, its nested `.bundle` resources, and the CLI binary.
 - `MACOS_NOTARY_KEY` / `MACOS_NOTARY_KEY_ID` / `MACOS_NOTARY_ISSUER_ID` — App Store Connect API key (base64 `.p8`, Key ID, Issuer ID) for `notarytool`. Notarization runs only when both the app cert and this key are present.
 - `MACOS_SIGN_INSTALLER_P12` / `MACOS_SIGN_INSTALLER_PASSWORD` — Developer ID **Installer** cert for signing the `.pkg`. Not currently set (no Installer cert exists), so the CLI pkg ships unsigned; everything else still signs and notarizes.
+- `SPARKLE_ED_PRIVATE_KEY` — base64 EdDSA private seed (from `generate_keys -x`) that signs each DMG for the Sparkle appcast. Its public half is the hardcoded `SUPublicEDKey` in `release.yml`. If unset, the release still ships but the appcast item is skipped (no auto-update for that version). **Not** account-wide — it is Lokalite's own Sparkle key; keep a copy in the vault's `Global` project.
+- `HOMEBREW_PR_TOKEN` — PAT (repo scope) used to open and auto-merge the Homebrew/appcast PR. If unset, the workflow only pushes the `homebrew/vX.Y.Z` branch.
 
 The workflow maps these to descriptive internal job-env names; the signing identity itself is discovered from the imported cert at build time (no identity name is hardcoded). `LokaliteApp.entitlements` is intentionally empty — the app is not sandboxed (Carbon hotkey + Unix socket) and needs no special entitlement under the hardened runtime. Canonical copies of these credentials live in the `lokalite` vault's `Global` project; GitHub Actions secrets are the CI mirror.
 
