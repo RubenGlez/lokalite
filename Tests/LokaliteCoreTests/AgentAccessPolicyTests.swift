@@ -226,6 +226,182 @@ final class AgentAccessPolicyTests: XCTestCase {
         XCTAssertEqual(AgentAccessCommand.State.approve.policy, .requiresApproval)
         XCTAssertEqual(AgentAccessCommand.State.block.policy, .blocked)
         XCTAssertEqual(AgentAccessCommand.State.allow.policy, .allowed)
+        XCTAssertEqual(AgentAccessCommand.State.strict.policy, .strict)
+    }
+
+    // MARK: - strict tier (per-call approval)
+
+    func testStrictPolicyRoundTripsAndFlags() throws {
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        _ = try vault.add(name: "K", value: "v", projectId: project.id)
+
+        try vault.setAgentAccess(name: "K", projectId: project.id, policy: .strict)
+        XCTAssertEqual(try vault.get(name: "K", projectId: project.id).agentAccess, .strict)
+        XCTAssertEqual(try vault.listInfo(projectId: project.id).first?.agentAccess, .strict)
+        XCTAssertEqual(AgentAccessPolicy.strict.rawValue, "strict")
+
+        // strict prompts like requiresApproval, but on every read.
+        XCTAssertTrue(AgentAccessPolicy.strict.requiresApprovalForAgents)
+        XCTAssertTrue(AgentAccessPolicy.strict.promptsPerCall)
+        XCTAssertFalse(AgentAccessPolicy.requiresApproval.promptsPerCall)
+        XCTAssertFalse(AgentAccessPolicy.strict.blocksAgents)
+    }
+
+    func testDaemonReleasesStrictSecretOnlyWhenHandlerApproves() throws {
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        _ = try vault.add(name: "K", value: "v-secret", projectId: project.id)
+        try vault.setAgentAccess(name: "K", projectId: project.id, policy: .strict)
+        let request = VaultRequest.get(name: "K", projectId: project.id, environmentName: nil)
+        let agent = CallerContext(pid: 999, agent: "claude")
+
+        let denied = VaultRequestDispatcher.handle(request, using: vault, caller: agent, approveAgentAccess: { _ in false })
+        guard case let .failure(message) = denied else {
+            return XCTFail("denied strict read should fail, got \(denied)")
+        }
+        XCTAssertTrue(message.contains("approval"), "got: \(message)")
+        XCTAssertFalse(message.contains("v-secret"))
+        let denial = try XCTUnwrap(try vault.listActivity().first { $0.action == .denied })
+        XCTAssertEqual(denial.secretName, "K")
+        XCTAssertEqual(denial.agent, "claude")
+
+        var seen: ApprovalRequest?
+        let approved = VaultRequestDispatcher.handle(request, using: vault, caller: agent, approveAgentAccess: { req in
+            seen = req
+            return true
+        })
+        guard case let .secret(secret) = approved else {
+            return XCTFail("approved strict read should return the secret, got \(approved)")
+        }
+        XCTAssertEqual(secret.value, "v-secret")
+        XCTAssertEqual(seen?.perCall, true)
+        XCTAssertEqual(seen?.agent, "claude")
+    }
+
+    func testDispatcherInvokesHandlerOnEveryStrictRead() throws {
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        _ = try vault.add(name: "K", value: "v", projectId: project.id)
+        try vault.setAgentAccess(name: "K", projectId: project.id, policy: .strict)
+        let request = VaultRequest.get(name: "K", projectId: project.id, environmentName: nil)
+        let agent = CallerContext(pid: 999, agent: "claude")
+
+        var invocations = 0
+        let handler: AgentApprovalHandler = { _ in
+            invocations += 1
+            return true
+        }
+        _ = VaultRequestDispatcher.handle(request, using: vault, caller: agent, approveAgentAccess: handler)
+        _ = VaultRequestDispatcher.handle(request, using: vault, caller: agent, approveAgentAccess: handler)
+        XCTAssertEqual(invocations, 2, "a strict secret must consult the handler on every read")
+    }
+
+    func testGrantCacheCachesSessionGrantsButNeverPerCallOnes() {
+        let cache = ApprovalGrantCache()
+        let session = ApprovalRequest(secretID: "s1", secretName: "K", projectID: "p1", projectName: "App", environmentName: "Default", perCall: false, agent: "claude")
+        let perCall = ApprovalRequest(secretID: "s2", secretName: "K2", projectID: "p1", projectName: "App", environmentName: "Default", perCall: true, agent: "claude")
+
+        // requiresApproval: first read prompts, the grant is cached, the second
+        // read is released without a prompt.
+        XCTAssertFalse(cache.isGranted(session))
+        cache.recordGrant(session)
+        XCTAssertTrue(cache.isGranted(session), "a session grant must short-circuit the second prompt")
+
+        // strict: never read from and never written to the cache.
+        XCTAssertFalse(cache.isGranted(perCall))
+        cache.recordGrant(perCall)
+        XCTAssertFalse(cache.isGranted(perCall), "a per-call approval must never be cached")
+
+        // A per-call request for a secret that also holds a session grant still
+        // bypasses the cache.
+        let perCallSameSecret = ApprovalRequest(secretID: "s1", secretName: "K", projectID: "p1", projectName: "App", environmentName: "Default", perCall: true, agent: "claude")
+        XCTAssertFalse(cache.isGranted(perCallSameSecret))
+
+        // Locking the vault drops session grants.
+        cache.clear()
+        XCTAssertFalse(cache.isGranted(session))
+    }
+
+    func testApprovalRequestCarriesProjectAndResolvedEnvironmentNames() throws {
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        _ = try vault.add(name: "K", value: "v", projectId: project.id)
+        _ = try vault.addEnvironment(name: "production", projectId: project.id)
+        _ = try vault.set(name: "K", value: "v-prod", projectId: project.id, environmentName: "production")
+        try vault.setAgentAccess(name: "K", projectId: project.id, policy: .requiresApproval)
+        let agent = CallerContext(pid: 999, agent: "claude")
+
+        // A nil wire environment resolves to the project's active environment name.
+        try vault.setActiveEnvironment(name: "production", projectId: project.id)
+        var seen: ApprovalRequest?
+        _ = VaultRequestDispatcher.handle(.get(name: "K", projectId: project.id, environmentName: nil), using: vault, caller: agent, approveAgentAccess: { req in
+            seen = req
+            return true
+        })
+        XCTAssertEqual(seen?.projectName, "App")
+        XCTAssertEqual(seen?.environmentName, "production")
+        XCTAssertEqual(seen?.perCall, false)
+
+        // An explicit wire environment is carried through as-is.
+        seen = nil
+        _ = VaultRequestDispatcher.handle(.get(name: "K", projectId: project.id, environmentName: "production"), using: vault, caller: agent, approveAgentAccess: { req in
+            seen = req
+            return true
+        })
+        XCTAssertEqual(seen?.environmentName, "production")
+    }
+
+    func testApprovalRequestFallsBackToDefaultEnvironmentName() throws {
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        // No active environment on the project: the value lives outside any
+        // environment, and the prompt shows the "Default" display name.
+        try vault.setActiveEnvironment(name: nil, projectId: project.id)
+        _ = try vault.add(name: "K", value: "v", projectId: project.id)
+        try vault.setAgentAccess(name: "K", projectId: project.id, policy: .strict)
+
+        var seen: ApprovalRequest?
+        _ = VaultRequestDispatcher.handle(.get(name: "K", projectId: project.id, environmentName: nil), using: vault, caller: CallerContext(pid: 999, agent: "claude"), approveAgentAccess: { req in
+            seen = req
+            return true
+        })
+        XCTAssertEqual(seen?.projectName, "App")
+        XCTAssertEqual(seen?.environmentName, "Default")
+        XCTAssertEqual(seen?.perCall, true)
+    }
+
+    func testMCPGetSecretFailsClosedForStrictSecretWhenNotDaemonBacked() throws {
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        _ = try vault.add(name: "STRIPE", value: "sk-live-xyz", projectId: project.id)
+        try vault.setAgentAccess(name: "STRIPE", projectId: project.id, policy: .strict)
+
+        let tools = LokaliteMCPTools(allowWrites: false, vault: vault, daemonBacked: false)
+        let payload = try successPayload(tools.call(name: "get_secret", args: ["name": "STRIPE", "project": "App"]))
+
+        XCTAssertEqual(payload["isError"] as? Bool, true)
+        let text = textOf(payload)
+        XCTAssertTrue(text.contains("--local") || text.contains("approval"), "got: \(text)")
+        XCTAssertFalse(text.contains("sk-live-xyz"), "a strict value must never appear")
+    }
+
+    func testMCPListSecretsMarksStrictSecrets() throws {
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        _ = try vault.add(name: "GATED", value: "a", projectId: project.id)
+        _ = try vault.add(name: "STRICT", value: "b", projectId: project.id)
+        try vault.setAgentAccess(name: "GATED", projectId: project.id, policy: .requiresApproval)
+        try vault.setAgentAccess(name: "STRICT", projectId: project.id, policy: .strict)
+
+        let tools = LokaliteMCPTools(allowWrites: false, vault: vault, daemonBacked: true)
+        let text = textOf(try successPayload(tools.call(name: "list_secrets", args: ["project": "App"])))
+
+        let strictLine = text.split(separator: "\n").first { $0.contains("STRICT") } ?? ""
+        XCTAssertTrue(strictLine.contains("approval required every read"), "got: \(text)")
+        let gatedLine = text.split(separator: "\n").first { $0.contains("GATED") } ?? ""
+        XCTAssertTrue(gatedLine.contains("approval required"))
+        XCTAssertFalse(gatedLine.contains("every read"), "session-tier marker must stay unchanged")
     }
 
     private func successPayload(_ result: MCPToolCallResult) throws -> [String: Any] {

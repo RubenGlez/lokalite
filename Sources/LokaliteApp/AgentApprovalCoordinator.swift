@@ -2,19 +2,20 @@ import Foundation
 import LocalAuthentication
 import LokaliteCore
 
-/// Brokers consent-on-read for `requiresApproval` secrets (ADR 0014). Lives in the
+/// Brokers consent-on-read for approval-tier secrets (ADR 0014). Lives in the
 /// app because only the app — the daemon and sole vault owner — has the GUI context
-/// for Touch ID. A successful approval grants that secret for the rest of the unlock
-/// session (keyed by secret id); grants clear when the vault locks.
+/// for Touch ID. For `requiresApproval` a successful approval grants that secret for
+/// the rest of the unlock session (keyed by secret id); grants clear when the vault
+/// locks. A `strict` (per-call) request bypasses the grant cache — the cache is
+/// neither read nor written, so every read re-prompts.
 final class AgentApprovalCoordinator {
-    private let lock = NSLock()
-    private var grantedSecretIDs: Set<String> = []
+    private let grants = ApprovalGrantCache()
     private var lockObserver: NSObjectProtocol?
 
     init() {
         lockObserver = NotificationCenter.default.addObserver(
             forName: .vaultDidLock, object: nil, queue: nil
-        ) { [weak self] _ in self?.clearGrants() }
+        ) { [weak self] _ in self?.grants.clear() }
     }
 
     deinit {
@@ -22,27 +23,13 @@ final class AgentApprovalCoordinator {
     }
 
     /// Called by the daemon dispatcher on its serial queue. Blocks until the user
-    /// responds to Touch ID. A cached session grant short-circuits the prompt.
+    /// responds to Touch ID. A cached session grant short-circuits the prompt
+    /// (never for a per-call request — `ApprovalGrantCache` bypasses those).
     func approve(_ request: ApprovalRequest) -> Bool {
-        if isGranted(request.secretID) { return true }
+        if grants.isGranted(request) { return true }
         guard promptTouchID(for: request) else { return false }
-        recordGrant(request.secretID)
+        grants.recordGrant(request)
         return true
-    }
-
-    private func isGranted(_ id: String) -> Bool {
-        lock.lock(); defer { lock.unlock() }
-        return grantedSecretIDs.contains(id)
-    }
-
-    private func recordGrant(_ id: String) {
-        lock.lock(); defer { lock.unlock() }
-        grantedSecretIDs.insert(id)
-    }
-
-    private func clearGrants() {
-        lock.lock(); defer { lock.unlock() }
-        grantedSecretIDs.removeAll()
     }
 
     private func promptTouchID(for request: ApprovalRequest) -> Bool {
@@ -53,7 +40,7 @@ final class AgentApprovalCoordinator {
             return false
         }
         let who = request.agent.map { "“\($0)”" } ?? "an AI agent"
-        let reason = "release \(request.secretName) to \(who)"
+        let reason = "release \(request.secretName) (\(request.environmentName)) in project \(request.projectName) to \(who)"
         let semaphore = DispatchSemaphore(value: 0)
         var approved = false
         context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason) { success, _ in

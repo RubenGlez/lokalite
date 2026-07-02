@@ -304,12 +304,13 @@ struct EditSecretView: View {
 
 extension AgentAccessPolicy {
     /// Tiers offered in the editor, ordered by escalating restriction.
-    static var editorCases: [AgentAccessPolicy] { [.allowed, .requiresApproval, .blocked] }
+    static var editorCases: [AgentAccessPolicy] { [.allowed, .requiresApproval, .strict, .blocked] }
 
     var editorLabel: String {
         switch self {
         case .allowed: return "Allowed"
         case .requiresApproval: return "Require approval"
+        case .strict: return "Require approval every time"
         case .blocked: return "Blocked"
         }
     }
@@ -320,6 +321,8 @@ extension AgentAccessPolicy {
             return "Agents can retrieve this secret through the MCP handoff."
         case .requiresApproval:
             return "Agents must pass a Touch ID prompt each session before this secret is released."
+        case .strict:
+            return "Agents must pass a Touch ID prompt on every read — approvals are never remembered."
         case .blocked:
             return "Agents are never given this secret."
         }
@@ -331,6 +334,7 @@ extension AgentAccessPolicy {
         switch self {
         case .allowed: return nil
         case .requiresApproval: return ("Approval", "touchid")
+        case .strict: return ("Strict", "touchid")
         case .blocked: return ("Blocked", "hand.raised.slash")
         }
     }
