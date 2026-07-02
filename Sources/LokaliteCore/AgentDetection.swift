@@ -23,17 +23,31 @@ public enum AgentDetection {
 
     /// Walks up the process tree from `pid` (default: this process) toward
     /// `launchd`, returning the first detected agent token, or nil.
+    ///
+    /// Each hop is matched against both the kernel process name (`p_comm`,
+    /// truncated to 16 chars) and the executable path: launchers like Claude
+    /// Code exec a version-numbered binary (p_comm `2.1.198`) that only the
+    /// path (`…/claude/versions/2.1.198`) identifies.
     public static func detectAgent(startingFrom pid: pid_t = getpid()) -> String? {
         var current = pid
         var hops = 0
         while current > 1, hops < maxHops {
             guard let info = processInfo(pid: current) else { break }
             if let agent = matchedAgent(processName: info.name) { return agent }
+            if let path = executablePath(pid: current), let agent = matchedAgent(processName: path) {
+                return agent
+            }
             guard info.parentPID > 0, info.parentPID != current else { break }
             current = info.parentPID
             hops += 1
         }
         return nil
+    }
+
+    private static func executablePath(pid: pid_t) -> String? {
+        var buffer = [CChar](repeating: 0, count: 4096)
+        let length = proc_pidpath(pid, &buffer, UInt32(buffer.count))
+        return length > 0 ? String(cString: buffer) : nil
     }
 
     private static func processInfo(pid: pid_t) -> (name: String, parentPID: pid_t)? {
