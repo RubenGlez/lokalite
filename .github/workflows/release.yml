@@ -137,11 +137,34 @@ jobs:
             <true/>
             <key>NSHighResolutionCapable</key>
             <true/>
+            <key>SUFeedURL</key>
+            <string>https://raw.githubusercontent.com/RubenGlez/lokalite/main/appcast.xml</string>
+            <key>SUPublicEDKey</key>
+            <string>C414ty+O4JN3PkkOQ8tMQeuwxE6Y+vSuCbuG2GOh/lA=</string>
           </dict>
           </plist>
           EOF
 
           printf 'APPL????' > LokaliteApp.app/Contents/PkgInfo
+
+          # Embed Sparkle so the app can self-update (unconditional: without the
+          # framework dyld can't resolve @rpath/Sparkle.framework and the app
+          # would crash on launch). swift build populates .build/artifacts; the
+          # xcframework slice is universal (arm64 + x86_64).
+          SPARKLE_FW="$(find .dd/Build/Products -maxdepth 2 -name Sparkle.framework -type d 2>/dev/null | head -1)"
+          if [ -z "${SPARKLE_FW}" ]; then
+            SPARKLE_FW="$(find .build/artifacts -path '*macos-arm64_x86_64/Sparkle.framework' -type d 2>/dev/null | head -1)"
+          fi
+          if [ -z "${SPARKLE_FW}" ]; then
+            echo "Sparkle.framework not found" >&2
+            exit 1
+          fi
+          mkdir -p LokaliteApp.app/Contents/Frameworks
+          ditto "${SPARKLE_FW}" LokaliteApp.app/Contents/Frameworks/Sparkle.framework
+          # The executable's LC_RPATH points at build dirs / @loader_path; add the
+          # bundle's Frameworks dir so @rpath/Sparkle.framework resolves at runtime.
+          install_name_tool -add_rpath "@executable_path/../Frameworks" \
+            LokaliteApp.app/Contents/MacOS/LokaliteApp 2>/dev/null || true
 
       - name: Sign app bundle (Developer ID)
         if: env.SIGNING == '1'
@@ -153,6 +176,20 @@ jobs:
             codesign --force --options runtime --timestamp \
               --sign "${APP_IDENTITY}" "${bundle}"
           done
+          # Sparkle's nested helpers must be signed before the framework, which
+          # must be signed before the app (do not use --deep). Downloader.xpc
+          # keeps its own sandbox entitlements.
+          SPARKLE_V="LokaliteApp.app/Contents/Frameworks/Sparkle.framework/Versions/B"
+          codesign --force --options runtime --timestamp \
+            --sign "${APP_IDENTITY}" "${SPARKLE_V}/XPCServices/Installer.xpc"
+          codesign --force --options runtime --timestamp --preserve-metadata=entitlements \
+            --sign "${APP_IDENTITY}" "${SPARKLE_V}/XPCServices/Downloader.xpc"
+          codesign --force --options runtime --timestamp \
+            --sign "${APP_IDENTITY}" "${SPARKLE_V}/Autoupdate"
+          codesign --force --options runtime --timestamp \
+            --sign "${APP_IDENTITY}" "${SPARKLE_V}/Updater.app"
+          codesign --force --options runtime --timestamp \
+            --sign "${APP_IDENTITY}" "LokaliteApp.app/Contents/Frameworks/Sparkle.framework"
           codesign --force --options runtime --timestamp \
             --entitlements LokaliteApp.entitlements \
             --sign "${APP_IDENTITY}" LokaliteApp.app/Contents/MacOS/LokaliteApp
@@ -268,6 +305,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           HOMEBREW_PR_TOKEN: ${{ secrets.HOMEBREW_PR_TOKEN }}
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
         run: |
           VERSION="${GITHUB_REF_NAME}"
           BRANCH="homebrew/${VERSION}"
@@ -303,11 +341,48 @@ jobs:
           sed -i '' "s|version \".*\"|version \"${SHORT_VERSION}\"|" Casks/lokalite-app.rb
           sed -i '' "s|sha256 \"[a-f0-9]*\"|sha256 \"${CASK_SHA}\"|" Casks/lokalite-app.rb
 
+          # Sign the DMG and prepend a Sparkle appcast item so notarized users get
+          # in-app auto-updates. The appcast on main is served verbatim over
+          # raw.githubusercontent (SUFeedURL), so it updates when this PR merges —
+          # same cadence as the cask. Skipped when the key is absent so releases
+          # never hard-fail before the secret is configured.
+          if [ -n "${SPARKLE_ED_PRIVATE_KEY}" ]; then
+            SIGN_OUTPUT="$(printf '%s' "${SPARKLE_ED_PRIVATE_KEY}" | .build/artifacts/sparkle/Sparkle/bin/sign_update --ed-key-file - "Lokalite-${VERSION}.dmg")"
+            ED_SIG="$(printf '%s' "${SIGN_OUTPUT}" | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p')"
+            ED_LEN="$(printf '%s' "${SIGN_OUTPUT}" | sed -n 's/.*length="\([^"]*\)".*/\1/p')"
+            if [ -z "${ED_SIG}" ] || [ -z "${ED_LEN}" ]; then
+              echo "Failed to derive appcast signature from sign_update output: ${SIGN_OUTPUT}" >&2
+              exit 1
+            fi
+            PUBDATE="$(date -u '+%a, %d %b %Y %H:%M:%S +0000')"
+            cat > /tmp/appcast-item.xml << ITEM
+          <item>
+            <title>Lokalite ${SHORT_VERSION}</title>
+            <link>https://github.com/RubenGlez/lokalite/releases/tag/${VERSION}</link>
+            <sparkle:version>${SHORT_VERSION}</sparkle:version>
+            <sparkle:shortVersionString>${SHORT_VERSION}</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <pubDate>${PUBDATE}</pubDate>
+            <enclosure url="${DMG_URL}" sparkle:edSignature="${ED_SIG}" length="${ED_LEN}" type="application/octet-stream" />
+          </item>
+          ITEM
+            awk '/<!-- BEGIN ITEMS -->/{print; while((getline line < "/tmp/appcast-item.xml") > 0) print line; next} {print}' appcast.xml > appcast.xml.new
+            mv appcast.xml.new appcast.xml
+            APPCAST_CHANGED=1
+          else
+            echo "SPARKLE_ED_PRIVATE_KEY not set; skipping appcast update."
+          fi
+
           git config user.email "action@github.com"
           git config user.name "GitHub Actions"
           git checkout -B "${BRANCH}"
           git add Formula/lokalite.rb Casks/lokalite-app.rb
-          git commit -m "Update Homebrew formula and cask to ${VERSION}"
+          COMMIT_MSG="Update Homebrew formula and cask to ${VERSION}"
+          if [ "${APPCAST_CHANGED:-}" = "1" ]; then
+            git add appcast.xml
+            COMMIT_MSG="Update Homebrew formula, cask, and Sparkle appcast to ${VERSION}"
+          fi
+          git commit -m "${COMMIT_MSG}"
           git push -u origin "${BRANCH}"
 
           printf '%s\n' \
@@ -316,6 +391,7 @@ jobs:
             "This release workflow refreshes:" \
             "- \`Formula/lokalite.rb\`" \
             "- \`Casks/lokalite-app.rb\`" \
+            "- \`appcast.xml\` (Sparkle in-app update feed)" \
             "" \
             "The branch was created automatically from the release tag and is ready to merge into \`main\`." \
             > /tmp/homebrew-pr-body.md
@@ -327,12 +403,18 @@ jobs:
                 --repo RubenGlez/lokalite \
                 --base main \
                 --head "${BRANCH}" \
-                --draft \
-                --title "Update Homebrew formula and cask to ${VERSION}" \
+                --title "${COMMIT_MSG}" \
                 --body-file /tmp/homebrew-pr-body.md)
             fi
 
             echo "Homebrew PR: ${PR_URL}"
+
+            # Merge automatically once the branch's build-and-test status passes,
+            # so a release is fully hands-off. Best-effort: if repo auto-merge is
+            # disabled the PR just stays open for a manual merge.
+            if ! GH_TOKEN="${HOMEBREW_PR_TOKEN}" gh pr merge "${PR_URL}" --auto --squash; then
+              echo "Could not enable auto-merge; merge the PR manually once checks pass."
+            fi
           else
             echo "HOMEBREW_PR_TOKEN is not configured; skipping PR creation."
             echo "Open the branch manually if you want an automatic Homebrew PR:"

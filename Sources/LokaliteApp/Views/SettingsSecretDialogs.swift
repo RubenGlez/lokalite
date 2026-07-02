@@ -5,9 +5,14 @@ import LokaliteCore
 
 struct AppSettingsView: View {
     @Environment(VaultViewModel.self) private var vault
+    @Environment(SoftwareUpdater.self) private var softwareUpdater
     @Environment(\.dismiss) private var dismiss
     @State private var sessionTimeoutSeconds: Double = 300
     @State private var clipboardClearSeconds: Double = 30
+
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
+    }
 
     var body: some View {
         NavigationStack {
@@ -56,6 +61,23 @@ struct AppSettingsView: View {
                         vault.lock()
                     } label: {
                         Label("Lock Now", systemImage: "lock")
+                    }
+                }
+
+                Section("Updates") {
+                    LabeledContent("Version", value: appVersion)
+
+                    if softwareUpdater.isAvailable {
+                        Button {
+                            softwareUpdater.checkForUpdates()
+                            dismiss()
+                        } label: {
+                            Label("Check for Updates…", systemImage: "arrow.down.circle")
+                        }
+                    } else {
+                        Text("Updates are available in signed release builds.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
