@@ -25,6 +25,7 @@ Lokalite is a local-first secrets manager for macOS, built for how developers wo
 - **Clipboard auto-clear**: copied values are wiped after 30 seconds
 - **Session timeout**: vault auto-locks after inactivity
 - **MCP integration**: expose your vault as tools to Claude Code, Cursor, Windsurf, and any other MCP-compatible agent
+- **Secret references**: commit `lokalite://project/KEY` instead of a token in MCP configs; `lokalite run --refs-only` resolves it at spawn time
 - **Zero runtime dependencies**: no cloud, no telemetry, no vendor lock-in
 
 ## Requirements
@@ -111,6 +112,7 @@ lokalite delete OPENAI_API_KEY
 # Run a command with secrets injected as environment variables
 lokalite run -- npm start
 lokalite run --keys OPENAI_API_KEY,ANTHROPIC_API_KEY -- claude
+lokalite run --refs-only -- npx some-server   # resolve lokalite:// references only (see Secret references)
 
 # Manage projects
 lokalite project add MyProject
@@ -221,6 +223,36 @@ Pass `--read-write` to also expose write tools:
 > - **allow** — the default.
 >
 > The CLI `get`/`copy` refuse a `block` or `approve` secret when an AI agent is detected in the calling process tree (only the app can broker the consent prompt). Also keep the server read-only (the default), scope it to a single project by setting `LOKALITE_PROJECT` in the server's `env` config, and prefer clients that ask for approval before tool calls. Every MCP access is recorded in the activity log.
+
+## Secret references
+
+A `lokalite://` reference stands in for a secret's value anywhere an environment variable is configured. References carry no secret material, so they are safe to commit. Three forms:
+
+- `lokalite://KEY` — project resolved like the CLI does (linked directory, then active project); the project's active environment
+- `lokalite://myproject/KEY` — explicit project, its active environment
+- `lokalite://myproject/staging/KEY` — fully qualified
+
+`lokalite run` scans its inherited environment for `lokalite://` values and swaps each for the real secret value in the child process's environment before spawning. Pass `--refs-only` to skip the bulk injection of project secrets and resolve only the references. Any other environment variable is inherited unchanged.
+
+The primary use case is MCP server configs (`~/.claude.json`, a project's `.mcp.json`, `claude_desktop_config.json`), which otherwise carry tokens in plaintext `env` blocks:
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "lokalite",
+      "args": ["run", "--refs-only", "--", "npx", "-y", "@modelcontextprotocol/server-github"],
+      "env": { "GITHUB_TOKEN": "lokalite://myproject/GITHUB_TOKEN" }
+    }
+  }
+}
+```
+
+The MCP host puts the reference in the child environment; `lokalite run` replaces it with the real value before the server starts. The value never appears in the config file, the host's context, or the repo.
+
+References are resolved **through the Lokalite app** (the same broker the MCP server uses), so the per-secret agent-access tiers apply at spawn time — a `block`-tier reference is refused, an `approve`-tier reference prompts for Touch ID when an AI agent spawned the command — and every read lands in the activity log with agent attribution. Pass `--local` to resolve in-process for CI/headless use; approval-tier and blocked secrets are then unavailable when an AI agent is detected.
+
+Resolution fails closed: if any reference is malformed, unknown, or denied, `lokalite run` prints the environment variable and the reference (never a value), exits non-zero, and the command is not run.
 
 ## Security
 
