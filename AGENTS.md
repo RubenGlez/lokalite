@@ -34,8 +34,11 @@ Read these for project context:
 - `.harness/adr/0015-cli-local-process-boundary.md`
 - `.harness/adr/0016-agent-environment-switching.md`
 - `.harness/adr/0017-secret-references.md`
+- `.harness/adr/0018-enforcement-never-rides-detection.md`
 - `.harness/engineering/architecture.md`
 - `.harness/engineering/features/access-dashboard.md`
+- `.harness/engineering/features/caller-independent-approval.md`
+- `.harness/engineering/features/client-agent-context.md`
 - `.harness/engineering/features/env-import.md`
 - `.harness/engineering/features/per-call-approval.md`
 - `.harness/engineering/features/per-environment-agent-workflow.md`
