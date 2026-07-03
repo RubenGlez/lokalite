@@ -1,4 +1,5 @@
 import Foundation
+import Security
 
 public enum VaultError: Error, LocalizedError {
     case keychainReadFailed(OSStatus)
@@ -23,7 +24,10 @@ public enum VaultError: Error, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .keychainReadFailed(let status):
-            return "Keychain read failed (status \(status)). Try running `security unlock-keychain` if your keychain is locked."
+            if status == errSecAuthFailed {
+                return "Keychain read denied (errSecAuthFailed, -25293). This is usually NOT a locked keychain: the process is not authorized to read the vault key, typically because the item's access-control (partition) list no longer matches the caller's code signature after a re-sign or Developer ID change. Re-add the partition with `security set-key-partition-list` for the login keychain. Do NOT delete the keychain item — that destroys the vault key and makes the vault unrecoverable. A locked keychain (`security unlock-keychain`) is only the cause if the whole login keychain is locked."
+            }
+            return "Keychain read failed (status \(status)). If the login keychain is locked, run `security unlock-keychain`; also confirm it is in the search list with `security list-keychains`."
         case .keychainWriteFailed(let status):
             return "Keychain write failed (status \(status))."
         case .keychainKeyUnreachable:
