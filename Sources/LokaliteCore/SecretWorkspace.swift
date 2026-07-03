@@ -155,6 +155,7 @@ public final class SecretWorkspace {
             environmentName: context.displayEnvironmentName,
             source: source,
             agent: nil,
+            peerTeamID: nil,
             action: action
         )
     }

@@ -22,7 +22,7 @@ The release workflow signs with Developer ID + hardened runtime and notarizes wh
 
 - `MACOS_SIGN_P12` / `MACOS_SIGN_PASSWORD` — Developer ID **Application** cert+key as a base64 `.p12`, and its export password. Signs the app bundle, its nested `.bundle` resources, and the CLI binary.
 - `MACOS_NOTARY_KEY` / `MACOS_NOTARY_KEY_ID` / `MACOS_NOTARY_ISSUER_ID` — App Store Connect API key (base64 `.p8`, Key ID, Issuer ID) for `notarytool`. Notarization runs only when both the app cert and this key are present.
-- `MACOS_SIGN_INSTALLER_P12` / `MACOS_SIGN_INSTALLER_PASSWORD` — Developer ID **Installer** cert for signing the `.pkg`. Not currently set (no Installer cert exists), so the CLI pkg ships unsigned; everything else still signs and notarizes.
+- `MACOS_SIGN_INSTALLER_P12` / `MACOS_SIGN_INSTALLER_PASSWORD` — Developer ID **Installer** cert+key (base64 `.p12`) + export password, for `productsign`ing the CLI `.pkg`. **Set (2026-07-03):** an Installer cert was issued (Team `67S22M7P3P`, G2, exp 2031-07-04); the `.p12` bundles leaf + private key + Apple G2 intermediate so the chain validates in CI (`find-identity -v` finds it once the signing keychain is in the search list). The pkg now `productsign`s + notarizes on release. Copies in the vault's `Global` project.
 - `SPARKLE_ED_PRIVATE_KEY` — base64 EdDSA private seed (from `generate_keys -x`) that signs each DMG for the Sparkle appcast. Its public half is the hardcoded `SUPublicEDKey` in `release.yml`. If unset, the release still ships but the appcast item is skipped (no auto-update for that version). **Not** account-wide — it is Lokalite's own Sparkle key; keep a copy in the vault's `Global` project.
 - `HOMEBREW_PR_TOKEN` — PAT (repo scope) used to open and auto-merge the Homebrew/appcast PR. If unset, the workflow only pushes the `homebrew/vX.Y.Z` branch.
 
@@ -53,11 +53,13 @@ Read these for project context:
 - `.harness/adr/0016-agent-environment-switching.md`
 - `.harness/adr/0017-secret-references.md`
 - `.harness/adr/0018-enforcement-never-rides-detection.md`
+- `.harness/adr/0019-code-signature-peer-verification.md`
 - `.harness/engineering/architecture.md`
 - `.harness/engineering/features/access-dashboard.md`
 - `.harness/engineering/features/caller-independent-approval.md`
 - `.harness/engineering/features/client-agent-context.md`
 - `.harness/engineering/features/env-import.md`
+- `.harness/engineering/features/peer-code-signature-verification.md`
 - `.harness/engineering/features/per-call-approval.md`
 - `.harness/engineering/features/per-environment-agent-workflow.md`
 - `.harness/engineering/features/popover-refactor.md`

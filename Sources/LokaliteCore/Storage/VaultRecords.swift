@@ -91,6 +91,7 @@ struct ActivityLogRecord: Codable, FetchableRecord, PersistableRecord {
     var source: String
     var accessedAt: String
     var agent: String?
+    var peerTeam: String?
     var action: String
 
     enum CodingKeys: String, CodingKey {
@@ -101,6 +102,7 @@ struct ActivityLogRecord: Codable, FetchableRecord, PersistableRecord {
         case source
         case accessedAt = "accessed_at"
         case agent
+        case peerTeam = "peer_team"
         case action
     }
 }

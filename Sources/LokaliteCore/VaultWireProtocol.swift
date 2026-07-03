@@ -65,20 +65,26 @@ public struct CallerContext {
     public let pid: pid_t?
     public let agent: String?
     public let clientAgentHint: String?
+    /// The peer's Developer ID code signature, resolved daemon-side from the pid
+    /// (ADR 0019). Attribution only — never consulted for an access decision. Nil
+    /// when unverified (dev builds skip it, or the pid yielded no `SecCode`).
+    public let peerSignature: PeerCodeSignature?
     /// The attribution label: kernel detection wins; the hint fills a miss.
     public var effectiveAgent: String? { agent ?? clientAgentHint }
     public var isAgent: Bool { effectiveAgent != nil }
 
-    public init(pid: pid_t?, agent: String?, clientAgentHint: String? = nil) {
+    public init(pid: pid_t?, agent: String?, clientAgentHint: String? = nil, peerSignature: PeerCodeSignature? = nil) {
         self.pid = pid
         self.agent = agent
         self.clientAgentHint = clientAgentHint
+        self.peerSignature = peerSignature
     }
 
     /// Tighten-only merge of a frame's envelope hint: the hint can add agent
     /// classification, but a kernel-detected agent stays an agent regardless.
+    /// The daemon-resolved peer signature is preserved across the merge.
     public func merging(clientAgentHint: String?) -> CallerContext {
-        CallerContext(pid: pid, agent: agent, clientAgentHint: clientAgentHint)
+        CallerContext(pid: pid, agent: agent, clientAgentHint: clientAgentHint, peerSignature: peerSignature)
     }
 
     /// An in-process caller (no socket); used by tests and non-brokered paths.
@@ -176,7 +182,7 @@ public enum VaultRequestDispatcher {
             case let .get(name, projectId, environmentName):
                 let secret = try service.get(name: name, projectId: projectId, environmentName: environmentName)
                 if caller.isAgent, secret.agentAccess.blocksAgents {
-                    logDenial(service, secretName: name, projectId: projectId, environmentName: environmentName, agent: caller.effectiveAgent)
+                    logDenial(service, secretName: name, projectId: projectId, environmentName: environmentName, agent: caller.effectiveAgent, peerTeamID: caller.peerSignature?.verifiedTeamID)
                     return .failure(message: "Secret '\(name)' is marked off-limits to AI agents.")
                 }
                 if secret.agentAccess.requiresApprovalForAgents {
@@ -197,7 +203,7 @@ public enum VaultRequestDispatcher {
                         agent: caller.effectiveAgent
                     )
                     guard approveAgentAccess(approval) else {
-                        logDenial(service, secretName: name, projectId: projectId, environmentName: environmentName, agent: caller.effectiveAgent)
+                        logDenial(service, secretName: name, projectId: projectId, environmentName: environmentName, agent: caller.effectiveAgent, peerTeamID: caller.peerSignature?.verifiedTeamID)
                         let recipient = caller.isAgent ? " to an AI agent" : ""
                         return .failure(message: "Access to '\(name)' was denied — approval is required to release it\(recipient).")
                     }
@@ -229,7 +235,7 @@ public enum VaultRequestDispatcher {
                 // Agent attribution is the caller's, never the request body's —
                 // override whatever the client sent with caller.effectiveAgent
                 // (kernel detection wins; the envelope hint fills a miss).
-                service.logAccess(secretName: secretName, projectName: projectName, environmentName: environmentName, source: source, agent: caller.effectiveAgent, action: action)
+                service.logAccess(secretName: secretName, projectName: projectName, environmentName: environmentName, source: source, agent: caller.effectiveAgent, peerTeamID: caller.peerSignature?.verifiedTeamID, action: action)
                 return .ok
             }
         } catch {
@@ -241,9 +247,9 @@ public enum VaultRequestDispatcher {
     /// daemon (a nil agent renders as the human/CLI). Resolves the project name
     /// from its id (the request carries only the id); best-effort, so a lookup
     /// failure falls back to the id.
-    private static func logDenial(_ service: VaultService, secretName: String, projectId: String, environmentName: String?, agent: String?) {
+    private static func logDenial(_ service: VaultService, secretName: String, projectId: String, environmentName: String?, agent: String?, peerTeamID: String?) {
         let projects = (try? service.listProjects()) ?? []
         let projectName = projects.first { $0.id == projectId }?.name ?? projectId
-        service.logAccess(secretName: secretName, projectName: projectName, environmentName: environmentName ?? "Default", source: .mcp, agent: agent, action: .denied)
+        service.logAccess(secretName: secretName, projectName: projectName, environmentName: environmentName ?? "Default", source: .mcp, agent: agent, peerTeamID: peerTeamID, action: .denied)
     }
 }

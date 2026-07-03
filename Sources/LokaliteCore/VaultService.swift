@@ -43,6 +43,7 @@ public protocol VaultService: AnyObject {
         environmentName: String,
         source: ActivityLogEntry.AccessSource,
         agent: String?,
+        peerTeamID: String?,
         action: ActivityLogEntry.Action
     )
 }

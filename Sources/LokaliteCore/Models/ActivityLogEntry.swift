@@ -10,6 +10,10 @@ public struct ActivityLogEntry: Identifiable, Sendable {
     /// The detected AI agent token (e.g. `claude`, `cursor`), or nil for a human
     /// or unattributed caller. Stamped by the daemon from the kernel peer-PID.
     public let agent: String?
+    /// The Developer ID team of the genuine signed binary that brokered this read,
+    /// when verified (ADR 0019); nil when unverified, in dev, or app-local. Set
+    /// daemon-side from the peer's code signature — the client cannot forge it.
+    public let peerTeamID: String?
     /// What the caller did to the secret.
     public let action: Action
 
@@ -21,6 +25,7 @@ public struct ActivityLogEntry: Identifiable, Sendable {
         source: AccessSource,
         accessedAt: Date,
         agent: String? = nil,
+        peerTeamID: String? = nil,
         action: Action = .read
     ) {
         self.id = id
@@ -30,6 +35,7 @@ public struct ActivityLogEntry: Identifiable, Sendable {
         self.source = source
         self.accessedAt = accessedAt
         self.agent = agent
+        self.peerTeamID = peerTeamID
         self.action = action
     }
 

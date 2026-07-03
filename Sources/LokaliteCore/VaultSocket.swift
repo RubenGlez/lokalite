@@ -32,6 +32,10 @@ public final class VaultSocketServer {
     private let socketPath: String
     private let service: VaultService
     private let approveAgentAccess: AgentApprovalHandler
+    /// Resolves the connecting peer's Developer ID code signature from its pid
+    /// (ADR 0019). Injected so the accept seam is testable without a signed peer;
+    /// the default skips in dev builds (peers are unsigned/ad-hoc there).
+    private let verifyPeer: (pid_t) -> PeerCodeSignature?
     // `listenFD` is written once in start() (before the accept loop is dispatched)
     // and only read afterwards, so it needs no lock. `running` is read by the
     // accept loop and written by stop() on another thread, so it is lock-guarded.
@@ -50,11 +54,25 @@ public final class VaultSocketServer {
     public init(
         socketPath: String,
         service: VaultService,
-        approveAgentAccess: @escaping AgentApprovalHandler = { _ in false }
+        approveAgentAccess: @escaping AgentApprovalHandler = { _ in false },
+        verifyPeer: @escaping (pid_t) -> PeerCodeSignature? = VaultSocketServer.defaultPeerVerifier
     ) {
         self.socketPath = socketPath
         self.service = service
         self.approveAgentAccess = approveAgentAccess
+        self.verifyPeer = verifyPeer
+    }
+
+    /// Verifies the peer's Developer ID signature in release builds; skips in dev
+    /// (dev peers are `swift build` unsigned/ad-hoc, on a separate socket) so the
+    /// result is never a misleading `unsigned`.
+    public static func defaultPeerVerifier(_ pid: pid_t) -> PeerCodeSignature? {
+        guard !VaultConfiguration.isDevelopmentBuild else { return nil }
+        #if canImport(Security)
+        return PeerCodeVerifier.verify(pid: pid)
+        #else
+        return nil
+        #endif
     }
 
     public func start() throws {
@@ -104,7 +122,11 @@ public final class VaultSocketServer {
         defer { close(fd) }
         // The peer is fixed for the connection; resolve its identity once.
         let peerPID = SocketIO.peerPID(fd: fd)
-        let caller = CallerContext(pid: peerPID, agent: peerPID.flatMap { AgentDetection.detectAgent(startingFrom: $0) })
+        let caller = CallerContext(
+            pid: peerPID,
+            agent: peerPID.flatMap { AgentDetection.detectAgent(startingFrom: $0) },
+            peerSignature: peerPID.flatMap { verifyPeer($0) }
+        )
 
         while let line = SocketIO.readLine(fd: fd) {
             let response: VaultResponse

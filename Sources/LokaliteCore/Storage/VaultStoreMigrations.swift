@@ -135,6 +135,15 @@ extension VaultStore {
             }
         }
 
+        // ADR 0019: the Developer ID team of the genuine signed binary that
+        // brokered the read, when verified. Nullable/additive — existing rows
+        // and app-local/dev reads stay nil.
+        migrator.registerMigration("v7") { db in
+            try db.alter(table: "activity_log") { t in
+                t.add(column: "peer_team", .text)
+            }
+        }
+
         try migrator.migrate(db)
     }
 }
