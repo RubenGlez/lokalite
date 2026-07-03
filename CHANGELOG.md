@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-07-03
+
+### Added
+- **Agent write governance:** an AI agent's `set_secret`/`delete_secret` — and the CLI `set`/`delete` — is now gated by the target secret's agent-access tier, mirroring the read tiers. A `block` secret can't be overwritten or deleted by an agent (a human still can); an `approve`/`strict` secret requires Touch ID consent, for every caller, before any change. Enforced at the daemon chokepoint, the MCP tool layer (fails closed under `--local`), and the CLI. Creating a brand-new secret is unaffected — governance applies once a tier is set. (ADR 0020)
+
+### Changed
+- The daemon's bulk `list` now excludes `approve`/`strict` secrets from an agent caller, not just `block` — a bulk read can't broker per-secret consent, so the daemon stays a real chokepoint rather than only filtering off-limits secrets.
+- Secret names are validated on creation against `^[A-Za-z_][A-Za-z0-9_]*$`, so a crafted name can no longer break out of the `export NAME='…'` constructs the MCP handoff, `lokalite shell`, and the `.env` export emit.
+- The daemon serializes vault access per call rather than behind a single queue, so a Touch ID consent prompt no longer stalls unrelated clients or trips the liveness check that could spuriously relaunch the app while the user deliberates.
+- `lokalite list` reads metadata instead of decrypting every secret value just to print names; the MCP secret-handoff script's unsourced-linger TTL is shortened from 120s to 30s.
+
+### Fixed
+- **Security:** the vault key is no longer clobbered on unlock when it already exists but can't be read (for example, a misconfigured keychain search list). The existing key is left intact and a clear error explains the cause, instead of a bare Keychain status `-25299` and a possible overwrite that would have made the vault undecryptable.
+
 ## [2.3.0] - 2026-07-03
 
 ### Added
