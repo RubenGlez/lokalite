@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-07-03
+
+### Added
+- In-app auto-updates via [Sparkle](https://sparkle-project.org): a "Check for Updates…" item on the menu-bar status icon (right-click) and in Settings → Updates, plus automatic background checks after a first-launch opt-in. Signed release builds self-update from a notarized, EdDSA-signed appcast; development builds stay inert.
+- Code-signature peer verification in the daemon: a read brokered by the genuine Developer ID–signed Lokalite binary is attributed as such in the access log (`lokalite log` shows a verified marker). Attribution only — it never gates access, and applies to signed release builds.
+
+### Changed
+- The CLI installer package (`.pkg`) is now signed with a Developer ID Installer certificate and notarized, joining the already-signed app, DMG, and CLI binary — no Gatekeeper prompt on install.
+
 ## [2.2.1] - 2026-07-02
 
 ### Changed
