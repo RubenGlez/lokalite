@@ -3,6 +3,7 @@ import Foundation
 public enum VaultError: Error, LocalizedError {
     case keychainReadFailed(OSStatus)
     case keychainWriteFailed(OSStatus)
+    case keychainKeyUnreachable
     case encryptionFailed
     case decryptionFailed
     case secretNotFound(String)
@@ -24,6 +25,8 @@ public enum VaultError: Error, LocalizedError {
             return "Keychain read failed (status \(status)). Try running `security unlock-keychain` if your keychain is locked."
         case .keychainWriteFailed(let status):
             return "Keychain write failed (status \(status))."
+        case .keychainKeyUnreachable:
+            return "A vault key already exists in the login keychain but could not be read, so it was not overwritten. Check that the login keychain is in the search list (`security list-keychains`) and unlocked, then relaunch."
         case .encryptionFailed:
             return "Failed to encrypt secret value."
         case .decryptionFailed:

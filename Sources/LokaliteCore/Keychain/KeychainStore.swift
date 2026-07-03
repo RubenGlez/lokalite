@@ -18,14 +18,20 @@ enum KeychainStore {
             kSecValueData as String: data,
             kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
         ]
-        let deleteQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-        ]
-        SecItemDelete(deleteQuery as CFDictionary)
+        // Plain add, never delete-then-add: this is only reached when load()
+        // reported the key as absent (see Vault.unlock). A duplicate here means
+        // a key actually exists but the read couldn't see it — a misconfigured
+        // keychain search list, a locked keychain, or an access-control
+        // mismatch after a signature change. Overwriting would replace the real
+        // vault key and make the vault undecryptable, so surface the
+        // contradiction instead of clobbering it.
         let status = SecItemAdd(query as CFDictionary, nil)
-        guard status == errSecSuccess else {
+        switch status {
+        case errSecSuccess:
+            return
+        case errSecDuplicateItem:
+            throw VaultError.keychainKeyUnreachable
+        default:
             throw VaultError.keychainWriteFailed(status)
         }
     }
