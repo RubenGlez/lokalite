@@ -119,6 +119,44 @@ enum CLIReveal {
     }
 }
 
+// MARK: - CLI write routing (ADR 0020)
+
+/// Routes a CLI write (`set`, `delete`) by the target secret's agent-access tier,
+/// mirroring `CLIReveal` for reads (H3). A `blocked` secret is refused when an AI
+/// agent is detected in the calling tree (blocked is agent-scoped — a human may
+/// still edit it). An approval-tier (`requiresApproval`/`strict`) write is brokered
+/// through the daemon, where the Touch ID prompt lives, for EVERY caller (ADR 0018);
+/// it fails closed with no override when the app can't be reached. Every other tier
+/// keeps the in-process path.
+enum CLIWrite {
+    static func perform(
+        name: String,
+        tier: AgentAccessPolicy,
+        context: SecretWorkspaceContext,
+        daemonWrite: (SecretWorkspace, SecretWorkspaceContext) throws -> Void,
+        inProcessWrite: () throws -> Void
+    ) throws {
+        if tier.blocksAgents, let agent = AgentDetection.detectAgent() {
+            print("Secret '\(name)' is off-limits to AI agents (\(agent) detected); refusing to modify it.")
+            print("Run `lokalite agent-access \(name) allow` if agents should be able to change it.")
+            throw ExitCode.failure
+        }
+        guard tier.requiresApprovalForAgents else {
+            try inProcessWrite()
+            return
+        }
+        let socketPath = VaultConfiguration.daemonSocketURL.path
+        do {
+            try VaultDaemonLauncher.ensureRunning(socketPath: socketPath)
+        } catch {
+            print(CLIReveal.daemonUnreachableMessage(secretName: name))
+            throw ExitCode.failure
+        }
+        let remote = SecretWorkspace(vault: RemoteVaultService(transport: RunCommand.socketClient(socketPath: socketPath).send))
+        try daemonWrite(remote, context)
+    }
+}
+
 // MARK: - Bulk reveal exclusions (ADR 0018)
 
 /// Fetches the secrets a bulk reveal path (`shell`, `export --format env`,

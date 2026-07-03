@@ -48,8 +48,6 @@ public final class VaultSocketServer {
     }
     private let acceptQueue = DispatchQueue(label: "com.lokalite.daemon.accept")
     private let connectionQueue = DispatchQueue(label: "com.lokalite.daemon.conn", attributes: .concurrent)
-    /// Vault access is serialized — the underlying store is not assumed thread-safe.
-    private let dispatchQueue = DispatchQueue(label: "com.lokalite.daemon.dispatch")
 
     public init(
         socketPath: String,
@@ -58,7 +56,9 @@ public final class VaultSocketServer {
         verifyPeer: @escaping (pid_t) -> PeerCodeSignature? = VaultSocketServer.defaultPeerVerifier
     ) {
         self.socketPath = socketPath
-        self.service = service
+        // Serialize vault access per-call (the store is not assumed thread-safe)
+        // without holding the lock across a request's consent prompt (M3).
+        self.service = SynchronizedVaultService(service)
         self.approveAgentAccess = approveAgentAccess
         self.verifyPeer = verifyPeer
     }
@@ -134,7 +134,11 @@ public final class VaultSocketServer {
                 // Tighten-only merge (ADR 0018): the frame's envelope hint can add
                 // agent classification; kernel detection is never weakened by it.
                 let requestCaller = caller.merging(clientAgentHint: frame.agentContext)
-                response = dispatchQueue.sync { VaultRequestDispatcher.handle(frame.request, using: service, caller: requestCaller, approveAgentAccess: approveAgentAccess) }
+                // No serial queue here: `service` is a SynchronizedVaultService, so
+                // each vault call is locked individually while the dispatcher's
+                // approval prompt (if any) runs off-lock, letting concurrent
+                // connections — including the liveness ping — make progress (M3).
+                response = VaultRequestDispatcher.handle(frame.request, using: service, caller: requestCaller, approveAgentAccess: approveAgentAccess)
             } else {
                 response = .failure(message: "Malformed request.")
             }

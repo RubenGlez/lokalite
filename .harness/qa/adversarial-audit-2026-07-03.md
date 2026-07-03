@@ -1,407 +1,468 @@
-# Lokalite — Adversarial Codebase Audit (2026-07-03)
-
-Reviewer role: senior staff engineer + skeptical first-time user + adversarial
-security reviewer. Target: `/home/user/lokalite` at commit `b45ad7d`
-(branch `claude/codebase-adversarial-audit-wo8pbw`, default branch `main`).
-
-Scope covered in full: crypto (`VaultCrypto`, `KeychainStore`), vault core
-(`Vault`, `VaultStore` + query files, migrations), the Unix-socket daemon
-(`VaultSocket`, `VaultWireProtocol`/dispatcher, `VaultService`,
-`RemoteVaultService`), agent detection + peer code-signature verification, the
-MCP tool surface + handoff, every CLI command, the menu-bar app
-(`LokaliteApp`, `VaultViewModel`, `AgentApprovalCoordinator`, session/clipboard/
-hotkey), release automation (`scripts/release.sh`, `.github/workflows/*`), and
-the test suite. `.harness/adr/*` and `.harness/qa/report.md` are age-encrypted
-in this repo (doctier self-hosting) and could not be read without a key — ADR
-drift was assessed against `AGENTS.md` + code only (see Open Questions).
-
----
-
-## 1. System map
-
-### Processes and trust boundaries
-
-- **Menu-bar app (`LokaliteApp`)** — the *vault daemon* and sole key owner
-  (ADR 0014). Owns `Vault.shared`, holds the AES-256 key in memory when
-  unlocked, and runs a `VaultSocketServer` on a Unix domain socket at
-  `~/Library/Application Support/Lokalite/daemon.sock` (dir `0700`, socket
-  `0600`). Gates *UI* unlock behind Touch ID (`VaultViewModel.unlock`).
-- **CLI (`lokalite`)** — ArgumentParser tool. Two very different modes:
-  - **In-process**: `withVault`/`withWorkspace` → `Vault.shared.unlock()` loads
-    the key from the Keychain *into the CLI process*. Used by `get` (non-approval
-    tier), `copy`, `list`, `shell`, `export`, `run` bulk injection, `backup`,
-    `restore`, `import`, `seed`, `env`/`project`.
-  - **Daemon-backed**: `RemoteVaultService` over the socket. Used by the
-    approval-tier reveal route (`CLIReveal.fetchThroughDaemon`), `run`
-    `lokalite://` reference resolution (default), and `mcp` (default).
-- **MCP server (`lokalite mcp`)** — stdio JSON-RPC for coding agents. Default is
-  daemon-backed (never holds key); `--local` opens `Vault.shared` in-process.
-  Exposes read tools (`get_secret` via single-use shell handoff, `list_secrets`,
-  `list_projects`, `list_environments`, `use_environment`) and, with
-  `--read-write`, `add_secret`/`set_secret`/`delete_secret`.
-
-Kernel-derived peer identity: `LOCAL_PEERPID` → `AgentDetection` process-tree
-walk (agent token) and `PeerCodeVerifier` (Developer ID signature, attribution
-only). The socket file mode `0600` restricts connections to the same UID.
-
-### Encryption
-
-- Per-value: `AES.GCM.seal(...).combined` with a random 256-bit key
-  (`SymmetricKey(size:.bits256)`), stored per (secret, environment) as a BLOB.
-  Nonce handled by CryptoKit (fresh per seal), stored in the combined box. Sound.
-- Export/backup envelope (`0x02` magic): Argon2id (t=3, m=64 MiB, p=1) over a
-  32-byte `SecRandomCopyBytes` salt → AES-GCM. KDF params are stored in the
-  envelope and honored on decrypt. Passphrase zeroed with `memset_s` after use.
-- Vault key at rest: Keychain generic-password `WhenUnlocked`, login (file)
-  keychain, **no `SecAccessControl`** (documented tradeoff in `KeychainStore`).
-
-### Key invariants (as intended)
-
-1. Only the app holds the key; CLI/MCP broker through the daemon (ADR 0014).
-2. Approval-tier (`requiresApproval`/`strict`) reads require consent for **every**
-   caller, human included; enforcement is caller-independent (ADR 0018).
-3. `blocked` secrets are never released to a detected agent.
-4. A secret value never enters an agent's model context (MCP handoff principle).
-5. One synced active environment across app/CLI/agent (ADR 0016).
-
-Findings below show invariants **1 and 4** are only partially upheld by the code.
-
----
-
-## 2. Findings (ranked)
-
-### HIGH
-
----
-
-**H1 — The daemon's `.unlock` request loads the vault key with no Touch ID, so
-the app's unlock/lock/session-timeout UI is not a security boundary for
-default-tier secrets.**
-`Sources/LokaliteCore/VaultWireProtocol.swift:173` (`case .unlock`),
-`Sources/LokaliteCore/Vault.swift:56` (`unlock()`),
-`Sources/LokaliteCore/Keychain/KeychainStore.swift:33` (`load()`).
-
-The app gates unlock behind Touch ID only in `VaultViewModel.unlock`. The
-Keychain item is `kSecAttrAccessibleWhenUnlocked` with **no** access-control
-flags, so loading it needs no biometric. `VaultRequest.unlock` →
-`service.unlock()` → `Vault.unlock()` calls `KeychainStore.load()` unconditionally
-and sets the in-memory key. The daemon is started at app launch regardless of
-lock state (`LokaliteApp.startVaultDaemon`), and `RemoteVaultService.unlock`
-(called at MCP/CLI startup via `SecretWorkspace.unlock`) issues `.unlock`.
-
-Scenario (CONFIRMED by trace): any same-UID local process — the recommended
-`lokalite mcp` server, or a hand-rolled socket client — connects to
-`daemon.sock`, sends `{"unlock"}` then `{"list", …}`/`{"get", …}`, and reads
-every `allowed`/default-tier secret in plaintext. No Touch ID, no app unlock,
-even after the session auto-lock cleared the app's own key (a subsequent
-`.unlock` reloads it). Daemon activity also never renews or is bounded by the
-app's `SessionPolicy` timer.
-
-Impact: the Touch ID unlock, the lock button, and the session timeout protect
-only (a) what the app UI shows and (b) the approval-tier, which re-checks Touch
-ID per read. For the default tier they are effectively cosmetic against local
-processes. If "unlocked user session = trusted" is the real boundary, the UI
-overstates protection; if it is not, this is an authentication bypass.
-Recommended direction: require the app to be UI-unlocked (and optionally re-arm
-the session timer) before the daemon services value-returning requests; or move
-the key to a data-protection Keychain item guarded by
-`SecAccessControlCreateWithFlags(.userPresence)` so a load itself requires
-presence. At minimum, stop documenting the lock/timeout as a protection boundary
-it does not enforce.
-
----
-
-**H2 — `lokalite get`/`copy` let a detected agent exfiltrate any default-tier
-secret to stdout/clipboard, defeating the MCP "value never enters agent context"
-guarantee.**
-`Sources/lokalite/Commands/GetCommand.swift:27` (`print(secret.value…)`),
-`Sources/lokalite/Lokalite.swift:67` (`enforceAgentRevealPolicy` checks only
-`blocksAgents`), vs. `Sources/lokalite/Lokalite.swift:53`
-(`ensureNotAgentExfil`, applied only to `shell`/`export`).
-
-The whole MCP design routes values through a single-use shell handoff so the raw
-value never reaches the model context (`MCPServer.instructions`,
-`MCPSecretHandoff`). But an agent in the calling process tree can simply run
-`lokalite get OPENAI_API_KEY`, which prints the value to stdout — straight into
-the agent's captured output/context. `get`/`copy` enforce only the `blocked`
-tier (`enforceAgentRevealPolicy`); the blanket agent refusal `ensureNotAgentExfil`
-guards `shell`/`export` but **not** `get`/`copy`. Default policy is `allowed`.
-
-Scenario (CONFIRMED): agent shells out `lokalite get STRIPE_SECRET_KEY` for any
-secret the user left at the default tier → value in context/logs. `copy` places
-it on the shared clipboard. Impact: the product's headline no-context guarantee
-holds only for secrets the user manually marked `blocked`/approval — the safe
-default is the *un-safe* one for the CLI path. Recommended direction: apply the
-same agent-exfil refusal (or a per-secret "print to stdout is an agent-reveal"
-rule) to `get`/`copy`, or route agent `get` through the handoff like MCP; make
-the default tier not silently printable to a detected agent.
-
----
-
-**H3 — Agent-access policy governs reads only; a write-enabled agent can
-overwrite or delete even `blocked`/`requiresApproval`/`strict` secrets with no
-consent.**
-`Sources/LokaliteCore/VaultWireProtocol.swift:212` (`.set`), `:214` (`.delete`)
-— neither consults `caller.isAgent` or `agentAccess`;
-`Sources/lokalite/MCP/LokaliteMCPTools.swift:161`/`182` (`set_secret`/
-`delete_secret` gated only by `allowWrites`).
-
-The dispatcher enforces policy on `.get`/`.list` but `.set` and `.delete` are
-unconditional. `AgentAccessPolicy` is a read-governance model only.
-
-Scenario (CONFIRMED): an agent using a `--read-write` MCP server (or driving the
-CLI `set`/`delete`) runs `set_secret DEPLOY_KEY <attacker-value>` or
-`delete_secret <a blocked secret>`. A `strict`/`blocked` secret the user believed
-was protected is silently clobbered or destroyed — no Touch ID, no denial log.
-Impact: integrity/availability of the most sensitive secrets. Recommended
-direction: gate writes to `blocked`/approval-tier secrets behind the same consent
-broker (or refuse agent writes to governed secrets), and audit-log agent writes.
-
----
-
-### MEDIUM
-
----
-
-**M1 — "The CLI and MCP server never hold the vault key" (ADR 0014 / AGENTS.md)
-is false for the CLI's common paths.**
-`Sources/lokalite/Lokalite.swift:38-48` (`withVault`/`withWorkspace` →
-`Vault.shared.unlock()`), used by `list`, `get` (non-approval), `copy`, `shell`,
-`export`, `run` bulk, `backup`, `restore`, `import`, `seed`.
-
-Only the MCP default path and the approval-tier CLI reveal actually broker
-through the daemon. Every other CLI invocation loads the key from the Keychain
-directly into the CLI process. CONFIRMED. This is a load-bearing incoherence: the
-security narrative (key isolation) does not match the dominant code path, and it
-compounds H1 (any local process can obtain plaintext trivially). Recommended
-direction: either route all value paths through the daemon, or restate the model
-honestly as "local same-UID process = trusted; key isolation applies to
-agent-facing MCP only."
-
----
-
-**M2 — Dispatcher `.list` for agents filters only `blocked`, not the approval
-tiers — contradicting its own "daemon enforces independently (defense in depth)"
-comment.**
-`Sources/LokaliteCore/VaultWireProtocol.swift:217-223`.
-
-`.get` gates `requiresApproval`/`strict`; `.list` (which returns decrypted
-values) only strips `blocksAgents` for agents. There is no test asserting
-approval-tier exclusion from `.list` (`AgentAccessPolicyTests:94` covers only
-`blocked`). Currently no shipped agent-reachable caller uses daemon `.list`
-(MCP uses `listInfo`; CLI bulk uses in-process `bulkRevealSecrets`, which
-excludes approval-tier), so this is **latent**, not live. PLAUSIBLE. But
-`RemoteVaultService.list` is public and the dispatcher advertises independent
-enforcement, so a future daemon-backed bulk read would leak `requiresApproval`/
-`strict` plaintext to an agent with no prompt. Recommended direction: in the
-`.list` agent branch, also drop `requiresApprovalForAgents` secrets (mirror the
-`bulkRevealSecrets` exclusion), so the daemon is actually a chokepoint.
-
----
-
-**M3 — A Touch ID approval prompt blocks the daemon's single serial dispatch
-queue, stalling all clients and tripping the liveness/launch path.**
-`Sources/LokaliteCore/VaultSocket.swift:137` (`dispatchQueue.sync { … handle }`),
-`Sources/LokaliteApp/AgentApprovalCoordinator.swift:46-52` (`semaphore.wait()`).
-
-All requests serialize on `dispatchQueue`; an approval-tier `.get` runs the
-blocking Touch ID prompt *inside* that serial section. While the user deliberates,
-every other client's request (any project/list/get) is queued. A concurrently
-launching CLI/MCP does `VaultDaemonLauncher.ensureRunning`, whose liveness ping is
-`.listProjects` with a 6 s deadline (`VaultDaemonLauncher.ensureRunning`,
-`isAnswering`) — if the prompt outlives 6 s it concludes the daemon is down and
-re-`open`s the app. CONFIRMED by reading. Impact: availability/UX under
-concurrent use; spurious app relaunches. Recommended direction: run the approval
-prompt outside the serial vault lock (resolve the secret, then broker consent
-without holding `dispatchQueue`), or use a dedicated per-request queue so consent
-does not head-of-line-block unrelated reads.
-
----
-
-**M4 — Enforcement of the `blocked` tier still rides on best-effort agent
-detection (pid tree walk), and peer identity is resolved post-accept (pid
-reuse).**
-`Sources/LokaliteCore/AgentDetection.swift:40` (name/path substring match over a
-≤20-hop tree walk), `Sources/LokaliteCore/VaultSocket.swift:124-129` (peer PID
-and signature resolved in `serve`, after `accept`).
-
-ADR 0018 deliberately makes the *approval* tiers caller-independent to avoid
-relying on detection — good — but the `blocked` tier and the `--local`
-reference/`ensureNotAgentExfil` refusals are gated on `AgentDetection`, a
-fixed substring list (`claude/cursor/windsurf/codex/copilot/aider/goose`). An
-agent whose process name is not on the list, or that launders itself under a
-generic parent (a shell, `make`, `xargs`), evades the block; a renamed binary
-defeats it outright. Peer PID/signature are attribution-only (lower risk) but are
-read after accept, so a reused pid could mislabel the audit entry. CONFIRMED
-design limitation. Recommended direction: treat detection as advisory (as ADR
-0018 does for approval) and lean on explicit per-secret policy for anything that
-must actually be blocked; document that `blocked` is a courtesy guard, not a
-control.
-
----
-
-**M5 — Secret names are not shell-escaped in the MCP handoff / `shell` / app
-export lines; a crafted name injects into the script the consumer `source`s.**
-`Sources/lokalite/MCP/MCPSecretHandoff.swift:35` (`"export \($0.name)='…'"` —
-only the *value* is escaped, `escape()` at `:68`), same pattern in
-`ShellCommand.swift:40` and `EnvFileFormat.line` (`:2`, name interpolated raw).
-
-A secret named e.g. `X'; rm -rf ~ #` or one containing a newline breaks out of
-the `export NAME='…'` construct when the handoff/shell output is `source`d/`eval`d.
-Names come from whoever added the secret; with `--read-write` an **agent** can
-`add_secret` an arbitrary name and then `get_secret` it, injecting into the shell
-it sources (self-directed, low), but a malicious/committed name also harms any
-human who `eval $(lokalite shell)`. No name validation exists on `add`/`set`.
-PLAUSIBLE→CONFIRMED (mechanics traced; impact depends on consumer). Recommended
-direction: validate secret names against `[A-Za-z_][A-Za-z0-9_]*` on write, and/or
-emit assignments via a form that cannot be reinterpreted (printf-quoted name).
-
----
-
-### LOW
-
----
-
-**L1 — `lokalite list` decrypts every secret value just to print names.**
-`Sources/lokalite/Commands/ListCommand.swift:22` (`workspace.list`) — `list`
-returns fully decrypted `Secret`s; the command uses only `.name`/`.description`.
-No leak (only names printed), but it needlessly materializes all plaintext in the
-CLI process and does N decrypts. Use `listInfo` (metadata only). CONFIRMED.
-
----
-
-**L2 — `Vault.add` silently drops `description`/`icon`/`category` when the secret
-already exists in another environment, and returns a `Secret` whose `category`
-was never persisted.**
-`Sources/LokaliteCore/Vault.swift:229-248`. When a same-named secret exists in a
-different environment, the existing `SecretRecord` is reused as-is (metadata args
-ignored) but the returned `Secret` reports the freshly `infer`-ed category
-(`:225`, `:248`), which disagrees with the stored row. Minor correctness/label
-incoherence; affects `add --description` on an existing multi-env secret and the
-value returned to callers. Recommended: either update metadata on the reuse path
-or document that add-in-new-environment is value-only, and return the persisted
-category.
-
----
-
-**L3 — MCP handoff plaintext lingers up to 120 s if never sourced.**
-`Sources/lokalite/MCP/MCPSecretHandoff.swift:14` (`ttl = 120`), swept lazily on
-the *next* `write`. A `0600` file in a `0700` dir under `NSTemporaryDirectory`
-holds the value until the agent sources it (self-deletes) or the TTL sweep runs
-on the next handoff. Same-UID exposure window only; acceptable but worth a shorter
-TTL or an eager timer. CONFIRMED.
-
----
-
-**L4 — `copy` clipboard auto-clear relies on a detached `/bin/sh` that polls for
-30 s.**
-`Sources/lokalite/Commands/CopyCommand.swift:45-56`. The digest (not the value)
-is embedded, so no value leaks via the process list — good. But a short-lived CLI
-spawns a lingering `sleep 30` subprocess per copy; if the CLI is scripted in a
-loop, these accumulate. Minor. The app's own `ClipboardController` uses an
-in-process `Task.sleep` and is cleaner.
-
----
-
-**L5 — Migration numbering skips `v2`; `active_environment`/first-project seeding
-is implicit.** `VaultStoreMigrations.swift:8,72` register `v1` then `v3`.
-Harmless (GRDB keys migrations by string), but confusing; a reader may assume a
-lost migration. Cosmetic.
-
----
-
-### Documentation / release
-
-**D1 — Release docs are accurate; two sharp edges already flagged in
-`AGENTS.md` are real.** `scripts/release.sh` checks only `HEAD..origin/main`
-(behind), never ahead (`:27`), and pushes only the tag (`:51`) — matches the
-AGENTS.md warning. `release.yml` derives cask/appcast SHAs post-upload with
-retries and gates signing/notarization on secret presence (`:37`, `:76`, `:264`),
-matching the doc. `SUPublicEDKey` in `release.yml:144` is the hardcoded Sparkle
-pubkey per docs. No drift found. One nit: `release.yml` commits Formula/Cask
-unconditionally but appends the appcast item only when `SPARKLE_ED_PRIVATE_KEY`
-is set (`:350`, `:382`) — so a release without the key ships a Homebrew bump with
-no matching auto-update item, as documented.
-
-**D2 — `.harness/adr/*` and `.harness/qa/report.md` are age-encrypted** and were
-not readable in this environment, so ADR-vs-code drift beyond `AGENTS.md` is an
-open question (see below). Developer-experience baseline is fine: `swift build`,
-`swift test`, `make run/build/test/install` all match `Package.swift` and CI
-(`ci.yml` runs `swift build` + `swift test`).
-
----
-
-## 3. Design tensions
-
-1. **Where is the real trust boundary — Touch ID, or the unlocked UID session?**
-   The app invests in Touch ID unlock, a lock button, and a session timeout, yet
-   the daemon `.unlock` path (H1) and the in-process CLI (M1) both obtain the key
-   with neither biometric nor app-unlock. Either commit to "unlocked session =
-   trusted" (and demote the Touch ID/lock UI to convenience, stop marketing it as
-   protection) or make the daemon refuse value requests until the app is
-   UI-unlocked and back the key with a presence-guarded Keychain ACL. Today the
-   two stories coexist and mislead.
-
-2. **Read-only governance vs. an agent that can write.** `AgentAccessPolicy`
-   models reads exhaustively (allowed/blocked/approval/strict) but writes are
-   ungoverned (H3). An adversarial agent doesn't need to *read* a `strict` secret
-   to do damage — overwriting or deleting it is unguarded. A coherent model gates
-   the *governed* secret on both axes.
-
-3. **Detection-gated blocking inside a "detection-free enforcement" design.**
-   ADR 0018's insight — don't let enforcement ride detection — is applied to the
-   approval tiers but not to `blocked` or the CLI exfil refusals (M4). The result
-   is a two-tier promise: approval is robust, `blocked` is best-effort, and
-   nothing in the UI communicates that difference to the user choosing a tier.
-
-4. **Two doors to the same value with opposite context guarantees.** MCP's
-   handoff is carefully context-free, but `lokalite get` (H2) prints to stdout.
-   The same agent can pick either door. A guarantee that one door upholds and the
-   adjacent door breaks is not a guarantee. The tiers should behave identically
-   across the MCP and CLI reveal surfaces.
-
-5. **Serial vault queue vs. human-latency consent.** Consent is inherently
-   slow (a person deciding) but is executed inside the daemon's serial critical
-   section (M3). Blocking shared throughput on human latency guarantees
-   head-of-line stalls and forces the liveness timeout to be generous. Consent
-   should be brokered off the vault lock.
-
----
-
-## 4. Expectation gaps ("I expected X, found Y")
-
-- I expected the vault to be unreadable until Touch ID; I found any same-UID
-  process can `.unlock` the daemon and read default-tier secrets with no
-  biometric (H1).
-- I expected "CLI never holds the key" (ADR 0014); I found `list`/`get`/`shell`/
-  `export`/`run`/`backup`/`restore` load the key straight into the CLI (M1).
-- I expected the MCP "value never enters agent context" principle to hold for
-  agents; I found `lokalite get` prints default-tier values to stdout (H2).
-- I expected `blocked`/`strict` to protect a secret end-to-end; I found writes
-  (set/delete) ignore the policy entirely (H3).
-- I expected the daemon to "enforce agent policy independently (defense in
-  depth)" for bulk reads; I found `.list` only filters `blocked`, not the
-  approval tiers (M2).
-- I expected `blocked` to be a hard control; I found it rides a substring-based
-  process-name list that a renamed/laundered agent evades (M4).
-- I expected secret names to be validated; I found unescaped names interpolated
-  into sourced/eval'd shell (M5) and no `[A-Za-z_]` check on write.
-- I expected `list` to be cheap; I found it decrypts every value to print names
-  (L1).
-
-## 5. Open questions
-
-1. Is "unlocked same-UID session = fully trusted" the intended threat model? If
-   yes, H1/M1 are acceptable but the Touch ID/lock/timeout UI should be reframed;
-   if no, they are bypasses. This is the single most important thing to confirm.
-2. Do the encrypted ADRs (0003 unlock-model, 0014 daemon-broker, 0018) actually
-   specify daemon-side re-authentication, or only UI-side? Could not read them
-   (age-encrypted). If they claim the daemon requires an unlocked app, the code
-   diverges (H1).
-3. Is agent write access (`--read-write`) meant to bypass `blocked`/`strict`
-   (H3), or was read-only governance an oversight when write tools were added?
-4. Should `lokalite get`/`copy` be considered agent-reveal surfaces (H2), or is
-   the intent that agents must use `run`/MCP and `get` is "human-only by
-   convention"? If the latter, nothing enforces it.
-5. Is anyone expected to reach the daemon `.list` path as an agent in the future
-   (M2)? If bulk agent reads are on the roadmap, the exclusion must land first.
+-----BEGIN AGE ENCRYPTED FILE-----
+YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IHNzaC1lZDI1NTE5IExRMGNCZyBCQlBP
+YnFLVWQ0NWhnR2xYK1B5VkNPM3JVNWZSWmxjaG0xOFRZcE9XS0F3CmpsUkd6bStW
+ZmVNTkoxTUhobHZIUWVwUEcvN0NNdERmb0djUmZwL0x5aEEKLS0tIE43c2xuT3Rz
+SmJuUHZaVXIwRmcxMnR1WmN1MHk5RUxubENLZGlLM3dERmsKVvjMZ+y8tcCoDDvv
+NFS7vs+87uZROZVMKoQfAP2BsvmtZoaXT353e1vhQgtBGvgLBR9rLAQCdiq90dtm
+Y8Q3ObIMFmshkE5naZzmD0Yy3gs5oQbNR3IE4zLSDWf3OuJ30hdzWAWS93Yhm394
+kLVP6UjYJQ62b7X1X1oezRuCmAWd+HK+9OuL1Ao8guZbwnxnFjfbJYWvX2Hhnxsn
+iyN8JVWN88mTitixF5MCnwAqVk2zfhgp1xxOky7rExJohnmXnskzIYULmikeQK5H
+qMaZgYP/5s4LU5GnI48TX54OU7OkYEm9EWIQsg36LojYE7IEKYhH/u3LwX1apxXA
+BKj9tURNiVdebgnfmkMYSV/1IO/cZboa5AkYkaJ47i1f+WA7WdGcNxJyw+9q1Pyf
+9a6cUMd8AuQOmTXNSPo5V2UsC3HaeqWhIFQYRze1ePjiCdyZzDXT8Nh36W0uj9+0
+cUhafa75tG5pJNBrz5/g96sWZyESn19gRuKINt+q41zYBUnFHbG1WVaX4Ed5HC53
+E7Bfa4PFUhBRENs7nN9wehzTE/BSID/PKQ8eDVornOzyfHWUY8oitk3rqsyinh1V
+jO3eaCC6vh61/s6Pjxd4l9XJQsu6RqHaxk89H1jXXFxh4ZUB+vJV/iXl7Pi4EYeF
+y/8Mlr9zpNmQJLOI11Uff22UC9WwyygRTHeqjMf8jG6s/END+Fex8t60CBB8akqP
+y4LQUWLp2eIolNlQik3f+VMjnwMnmjUQLqcWN386LnUHbh2zZP3v5NYaMiunbELt
+rzPHm2ej4E0ZJ6CONfERtgDCW2U16ZqHh4Gd6plRjz0X9jpFjnFNGQlCjdMMR6I8
+QMfIJhPqsJ/fy+LHHGGVwNkX3ANxf034r/avTbFcI1dqQ7k3S0gJsSBi4m6x/Mk1
++2HzW5SJN9f7uH5Fk+n70fZMFoZLENMFjKzr/2pWemU5GjtYA6dEULDY2EYruhzT
+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
+-----END AGE ENCRYPTED FILE-----

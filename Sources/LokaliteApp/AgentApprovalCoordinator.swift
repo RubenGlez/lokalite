@@ -22,9 +22,9 @@ final class AgentApprovalCoordinator {
         if let lockObserver { NotificationCenter.default.removeObserver(lockObserver) }
     }
 
-    /// Called by the daemon dispatcher on its serial queue. Blocks until the user
-    /// responds to Touch ID. A cached session grant short-circuits the prompt
-    /// (never for a per-call request — `ApprovalGrantCache` bypasses those).
+    /// Called by the daemon dispatcher while it holds no vault lock (M3). Blocks
+    /// until the user responds to Touch ID. A cached session grant short-circuits
+    /// the prompt (never for a per-call request — `ApprovalGrantCache` bypasses those).
     func approve(_ request: ApprovalRequest) -> Bool {
         if grants.isGranted(request) { return true }
         guard promptTouchID(for: request) else { return false }

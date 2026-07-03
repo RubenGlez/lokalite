@@ -69,6 +69,9 @@ extension VaultStore {
                            arguments: [defaultProjectId])
         }
 
+        // No "v2": an early migration was dropped before release and the numbers
+        // were never renumbered. GRDB keys migrations by string, so the gap is
+        // harmless — v1 then v3 apply in registration order (L5).
         migrator.registerMigration("v3") { db in
             try db.create(table: "activity_log", options: .ifNotExists) { t in
                 t.column("id", .text).primaryKey()

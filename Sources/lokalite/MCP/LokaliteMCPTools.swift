@@ -173,6 +173,9 @@ final class LokaliteMCPTools {
             let path = args["path"] as? String
             do {
                 let ctx = try resolveContext(projectFlag: projectName, envFlag: envName, pathFlag: path, using: workspace)
+                if let refusal = try writeGovernanceRefusal(secretName: secretName, context: ctx, verb: "updated") {
+                    return refusal
+                }
                 _ = try workspace.set(name: secretName, value: value, context: ctx, accessSource: .mcp)
                 return .success(content("Secret '\(secretName)' updated."))
             } catch {
@@ -190,6 +193,9 @@ final class LokaliteMCPTools {
             let path = args["path"] as? String
             do {
                 let ctx = try resolveContext(projectFlag: projectName, envFlag: nil, pathFlag: path, using: workspace)
+                if let refusal = try writeGovernanceRefusal(secretName: secretName, context: ctx, verb: "deleted") {
+                    return refusal
+                }
                 try workspace.delete(name: secretName, context: ctx, accessSource: .mcp)
                 return .success(content("Secret '\(secretName)' deleted."))
             } catch {
@@ -313,6 +319,32 @@ final class LokaliteMCPTools {
         }
 
         return tools
+    }
+
+    /// The MCP-layer backstop for agent writes (H3 / ADR 0020), mirroring the
+    /// `get_secret` read pre-check. `lokalite mcp` is inherently an agent surface,
+    /// so a `blocked` secret's value can't be overwritten or deleted, and an
+    /// approval-tier write fails closed under `--local` (no daemon to prompt).
+    /// When daemon-backed, returns nil so the write reaches the daemon, which
+    /// brokers the Touch ID consent (and logs its own denial). A not-yet-existing
+    /// secret is not governed — the write surfaces its own not-found error.
+    private func writeGovernanceRefusal(
+        secretName: String,
+        context ctx: SecretWorkspaceContext,
+        verb: String
+    ) throws -> MCPToolCallResult? {
+        guard let policy = try workspace.listInfo(context: ctx).first(where: { $0.name == secretName })?.agentAccess else {
+            return nil
+        }
+        if policy.blocksAgents {
+            workspace.logAccess(secretName: secretName, context: ctx, source: .mcp, action: .denied)
+            return .success(contentError("Secret '\(secretName)' is marked off-limits to AI agents and cannot be \(verb)."))
+        }
+        if policy.requiresApprovalForAgents && !daemonBacked {
+            workspace.logAccess(secretName: secretName, context: ctx, source: .mcp, action: .denied)
+            return .success(contentError("Secret '\(secretName)' requires per-change approval, which needs the Lokalite app. It cannot be \(verb) with --local."))
+        }
+        return nil
     }
 
     private func content(_ text: String) -> [String: Any] {

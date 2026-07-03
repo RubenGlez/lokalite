@@ -406,6 +406,116 @@ final class AgentAccessPolicyTests: XCTestCase {
         XCTAssertFalse(gatedLine.contains("every read"), "session-tier marker must stay unchanged")
     }
 
+    // MARK: - M2: bulk list excludes approval-tier for agents
+
+    func testDaemonBulkListExcludesApprovalTierForAgentsOnly() throws {
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        _ = try vault.add(name: "OPEN", value: "a", projectId: project.id)
+        _ = try vault.add(name: "APPROVE", value: "b", projectId: project.id)
+        _ = try vault.add(name: "STRICT", value: "c", projectId: project.id)
+        try vault.setAgentAccess(name: "APPROVE", projectId: project.id, policy: .requiresApproval)
+        try vault.setAgentAccess(name: "STRICT", projectId: project.id, policy: .strict)
+        let request = VaultRequest.list(projectId: project.id, environmentName: nil)
+
+        let agentResponse = VaultRequestDispatcher.handle(request, using: vault, caller: CallerContext(pid: 1, agent: "claude"))
+        guard case let .secrets(agentSecrets) = agentResponse else { return XCTFail("expected secrets") }
+        XCTAssertEqual(agentSecrets.map(\.name), ["OPEN"], "agent bulk list must omit approval-tier secrets")
+
+        let humanResponse = VaultRequestDispatcher.handle(request, using: vault, caller: .local)
+        guard case let .secrets(humanSecrets) = humanResponse else { return XCTFail("expected secrets") }
+        XCTAssertEqual(Set(humanSecrets.map(\.name)), ["OPEN", "APPROVE", "STRICT"], "a human still gets everything")
+    }
+
+    // MARK: - H3: agent write governance (ADR 0020)
+
+    func testDaemonRefusesWritesToBlockedForAgentButAllowsHuman() throws {
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        _ = try vault.add(name: "K", value: "v", projectId: project.id)
+        try vault.setAgentAccess(name: "K", projectId: project.id, policy: .blocked)
+        let setReq = VaultRequest.set(name: "K", value: "hacked", projectId: project.id, environmentName: nil)
+        let delReq = VaultRequest.delete(name: "K", projectId: project.id)
+        let agent = CallerContext(pid: 1, agent: "claude")
+
+        guard case let .failure(setMsg) = VaultRequestDispatcher.handle(setReq, using: vault, caller: agent) else {
+            return XCTFail("agent set on a blocked secret must be refused")
+        }
+        XCTAssertTrue(setMsg.contains("off-limits"))
+        guard case .failure = VaultRequestDispatcher.handle(delReq, using: vault, caller: agent) else {
+            return XCTFail("agent delete on a blocked secret must be refused")
+        }
+        XCTAssertEqual(try vault.get(name: "K", projectId: project.id).value, "v", "the blocked value must be untouched")
+
+        // A human may still edit a blocked secret (blocked is agent-scoped).
+        guard case .secret = VaultRequestDispatcher.handle(setReq, using: vault, caller: .local) else {
+            return XCTFail("a human write to a blocked secret must succeed")
+        }
+        XCTAssertEqual(try vault.get(name: "K", projectId: project.id).value, "hacked")
+    }
+
+    func testDaemonWriteToApprovalTierRequiresConsentForEveryCaller() throws {
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        _ = try vault.add(name: "K", value: "v", projectId: project.id)
+        try vault.setAgentAccess(name: "K", projectId: project.id, policy: .requiresApproval)
+        let setReq = VaultRequest.set(name: "K", value: "changed", projectId: project.id, environmentName: nil)
+
+        for caller in [CallerContext(pid: 1, agent: "claude"), CallerContext.local] {
+            guard case let .failure(msg) = VaultRequestDispatcher.handle(setReq, using: vault, caller: caller, approveAgentAccess: { _ in false }) else {
+                return XCTFail("a denied approval must refuse the write")
+            }
+            XCTAssertTrue(msg.contains("approval"), "got: \(msg)")
+        }
+        XCTAssertEqual(try vault.get(name: "K", projectId: project.id).value, "v", "a denied write must not change the value")
+
+        var seen: ApprovalRequest?
+        let approved = VaultRequestDispatcher.handle(setReq, using: vault, caller: CallerContext(pid: 1, agent: "claude"), approveAgentAccess: { req in seen = req; return true })
+        guard case .secret = approved else { return XCTFail("an approved write must go through, got \(approved)") }
+        XCTAssertEqual(try vault.get(name: "K", projectId: project.id).value, "changed")
+        XCTAssertEqual(seen?.perCall, true, "a governed write always prompts — a cached read grant must never authorize it")
+    }
+
+    func testDaemonDefaultHandlerDeniesApprovalTierDelete() throws {
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        _ = try vault.add(name: "K", value: "v", projectId: project.id)
+        try vault.setAgentAccess(name: "K", projectId: project.id, policy: .strict)
+        let delReq = VaultRequest.delete(name: "K", projectId: project.id)
+
+        guard case .failure = VaultRequestDispatcher.handle(delReq, using: vault, caller: CallerContext(pid: 1, agent: "claude")) else {
+            return XCTFail("the fail-closed default handler must deny an approval-tier delete")
+        }
+        XCTAssertNoThrow(try vault.get(name: "K", projectId: project.id), "the secret must still exist")
+    }
+
+    func testMCPSetSecretRefusesBlockedSecretWithoutChangingIt() throws {
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        _ = try vault.add(name: "K", value: "v", projectId: project.id)
+        try vault.setAgentAccess(name: "K", projectId: project.id, policy: .blocked)
+
+        let tools = LokaliteMCPTools(allowWrites: true, vault: vault)
+        let payload = try successPayload(tools.call(name: "set_secret", args: ["name": "K", "value": "x", "project": "App"]))
+
+        XCTAssertEqual(payload["isError"] as? Bool, true)
+        XCTAssertTrue(textOf(payload).contains("off-limits"))
+        XCTAssertEqual(try vault.get(name: "K", projectId: project.id).value, "v")
+    }
+
+    func testMCPDeleteSecretFailsClosedForApprovalTierWhenNotDaemonBacked() throws {
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        _ = try vault.add(name: "K", value: "v", projectId: project.id)
+        try vault.setAgentAccess(name: "K", projectId: project.id, policy: .requiresApproval)
+
+        let tools = LokaliteMCPTools(allowWrites: true, vault: vault, daemonBacked: false)
+        let payload = try successPayload(tools.call(name: "delete_secret", args: ["name": "K", "project": "App"]))
+
+        XCTAssertEqual(payload["isError"] as? Bool, true)
+        XCTAssertNoThrow(try vault.get(name: "K", projectId: project.id), "a fail-closed delete must not remove the secret")
+    }
+
     private func successPayload(_ result: MCPToolCallResult) throws -> [String: Any] {
         guard case let .success(payload) = result else {
             throw XCTSkip("expected .success, got \(result)")

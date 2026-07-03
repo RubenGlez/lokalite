@@ -10,8 +10,10 @@ import Foundation
 /// self-deletion on first source, and a short TTL sweep for scripts that are
 /// never sourced — not on encrypting the file at rest.
 enum MCPSecretHandoff {
-    /// How long an unsourced handoff script may linger before it is swept.
-    static let ttl: TimeInterval = 120
+    /// How long an unsourced handoff script may linger before it is swept. Kept
+    /// short (L3) to bound the same-UID exposure window for a script the agent
+    /// never sources; a sourced script self-deletes immediately.
+    static let ttl: TimeInterval = 30
 
     private static var root: URL {
         URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
