@@ -13,7 +13,7 @@ Lokalite is a local-first secrets manager for macOS, built for how developers wo
 ## Features
 
 - **Encrypted vault**: AES-256-GCM via CryptoKit, vault key stored in Apple Keychain
-- **Touch ID unlock**: biometric authentication before accessing any secret
+- **Touch ID unlock**: biometric authentication to unlock the menu bar app, plus per-read consent on `approve`/`strict` secrets. The CLI and MCP server read from your unlocked user session without a prompt — see [Security](#security)
 - **Menu bar app**: search, copy, and reveal secrets without leaving your workflow; recent secrets surfaced at the top
 - **Global keyboard shortcut**: open the popover from anywhere, configurable in Settings (default `⌘⇧Space`)
 - **Full CLI**: read, write, and inject secrets from the terminal
@@ -221,11 +221,11 @@ Pass `--read-write` to also expose write tools:
 
 > **Security note:** the handoff keeps secret values out of the model's context, but an agent that can name a secret can still load it into a shell it controls (`list_secrets` gives it the names), and a sourced value is then visible to processes in that shell. Set a per-secret agent-access tier with `lokalite agent-access <name> allow|approve|block` (or from the app's secret editor):
 >
-> - **block** — off-limits: `get_secret` refuses it, `list_secrets` flags it `[off-limits to agents]`.
-> - **approve** — consent-on-read: every read through the app broker — an agent's `get_secret`, a `lokalite://` reference, or the CLI's `get`/`copy` — prompts for Touch ID before the value is released, whoever is asking; the approval then lasts for the rest of the unlock session. `list_secrets` flags it `[approval required]`. With `--local` (no app to prompt) it fails closed, like block.
+> - **block** — off-limits: `get_secret` refuses it, `list_secrets` flags it `[off-limits to agents]`. **Best-effort:** blocking an agent depends on detecting it (a process-tree name match), so a renamed or sandboxed agent can evade it. Treat `block` as a courtesy guard; use `approve` for a secret that must not be released without you in the loop.
+> - **approve** — consent-on-read: every read through the app broker — an agent's `get_secret`, a `lokalite://` reference, or the CLI's `get`/`copy` — prompts for Touch ID before the value is released, whoever is asking; the approval then lasts for the rest of the unlock session. `list_secrets` flags it `[approval required]`. With `--local` (no app to prompt) it fails closed, like block. Unlike `block`, this does **not** rely on detection — the prompt fires for every caller.
 > - **allow** — the default.
 >
-> The CLI `get`/`copy` route an `approve` secret through the Lokalite app for the Touch ID prompt (and refuse, with no override, when the app isn't reachable); bulk reveals (`shell`, plaintext `export`, bulk `run` injection, `backup`) skip `approve` secrets and name them on stderr. A `block` secret is refused when an AI agent is detected in the calling process tree. Also keep the server read-only (the default), scope it to a single project by setting `LOKALITE_PROJECT` in the server's `env` config, and prefer clients that ask for approval before tool calls. Every MCP access is recorded in the activity log.
+> The CLI `get`/`copy` route an `approve` secret through the Lokalite app for the Touch ID prompt (and refuse, with no override, when the app isn't reachable); bulk reveals (`shell`, plaintext `export`, bulk `run` injection, `backup`) skip `approve` secrets and name them on stderr. A `block` secret is refused when an AI agent is detected in the calling process tree. **Writes are governed too:** an agent's `set_secret`/`delete_secret` (or CLI `set`/`delete`) on a `block` secret is refused, and on an `approve`/`strict` secret it prompts for Touch ID — so an agent can't overwrite or delete a protected secret without consent. Also keep the server read-only (the default), scope it to a single project by setting `LOKALITE_PROJECT` in the server's `env` config, and prefer clients that ask for approval before tool calls. Every MCP access is recorded in the activity log.
 
 ## Secret references
 

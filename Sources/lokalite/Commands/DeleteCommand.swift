@@ -26,7 +26,12 @@ struct DeleteCommand: ParsableCommand {
             }
         }
         try withWorkspace { workspace in
-            try workspace.delete(name: name, context: ctx, accessSource: .cli)
+            let tier = try workspace.listInfo(context: ctx).first { $0.name == name }?.agentAccess ?? .allowed
+            try CLIWrite.perform(
+                name: name, tier: tier, context: ctx,
+                daemonWrite: { remote, ctx in try remote.delete(name: name, context: ctx, accessSource: .cli) },
+                inProcessWrite: { try workspace.delete(name: name, context: ctx, accessSource: .cli) }
+            )
         }
         print("Deleted \(name).")
     }

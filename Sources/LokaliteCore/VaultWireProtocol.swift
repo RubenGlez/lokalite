@@ -210,15 +210,27 @@ public enum VaultRequestDispatcher {
                 }
                 return .secret(secret)
             case let .set(name, value, projectId, environmentName):
+                if let refusal = try governAgentWrite(name: name, action: "modify", projectId: projectId, environmentName: environmentName, using: service, caller: caller, approveAgentAccess: approveAgentAccess) {
+                    return refusal
+                }
                 return .secret(try service.set(name: name, value: value, projectId: projectId, environmentName: environmentName))
             case let .delete(name, projectId):
+                if let refusal = try governAgentWrite(name: name, action: "delete", projectId: projectId, environmentName: nil, using: service, caller: caller, approveAgentAccess: approveAgentAccess) {
+                    return refusal
+                }
                 try service.delete(name: name, projectId: projectId)
                 return .ok
             case let .list(projectId, environmentName):
                 var secrets = try service.list(projectId: projectId, environmentName: environmentName)
                 if caller.isAgent {
-                    // An agent never receives off-limits values, even via bulk list.
-                    secrets = secrets.filter { !$0.agentAccess.blocksAgents }
+                    // An agent never receives off-limits values, even via bulk
+                    // list. Approval-tier secrets are excluded too (M2): a bulk
+                    // list can't broker per-secret consent, so it mirrors the CLI
+                    // `bulkRevealSecrets` exclusion — the daemon stays a real
+                    // chokepoint rather than only filtering `blocked`.
+                    secrets = secrets.filter {
+                        !$0.agentAccess.blocksAgents && !$0.agentAccess.requiresApprovalForAgents
+                    }
                 }
                 return .secrets(secrets)
             case let .listInfo(projectId):
@@ -241,6 +253,53 @@ public enum VaultRequestDispatcher {
         } catch {
             return .failure(message: error.localizedDescription)
         }
+    }
+
+    /// Governs a write (`set`/`delete`) against the target secret's agent-access
+    /// tier, mirroring the read governance on `.get` (H3 / ADR 0020). Returns a
+    /// `.failure` response to refuse the write, or nil to allow it:
+    /// - `blocked`: refused for an agent caller (blocked is agent-scoped; a human
+    ///   may still edit it), matching `.get`.
+    /// - `requiresApproval`/`strict`: consent is brokered for EVERY caller (ADR
+    ///   0018), like an approval-tier read. A write always prompts (`perCall`), so
+    ///   a cached read grant never silently authorizes a destructive change.
+    /// A secret that doesn't exist yet is not governed here — `set`/`delete` will
+    /// surface their own not-found error.
+    private static func governAgentWrite(
+        name: String,
+        action: String,
+        projectId: String,
+        environmentName: String?,
+        using service: VaultService,
+        caller: CallerContext,
+        approveAgentAccess: AgentApprovalHandler
+    ) throws -> VaultResponse? {
+        guard let info = try service.listInfo(projectId: projectId).first(where: { $0.name == name }) else {
+            return nil
+        }
+        let policy = info.agentAccess
+        if caller.isAgent, policy.blocksAgents {
+            logDenial(service, secretName: name, projectId: projectId, environmentName: environmentName, agent: caller.effectiveAgent, peerTeamID: caller.peerSignature?.verifiedTeamID)
+            return .failure(message: "Secret '\(name)' is marked off-limits to AI agents and cannot be modified.")
+        }
+        if policy.requiresApprovalForAgents {
+            let project = (try? service.listProjects())?.first { $0.id == projectId }
+            let approval = ApprovalRequest(
+                secretID: info.name,
+                secretName: name,
+                projectID: projectId,
+                projectName: project?.name ?? projectId,
+                environmentName: environmentName ?? project?.activeEnvironment ?? "Default",
+                perCall: true,
+                agent: caller.effectiveAgent
+            )
+            guard approveAgentAccess(approval) else {
+                logDenial(service, secretName: name, projectId: projectId, environmentName: environmentName, agent: caller.effectiveAgent, peerTeamID: caller.peerSignature?.verifiedTeamID)
+                let recipient = caller.isAgent ? " for an AI agent" : ""
+                return .failure(message: "Access to \(action) '\(name)' was denied — approval is required to change it\(recipient).")
+            }
+        }
+        return nil
     }
 
     /// Records a `.denied` audit entry when a caller is refused a secret at the

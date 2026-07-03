@@ -210,6 +210,21 @@ public final class Vault {
 
     // MARK: - Secret CRUD
 
+    /// Secret names must be POSIX shell identifiers so they can never break out of
+    /// the `export NAME='…'` constructs the MCP handoff, `lokalite shell`, and the
+    /// `.env` export emit (M5 — only the value was escaped there, not the name).
+    /// Enforced on creation, the single write chokepoint; `set` only updates an
+    /// already-validated name.
+    static let secretNamePattern = "^[A-Za-z_][A-Za-z0-9_]*$"
+
+    static func validateSecretName(_ name: String) throws {
+        let range = NSRange(name.startIndex..., in: name)
+        guard let regex = try? NSRegularExpression(pattern: secretNamePattern),
+              regex.firstMatch(in: name, range: range) != nil else {
+            throw VaultError.invalidSecretName(name)
+        }
+    }
+
     public func add(
         name: String,
         value: String,
@@ -219,6 +234,7 @@ public final class Vault {
         projectId: String,
         environmentName: String? = nil
     ) throws -> Secret {
+        try Self.validateSecretName(name)
         let key = try requireKey()
         let encrypted = try VaultCrypto.encrypt(value, using: key)
         let now = iso8601()
@@ -245,7 +261,10 @@ public final class Vault {
                                             updatedAt: now)
         try store.upsertSecretValue(valueRecord)
 
-        return Secret(id: secretRecord.id, name: name, value: value, description: description, icon: icon, category: category)
+        // Return the persisted row's metadata, not the freshly-inferred category:
+        // on the add-in-new-environment path the existing record is reused as-is,
+        // so its stored category/description/icon are authoritative (L2).
+        return secretFromRecord(secretRecord, value: value)
     }
 
     public func get(name: String, projectId: String, environmentName: String? = nil) throws -> Secret {

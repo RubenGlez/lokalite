@@ -54,6 +54,7 @@ Read these for project context:
 - `.harness/adr/0017-secret-references.md`
 - `.harness/adr/0018-enforcement-never-rides-detection.md`
 - `.harness/adr/0019-code-signature-peer-verification.md`
+- `.harness/adr/0020-agent-write-governance.md`
 - `.harness/engineering/architecture.md`
 - `.harness/engineering/features/access-dashboard.md`
 - `.harness/engineering/features/caller-independent-approval.md`
@@ -71,6 +72,7 @@ Read these for project context:
 - `.harness/product/product.md`
 - `.harness/product/roadmap.md`
 - `.harness/product/ux.md`
+- `.harness/qa/adversarial-audit-2026-07-03.md`
 - `.harness/qa/broker-qa-cowork.md`
 - `.harness/qa/broker-qa-self.md`
 - `.harness/qa/peer-verification-qa.md`

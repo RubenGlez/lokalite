@@ -17,15 +17,17 @@ struct ListCommand: ParsableCommand {
     var search: String?
 
     func run() throws {
+        // Metadata only — `list` prints names/descriptions, so decrypting every
+        // value (as `workspace.list` does) is needless work in the CLI process (L1).
         let secrets = try withWorkspace { workspace in
             let ctx = try resolveContext(projectFlag: project, envFlag: env, using: workspace)
-            return try workspace.list(context: ctx)
+            return try workspace.listInfo(context: ctx)
         }
         if secrets.isEmpty {
             print("No secrets found.")
             return
         }
-        let matches: [Secret]
+        let matches: [SecretInfo]
         if let term = search {
             let needle = term.lowercased()
             matches = secrets.filter { secret in
