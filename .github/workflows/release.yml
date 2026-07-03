@@ -18,8 +18,9 @@ jobs:
     # missing secret never hard-fails a release.
     # Internal job-env names are kept descriptive; the right-hand side maps them
     # to the account-wide signing secrets stored in the vault's Global project
-    # and mirrored to this repo's Actions secrets. No Developer ID Installer
-    # cert exists yet, so its secrets are unset and the pkg ships unsigned.
+    # and mirrored to this repo's Actions secrets. The Developer ID Installer
+    # cert + secrets are set (2026-07-03), so the CLI pkg is productsigned +
+    # notarized; a missing installer secret still falls back to an unsigned pkg.
     env:
       MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_SIGN_P12 }}
       MACOS_CERT_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
