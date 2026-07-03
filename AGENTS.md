@@ -73,5 +73,6 @@ Read these for project context:
 - `.harness/product/ux.md`
 - `.harness/qa/broker-qa-cowork.md`
 - `.harness/qa/broker-qa-self.md`
+- `.harness/qa/peer-verification-qa.md`
 - `.harness/qa/report.md`
 <!-- doctier:end -->

@@ -24,6 +24,7 @@ Lokalite is a local-first secrets manager for macOS, built for how developers wo
 - **Shell injection**: `eval $(lokalite shell)` exports secrets into the current session
 - **Clipboard auto-clear**: copied values are wiped after 30 seconds
 - **Session timeout**: vault auto-locks after inactivity
+- **In-app auto-updates**: the menu bar app keeps itself current via Sparkle — a manual *Check for Updates…* item plus opt-in automatic background checks
 - **MCP integration**: expose your vault as tools to Claude Code, Cursor, Windsurf, and any other MCP-compatible agent
 - **Secret references**: commit `lokalite://project/KEY` instead of a token in MCP configs; `lokalite run --refs-only` resolves it at spawn time
 - **Zero runtime dependencies**: no cloud, no telemetry, no vendor lock-in
@@ -68,7 +69,7 @@ Download from the [Releases page](https://github.com/RubenGlez/lokalite/releases
 - **CLI**: run the `.pkg` installer, then `lokalite install`
 - **Menu bar app**: drag the `.dmg` to Applications and launch it — no quarantine workaround needed.
 
-  Releases are signed with an Apple Developer ID and notarized by Apple, so Gatekeeper accepts the app on first launch. Every release also ships a `SHA256SUMS` file you can verify against the artifacts.
+  Releases are signed with an Apple Developer ID and notarized by Apple — the app, DMG, and CLI `.pkg` all pass Gatekeeper on first launch. The menu bar app then keeps itself up to date automatically (Sparkle). Every release also ships a `SHA256SUMS` file you can verify against the artifacts.
 
 ## CLI
 
@@ -161,6 +162,8 @@ The secrets manager is a three-column layout:
 - **Right panel**: edit the selected secret's value; save or delete
 
 On first launch, an onboarding screen guides you through creating your first project.
+
+Right-click the menu bar icon (or open Settings → Updates) for **Check for Updates…**; once you opt in, the app also checks in the background and installs updates in place.
 
 ## MCP Integration
 
