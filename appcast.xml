@@ -7,6 +7,15 @@
     <language>en</language>
     <!-- BEGIN ITEMS -->
 <item>
+  <title>Lokalite 2.4.0</title>
+  <link>https://github.com/RubenGlez/lokalite/releases/tag/v2.4.0</link>
+  <sparkle:version>2.4.0</sparkle:version>
+  <sparkle:shortVersionString>2.4.0</sparkle:shortVersionString>
+  <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+  <pubDate>Fri, 03 Jul 2026 18:30:47 +0000</pubDate>
+  <enclosure url="https://github.com/RubenGlez/lokalite/releases/download/v2.4.0/Lokalite-v2.4.0.dmg" sparkle:edSignature="cAoU7YoVdDVaJhSq1PlXuTedxRPEFWOruVgJeMpWF/H26d6s9Go8Qg1NoAOulZ7fyp/tt1Vj09lRUBRkTs6rAw==" length="6033404" type="application/octet-stream" />
+</item>
+<item>
   <title>Lokalite 2.3.0</title>
   <link>https://github.com/RubenGlez/lokalite/releases/tag/v2.3.0</link>
   <sparkle:version>2.3.0</sparkle:version>
