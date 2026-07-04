@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.1] - 2026-07-04
+
+### Changed
+- The Keychain read error now distinguishes `errSecAuthFailed` (-25293) from a locked keychain: it explains that the process isn't authorized to read the vault key — typically an access-control (partition) list that no longer matches the caller's code signature after a re-sign or Developer ID change — points at `security set-key-partition-list` to fix it, and warns never to delete the keychain item (which would destroy the vault key). Other read failures still suggest `security unlock-keychain` and confirming the keychain search list.
+
 ## [2.4.0] - 2026-07-03
 
 ### Added
