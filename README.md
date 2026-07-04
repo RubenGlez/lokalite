@@ -2,6 +2,10 @@
   <img src="assets/banner.png" alt="Lokalite" width="100%"/>
 </p>
 
+<p align="center">
+  <a href="https://github.com/RubenGlez/lokalite/releases/latest"><img src="https://img.shields.io/github/v/release/RubenGlez/lokalite" alt="latest release"/></a>
+</p>
+
 Lokalite is a local-first secrets manager for macOS, built for how developers work with AI coding agents. Your API keys, tokens, and credentials live in an encrypted vault on your machine. When an agent needs one, the value is delivered into its shell runtime, never into the chat — so secrets stay out of the model's context and your conversation history. Reaches Claude Code, Cursor, and Windsurf through MCP, on your terms, with every access logged. Menu bar app, CLI, and MCP server in one. No cloud, no accounts, no telemetry.
 
 ## Why Lokalite
