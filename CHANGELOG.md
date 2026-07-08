@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.1] - 2026-07-08
+
+### Changed
+- Selecting a project in the menu-bar app now persists it as the vault's active project. The app reopens to your last selection, and the CLI/agents resolve to it by default (their last-resort context, after an explicit `--project` flag or a linked-directory match). Previously an in-app selection was transient, so the app always reopened to the project last set via `lokalite project use` (or the created/linked default) regardless of what you picked.
+
 ## [2.5.0] - 2026-07-08
 
 ### Changed
