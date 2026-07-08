@@ -177,6 +177,16 @@ final class VaultViewModel {
         selectedEnvironment = environments.first { $0.name == project?.activeEnvironment } ?? environments.first
         reloadSecrets()
         reloadDashboardSummaries()
+        // Persist the selection as the vault's active project, so the app reopens
+        // to it and the CLI/agents resolve to it by default (their last-resort
+        // context, after an explicit flag or a linked-directory match).
+        if let id = project?.id {
+            do {
+                try Vault.shared.setActiveProject(id: id)
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 
     func selectEnvironment(_ env: VaultEnvironment?) {
