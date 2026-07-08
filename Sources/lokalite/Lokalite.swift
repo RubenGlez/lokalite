@@ -58,17 +58,31 @@ func ensureNotAgentExfil(allowAgent: Bool, action: String) throws {
     throw ExitCode.failure
 }
 
-/// Enforces a secret's `blocked` agent policy on the CLI's in-process reveal
-/// paths (`get`, `copy`) when an AI agent is detected in the calling tree
-/// (ADR 0014) — the same refusal the MCP and daemon enforce. The value has
-/// already been fetched but is never printed. Approval-tier secrets never reach
-/// this check: `CLIReveal` routes them through the daemon, which brokers the
-/// consent prompt for every caller (ADR 0018).
-func enforceAgentRevealPolicy(_ secret: Secret) throws {
-    guard let agent = AgentDetection.detectAgent() else { return }
-    if secret.agentAccess.blocksAgents {
-        print("Secret '\(secret.name)' is off-limits to AI agents (\(agent) detected); refusing to reveal it.")
-        print("Run `lokalite agent-access \(secret.name) allow` if this should be readable by agents.")
+/// Enforces a secret's agent-access policy on the CLI's reveal paths (`get`,
+/// `copy`) when an AI agent is detected in the calling tree (ADR 0014). Run
+/// before the value is fetched, so a refused reveal never decrypts. A `blocked`
+/// secret is always refused (a per-secret policy `--allow-agent` cannot
+/// override). Every other tier is refused too — printing a value to stdout or
+/// the clipboard would put it in the agent's context, defeating the MCP
+/// "value never enters agent context" guarantee (audit H2) — unless the human
+/// passes `--allow-agent`. Approval-tier secrets additionally broker Touch ID at
+/// the daemon for every caller (ADR 0018).
+func enforceAgentRevealPolicy(
+    secretName: String,
+    tier: AgentAccessPolicy,
+    allowAgent: Bool,
+    detectedAgent: String? = AgentDetection.detectAgent()
+) throws {
+    guard let agent = detectedAgent else { return }
+    if tier.blocksAgents {
+        print("Secret '\(secretName)' is off-limits to AI agents (\(agent) detected); refusing to reveal it.")
+        print("Run `lokalite agent-access \(secretName) allow` if this should be readable by agents.")
+        throw ExitCode.failure
+    }
+    guard allowAgent else {
+        print("Refusing to reveal '\(secretName)': an AI agent (\(agent)) was detected in the calling process tree.")
+        print("Printing a secret to stdout or the clipboard puts its value in the agent's context or a file on disk.")
+        print("Use `lokalite run -- <command>` to inject secrets without revealing them, or pass --allow-agent to override.")
         throw ExitCode.failure
     }
 }
@@ -86,10 +100,16 @@ enum CLIReveal {
         named name: String,
         in workspace: SecretWorkspace,
         context: SecretWorkspaceContext,
+        allowAgent: Bool = false,
+        detectedAgent: String? = AgentDetection.detectAgent(),
         daemonFetch: (String, SecretWorkspaceContext) throws -> Secret = CLIReveal.fetchThroughDaemon
     ) throws -> Secret {
         let info = try workspace.listInfo(context: context).first { $0.name == name }
-        if info?.agentAccess.requiresApprovalForAgents == true {
+        let tier = info?.agentAccess ?? .allowed
+        // Refuse a detected agent before decrypting anything (audit H2): a
+        // `blocked` secret outright, any other tier unless the human overrides.
+        try enforceAgentRevealPolicy(secretName: name, tier: tier, allowAgent: allowAgent, detectedAgent: detectedAgent)
+        if tier.requiresApprovalForAgents {
             return try daemonFetch(name, context)
         }
         return try workspace.get(name: name, context: context, accessSource: .cli)

@@ -2,6 +2,7 @@ import Foundation
 import Security
 
 public enum VaultError: Error, LocalizedError {
+    case vaultLocked
     case keychainReadFailed(OSStatus)
     case keychainWriteFailed(OSStatus)
     case keychainKeyUnreachable
@@ -23,6 +24,8 @@ public enum VaultError: Error, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
+        case .vaultLocked:
+            return "The vault is locked. Unlock it in the Lokalite app (or approve the unlock prompt) and retry."
         case .keychainReadFailed(let status):
             if status == errSecAuthFailed {
                 return "Keychain read denied (errSecAuthFailed, -25293). This is usually NOT a locked keychain: the process is not authorized to read the vault key, typically because the item's access-control (partition) list no longer matches the caller's code signature after a re-sign or Developer ID change. Re-add the partition with `security set-key-partition-list` for the login keychain. Do NOT delete the keychain item — that destroys the vault key and makes the vault unrecoverable. A locked keychain (`security unlock-keychain`) is only the cause if the whole login keychain is locked."

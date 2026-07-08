@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] - 2026-07-08
+
+### Changed
+- **Security (audit H2):** `lokalite get` and `lokalite copy` now refuse to print *any* secret to stdout or the clipboard when an AI agent is detected in the calling process tree, not just `block`-tier secrets. Previously a detected agent could shell out to `lokalite get <name>` for a default-tier secret and pull the value straight into its context — sidestepping the MCP handoff's "value never enters agent context" boundary. The refusal now runs before the value is decrypted; pass `--allow-agent` to override for your own use (a `block` secret stays refused regardless). Detection is best-effort, so this protects the transcript, not a determined agent's own shell — lean on the `approve`/`strict` consent tiers for anything that must not be released without you in the loop.
+
+### Fixed
+- **Security (audit H1):** a daemon-brokered read or write of a **locked** vault now prompts for Touch ID — through the Lokalite app, the sole vault owner — before the vault key is loaded, instead of loading it with no user presence. A request that arrives while the vault is locked surfaces a `vaultLocked` state and brokers a single unlock prompt; concurrent callers coalesce onto the first grant rather than stacking dialogs. This also replaces the bare Keychain `-25293` that a locked vault used to masquerade as (which read like an authorization failure) with a clear "unlock in the app" message. Approving adopts the unlocked state in the app and starts the auto-lock session timer.
+
 ## [2.4.1] - 2026-07-04
 
 ### Changed

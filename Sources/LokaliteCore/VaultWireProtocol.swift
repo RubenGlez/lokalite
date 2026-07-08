@@ -154,6 +154,13 @@ public final class ApprovalGrantCache {
 /// Returns true to release the value.
 public typealias AgentApprovalHandler = (ApprovalRequest) -> Bool
 
+/// Brokers a vault unlock with user presence when a request arrives while the
+/// vault is locked. The argument is the caller's agent label (nil = the human
+/// CLI), for the prompt text. The handler must obtain consent AND unlock the
+/// vault, returning true only once it is unlocked; it may block on the prompt.
+/// Defaults to deny (fail closed) so any path without a GUI broker refuses.
+public typealias VaultUnlockHandler = (String?) -> Bool
+
 /// Applies a decoded request to a local `VaultService` and produces a response.
 /// Used by the daemon's socket server; pure and testable without any socket.
 /// `caller` lets the daemon enforce agent policy independently of the client —
@@ -161,17 +168,48 @@ public typealias AgentApprovalHandler = (ApprovalRequest) -> Bool
 /// consent for approval-tier (`requiresApproval`/`strict`) secrets — for EVERY
 /// caller, not only agents (ADR 0018); it defaults to deny (fail closed) so any
 /// path without a GUI broker — `--local`, headless, tests — refuses them.
+/// `requestUnlock` brokers user presence when the vault is locked: a request that
+/// needs the key prompts once and is retried, so auto-lock gates every caller
+/// instead of being silently bypassed.
 public enum VaultRequestDispatcher {
     public static func handle(
         _ request: VaultRequest,
         using service: VaultService,
         caller: CallerContext = .local,
-        approveAgentAccess: AgentApprovalHandler = { _ in false }
+        approveAgentAccess: AgentApprovalHandler = { _ in false },
+        requestUnlock: VaultUnlockHandler = { _ in false }
     ) -> VaultResponse {
         do {
+            return try dispatch(request, using: service, caller: caller, approveAgentAccess: approveAgentAccess)
+        } catch VaultError.vaultLocked {
+            // The operation needs the key and the vault is locked. Broker user
+            // presence (Touch ID in the app) and retry once. The handler runs
+            // while no vault lock is held (M3), like the approval prompt.
+            guard requestUnlock(caller.effectiveAgent) else {
+                return .failure(message: "The vault is locked and the unlock request was not approved. Unlock Lokalite and retry.")
+            }
+            do {
+                return try dispatch(request, using: service, caller: caller, approveAgentAccess: approveAgentAccess)
+            } catch {
+                return .failure(message: error.localizedDescription)
+            }
+        } catch {
+            return .failure(message: error.localizedDescription)
+        }
+    }
+
+    private static func dispatch(
+        _ request: VaultRequest,
+        using service: VaultService,
+        caller: CallerContext,
+        approveAgentAccess: AgentApprovalHandler
+    ) throws -> VaultResponse {
             switch request {
             case .unlock:
-                try service.unlock()
+                // Reachability handshake only — deliberately NOT service.unlock().
+                // Loading the vault key requires user presence, brokered by
+                // `requestUnlock` on the operation that actually needs it; a wire
+                // request must never silently re-open a locked vault.
                 return .ok
             case let .resolveProject(name, workingDirectory):
                 return .project(try service.resolveProject(name: name, workingDirectory: workingDirectory))
@@ -250,9 +288,6 @@ public enum VaultRequestDispatcher {
                 service.logAccess(secretName: secretName, projectName: projectName, environmentName: environmentName, source: source, agent: caller.effectiveAgent, peerTeamID: caller.peerSignature?.verifiedTeamID, action: action)
                 return .ok
             }
-        } catch {
-            return .failure(message: error.localizedDescription)
-        }
     }
 
     /// Governs a write (`set`/`delete`) against the target secret's agent-access

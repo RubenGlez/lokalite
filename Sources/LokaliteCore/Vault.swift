@@ -71,6 +71,8 @@ public final class Vault {
         key = nil
     }
 
+    public var isLocked: Bool { key == nil }
+
     // MARK: - Project Management
 
     public func addProject(name: String, path: String? = nil, icon: String? = nil) throws -> Project {
@@ -612,7 +614,7 @@ public final class Vault {
 
     private func requireKey() throws -> SymmetricKey {
         guard let key else {
-            throw VaultError.keychainReadFailed(errSecAuthFailed)
+            throw VaultError.vaultLocked
         }
         return key
     }

@@ -32,6 +32,7 @@ public final class VaultSocketServer {
     private let socketPath: String
     private let service: VaultService
     private let approveAgentAccess: AgentApprovalHandler
+    private let requestUnlock: VaultUnlockHandler
     /// Resolves the connecting peer's Developer ID code signature from its pid
     /// (ADR 0019). Injected so the accept seam is testable without a signed peer;
     /// the default skips in dev builds (peers are unsigned/ad-hoc there).
@@ -53,6 +54,7 @@ public final class VaultSocketServer {
         socketPath: String,
         service: VaultService,
         approveAgentAccess: @escaping AgentApprovalHandler = { _ in false },
+        requestUnlock: @escaping VaultUnlockHandler = { _ in false },
         verifyPeer: @escaping (pid_t) -> PeerCodeSignature? = VaultSocketServer.defaultPeerVerifier
     ) {
         self.socketPath = socketPath
@@ -60,6 +62,7 @@ public final class VaultSocketServer {
         // without holding the lock across a request's consent prompt (M3).
         self.service = SynchronizedVaultService(service)
         self.approveAgentAccess = approveAgentAccess
+        self.requestUnlock = requestUnlock
         self.verifyPeer = verifyPeer
     }
 
@@ -138,7 +141,7 @@ public final class VaultSocketServer {
                 // each vault call is locked individually while the dispatcher's
                 // approval prompt (if any) runs off-lock, letting concurrent
                 // connections — including the liveness ping — make progress (M3).
-                response = VaultRequestDispatcher.handle(frame.request, using: service, caller: requestCaller, approveAgentAccess: approveAgentAccess)
+                response = VaultRequestDispatcher.handle(frame.request, using: service, caller: requestCaller, approveAgentAccess: approveAgentAccess, requestUnlock: requestUnlock)
             } else {
                 response = .failure(message: "Malformed request.")
             }

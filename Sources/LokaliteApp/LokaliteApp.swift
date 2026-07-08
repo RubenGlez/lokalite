@@ -42,6 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItemMenuMonitor: Any?
     private var daemonServer: VaultSocketServer?
     private let approvalCoordinator = AgentApprovalCoordinator()
+    private let unlockCoordinator = VaultUnlockCoordinator()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -68,6 +69,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.vault.refresh()
             }
         }
+
+        // A daemon-brokered unlock (Touch ID for a socket caller) loads the key
+        // outside the UI; adopt it so the menu bar unlocks and auto-lock starts.
+        NotificationCenter.default.addObserver(
+            forName: .vaultDidUnlockExternally, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.vault.adoptExternalUnlock()
+            }
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -87,7 +98,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let server = VaultSocketServer(
             socketPath: VaultConfiguration.daemonSocketURL.path,
             service: Vault.shared,
-            approveAgentAccess: approvalCoordinator.approve
+            approveAgentAccess: approvalCoordinator.approve,
+            requestUnlock: unlockCoordinator.requestUnlock
         )
         do {
             try server.start()

@@ -145,7 +145,7 @@ final class CallerIndependentApprovalTests: XCTestCase {
         let context = SecretWorkspaceContext(project: project, environmentName: nil)
 
         XCTAssertThrowsError(
-            try CLIReveal.secret(named: "GATED", in: workspace, context: context, daemonFetch: { _, _ in throw DaemonDown() })
+            try CLIReveal.secret(named: "GATED", in: workspace, context: context, detectedAgent: nil, daemonFetch: { _, _ in throw DaemonDown() })
         ) { XCTAssertTrue($0 is DaemonDown) }
         XCTAssertEqual(spy.getCalls, 0, "the value must never be decrypted in-process when the daemon route fails")
     }
@@ -161,7 +161,7 @@ final class CallerIndependentApprovalTests: XCTestCase {
         let context = SecretWorkspaceContext(project: project, environmentName: nil)
 
         var routed: String?
-        let secret = try CLIReveal.secret(named: "STRICT", in: workspace, context: context, daemonFetch: { name, _ in
+        let secret = try CLIReveal.secret(named: "STRICT", in: workspace, context: context, detectedAgent: nil, daemonFetch: { name, _ in
             routed = name
             return Secret(id: "remote", name: name, value: "daemon-brokered", description: nil, icon: nil, category: .other, agentAccess: .strict)
         })
@@ -185,14 +185,87 @@ final class CallerIndependentApprovalTests: XCTestCase {
             throw DaemonDown()
         }
 
-        // allowed → in-process, byte-identical to before.
-        let open = try CLIReveal.secret(named: "OPEN", in: workspace, context: context, daemonFetch: daemonFetch)
+        // allowed → in-process, byte-identical to before. No agent detected, so
+        // the H2 guard is a no-op.
+        let open = try CLIReveal.secret(named: "OPEN", in: workspace, context: context, detectedAgent: nil, daemonFetch: daemonFetch)
         XCTAssertEqual(open.value, "v-open")
-        // blocked → still fetched in-process (the agent refusal lives in
-        // enforceAgentRevealPolicy, unchanged; a human prints it).
-        let locked = try CLIReveal.secret(named: "LOCKED", in: workspace, context: context, daemonFetch: daemonFetch)
+        // blocked → still fetched in-process for a human (no agent detected, the
+        // guard passes; a human prints it).
+        let locked = try CLIReveal.secret(named: "LOCKED", in: workspace, context: context, detectedAgent: nil, daemonFetch: daemonFetch)
         XCTAssertEqual(locked.value, "v-locked")
         XCTAssertEqual(spy.getCalls, 2)
+    }
+
+    // MARK: - Detected-agent reveal refusal (audit H2)
+
+    /// A detected agent asking `lokalite get`/`copy` for a default-tier secret is
+    /// refused before the value is ever decrypted, so the value can't reach the
+    /// agent's stdout/clipboard context. `--allow-agent` is the human override.
+    func testDefaultTierRevealRefusesDetectedAgentAndNeverDecrypts() throws {
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        _ = try vault.add(name: "OPEN", value: "v-open", projectId: project.id)
+        let spy = SpyVaultService(wrapping: vault)
+        let workspace = SecretWorkspace(vault: spy)
+        let context = SecretWorkspaceContext(project: project, environmentName: nil)
+
+        XCTAssertThrowsError(
+            try CLIReveal.secret(named: "OPEN", in: workspace, context: context, allowAgent: false, detectedAgent: "claude", daemonFetch: { _, _ in
+                XCTFail("a refused reveal must not route through the daemon")
+                throw DaemonDown()
+            })
+        )
+        XCTAssertEqual(spy.getCalls, 0, "a refused default-tier reveal must never decrypt the value")
+    }
+
+    func testDefaultTierRevealAllowedWithOverride() throws {
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        _ = try vault.add(name: "OPEN", value: "v-open", projectId: project.id)
+        let spy = SpyVaultService(wrapping: vault)
+        let workspace = SecretWorkspace(vault: spy)
+        let context = SecretWorkspaceContext(project: project, environmentName: nil)
+
+        let secret = try CLIReveal.secret(named: "OPEN", in: workspace, context: context, allowAgent: true, detectedAgent: "claude")
+        XCTAssertEqual(secret.value, "v-open")
+        XCTAssertEqual(spy.getCalls, 1)
+    }
+
+    /// `blocked` is a per-secret policy: `--allow-agent` cannot override it, and
+    /// nothing is decrypted.
+    func testBlockedTierRefusesDetectedAgentEvenWithOverride() throws {
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        _ = try vault.add(name: "LOCKED", value: "v-locked", projectId: project.id)
+        try vault.setAgentAccess(name: "LOCKED", projectId: project.id, policy: .blocked)
+        let spy = SpyVaultService(wrapping: vault)
+        let workspace = SecretWorkspace(vault: spy)
+        let context = SecretWorkspaceContext(project: project, environmentName: nil)
+
+        XCTAssertThrowsError(
+            try CLIReveal.secret(named: "LOCKED", in: workspace, context: context, allowAgent: true, detectedAgent: "claude")
+        )
+        XCTAssertEqual(spy.getCalls, 0, "a blocked secret must never decrypt for an agent, override or not")
+    }
+
+    /// Approval-tier + detected agent, no override → refused before the daemon
+    /// Touch ID prompt, so no consent is even solicited for a reveal we'd refuse.
+    func testApprovalTierRefusesDetectedAgentBeforeDaemonPrompt() throws {
+        let vault = try makeVault()
+        let project = try vault.addProject(name: "App", path: nil)
+        _ = try vault.add(name: "GATED", value: "v-gated", projectId: project.id)
+        try vault.setAgentAccess(name: "GATED", projectId: project.id, policy: .requiresApproval)
+        let spy = SpyVaultService(wrapping: vault)
+        let workspace = SecretWorkspace(vault: spy)
+        let context = SecretWorkspaceContext(project: project, environmentName: nil)
+
+        XCTAssertThrowsError(
+            try CLIReveal.secret(named: "GATED", in: workspace, context: context, allowAgent: false, detectedAgent: "claude", daemonFetch: { _, _ in
+                XCTFail("a refused approval-tier reveal must not reach the daemon prompt")
+                throw DaemonDown()
+            })
+        )
+        XCTAssertEqual(spy.getCalls, 0)
     }
 
     func testDaemonUnreachableMessagePointsAtOpeningLokalite() {

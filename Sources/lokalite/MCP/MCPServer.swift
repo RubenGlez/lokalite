@@ -4,6 +4,7 @@ import LokaliteCore
 
 final class MCPServer {
     private let tools: LokaliteMCPTools
+    private let daemonBacked: Bool
 
     static let instructions = """
     Lokalite is an encrypted local vault for a project's secrets (API keys, tokens, credentials).
@@ -22,14 +23,23 @@ final class MCPServer {
       list_environments — a project's environments; use_environment(name) switches the active one (the environment get_secret resolves by default). The active environment is shared with the app and CLI.
 
     Project resolution: tools auto-resolve the project from your working directory (the `path` argument). If resolution fails, call list_projects and pass `project` explicitly.
+
+    If the vault is locked, a tool call blocks while the user is prompted (Touch ID) to unlock it. If the call returns a "vault is locked" error, the prompt was declined or unavailable — ask the user to unlock Lokalite, then retry.
     """
 
     init(allowWrites: Bool = false, vault: VaultService = Vault.shared, daemonBacked: Bool = false) {
         tools = LokaliteMCPTools(allowWrites: allowWrites, vault: vault, daemonBacked: daemonBacked)
+        self.daemonBacked = daemonBacked
     }
 
     func run() throws {
-        try tools.unlock()
+        // Daemon-backed: never unlock eagerly. The vault unlocks on demand — the
+        // daemon brokers a Touch ID prompt when a tool call first needs the key —
+        // so starting an MCP session doesn't prompt before any secret is asked for.
+        // `--local` keeps the eager in-process unlock (there is no broker).
+        if !daemonBacked {
+            try tools.unlock()
+        }
 
         while let line = readLine(strippingNewline: true) {
             guard !line.isEmpty,

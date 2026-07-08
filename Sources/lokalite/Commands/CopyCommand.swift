@@ -19,14 +19,18 @@ struct CopyCommand: ParsableCommand {
     @Option(name: .shortAndLong, help: "Environment name. Defaults to the active environment.")
     var env: String?
 
+    @Flag(name: .long, help: "Allow copying even when an AI agent is detected in the calling process tree.")
+    var allowAgent = false
+
     func run() throws {
-        // Approval-tier secrets are brokered through the daemon (Touch ID for
-        // every caller, ADR 0018); everything else stays in-process.
+        // A detected agent is refused unless --allow-agent (audit H2); `blocked`
+        // secrets are refused outright. Approval-tier secrets are brokered
+        // through the daemon (Touch ID for every caller, ADR 0018); everything
+        // else stays in-process.
         let secret = try withWorkspace { workspace in
             let ctx = try resolveContext(projectFlag: project, envFlag: env, using: workspace)
-            return try CLIReveal.secret(named: name, in: workspace, context: ctx)
+            return try CLIReveal.secret(named: name, in: workspace, context: ctx, allowAgent: allowAgent)
         }
-        try enforceAgentRevealPolicy(secret)
         copyToPasteboard(secret.value)
         try clearClipboardLater(value: secret.value)
         print("Copied \(name) to clipboard.")

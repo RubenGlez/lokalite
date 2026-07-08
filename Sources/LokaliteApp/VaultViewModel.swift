@@ -138,6 +138,16 @@ final class VaultViewModel {
         }
     }
 
+    /// Adopts an unlock performed by the daemon (Touch ID brokered for a socket
+    /// caller): the key is already loaded, so skip the prompt and take the same
+    /// post-unlock path as the UI — refresh and start the auto-lock session.
+    func adoptExternalUnlock() {
+        guard isLocked else { return }
+        isLocked = false
+        refresh()
+        renewSession()
+    }
+
     @MainActor
     private func performUnlock() {
         do {
