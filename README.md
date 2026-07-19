@@ -233,6 +233,23 @@ Pass `--read-write` to also expose write tools:
 >
 > The CLI `get`/`copy` won't print any secret to stdout or the clipboard when an AI agent is detected in the calling process tree — the same transcript-safety boundary as the MCP handoff, so an agent can't sidestep it by shelling out to read a value directly. Pass `--allow-agent` to override for your own use; a `block` secret is refused regardless (no override). An `approve`/`strict` secret is additionally routed through the Lokalite app for the Touch ID prompt, for every caller (and refused, with no override, when the app isn't reachable); bulk reveals (`shell`, plaintext `export`, bulk `run` injection, `backup`) skip `approve` secrets and name them on stderr. This detection is best-effort (see the `block` note above) — it protects the transcript, not a determined agent's own shell; lean on `approve`/`strict` consent for anything that must not be released without you in the loop. **Writes are governed too:** an agent's `set_secret`/`delete_secret` (or CLI `set`/`delete`) on a `block` secret is refused, and on an `approve`/`strict` secret it prompts for Touch ID — so an agent can't overwrite or delete a protected secret without consent. Also keep the server read-only (the default), scope it to a single project by setting `LOKALITE_PROJECT` in the server's `env` config, and prefer clients that ask for approval before tool calls. Every MCP access is recorded in the activity log.
 
+### The client's own permission layer
+
+There are **two independent gates** on an agent's `get_secret`, and they belong to different systems:
+
+1. **The client gate (above Lokalite).** MCP hosts like Claude Code, Cursor, and Windsurf run their own permission check on every tool call *before* the request ever reaches Lokalite. Depending on the client's mode, `mcp__lokalite__get_secret` may be auto-blocked or surfaced for your approval — the agent stops and asks. Lokalite has no say here; this gate is entirely the client's.
+2. **The Lokalite gate (below the client).** Once a call gets through, the per-secret tier (`allow`/`approve`/`block`) and vault-lock state apply, with Touch ID on `approve`/`strict`. This is the gate described above.
+
+The two are complementary: the client decides whether the *tool* may run at all; Lokalite decides whether *this secret* may be released. A secret can clear the client gate and still hit a Touch ID prompt, or be allowed by the client and refused by a `block` tier.
+
+If an agent reports that a `get_secret` call was **blocked by the permission classifier** (not a "vault is locked" error), that is the client gate, and you resolve it in the client — not in Lokalite. In Claude Code, allow the tool by adding it to `permissions.allow` in `.claude/settings.local.json` (project-scoped, uncommitted):
+
+```json
+{ "permissions": { "allow": ["mcp__lokalite__get_secret"] } }
+```
+
+Use `mcp__lokalite` to allow the whole server. **Weigh this against what you're releasing:** allowlisting removes the client's per-call prompt for *every* secret in the project, so an agent can auto-load production credentials into a shell without you in the loop. Because the client gate can't filter by argument, it can't distinguish prod from dev — if you want a human gate that only fires on sensitive secrets, leave `get_secret` out of the allowlist and mark those secrets `approve` so Lokalite's Touch ID prompt fires instead.
+
 ## Secret references
 
 A `lokalite://` reference stands in for a secret's value anywhere an environment variable is configured. References carry no secret material, so they are safe to commit. Three forms:
