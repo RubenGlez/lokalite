@@ -215,6 +215,10 @@ By default the server is **read-only** and exposes these tools:
 | `use_environment` | Switch the project's active environment — the one secrets resolve from by default |
 | `get_secret` | Load a secret into the agent's shell environment via a one-time handoff — the value is never returned to the model |
 
+<p align="center">
+  <img src="assets/screenshots/secrets-list.png" alt="The Secrets tab: names, categories, and environments, which is the metadata list_secrets exposes to an agent, never the values" width="100%"/>
+</p>
+
 `use_environment` switches the project's **single active environment**, the same one the menu bar app, the manager, and `lokalite env use` use — switching from the agent updates all of them, and the app refreshes live. For a one-off read from a different environment without switching, pass an `environment` argument to `get_secret` instead.
 
 `get_secret` does **not** return the secret value. It writes the value to a single-use, owner-only shell script and returns a `source '<path>'` command; the agent runs that in its own shell to load the variable, then runs its program in the same shell. The raw value never enters the conversation/model context, the script self-deletes on first source, and any unsourced script is swept after 30s. The server also sends `instructions` on connect describing this flow and telling agents never to print a loaded variable or copy a secret into `.env`/config/source.
@@ -240,10 +244,6 @@ Pass `--read-write` to also expose write tools:
 > - **allow** — the default.
 >
 > The CLI `get`/`copy` won't print any secret to stdout or the clipboard when an AI agent is detected in the calling process tree — the same transcript-safety boundary as the MCP handoff, so an agent can't sidestep it by shelling out to read a value directly. Pass `--allow-agent` to override for your own use; a `block` secret is refused regardless (no override). An `approve`/`strict` secret is additionally routed through the Lokalite app for the Touch ID prompt, for every caller (and refused, with no override, when the app isn't reachable); bulk reveals (`shell`, plaintext `export`, bulk `run` injection, `backup`) skip `approve` secrets and name them on stderr. This detection is best-effort (see the `block` note above) — it protects the transcript, not a determined agent's own shell; lean on `approve`/`strict` consent for anything that must not be released without you in the loop. **Writes are governed too:** an agent's `set_secret`/`delete_secret` (or CLI `set`/`delete`) on a `block` secret is refused, and on an `approve`/`strict` secret it prompts for Touch ID — so an agent can't overwrite or delete a protected secret without consent. Also keep the server read-only (the default), scope it to a single project by setting `LOKALITE_PROJECT` in the server's `env` config, and prefer clients that ask for approval before tool calls. Every MCP access is recorded in the activity log.
-
-<p align="center">
-  <img src="assets/screenshots/activity-log.png" alt="The Activity tab: each read tagged with the agent that made it, its source, and whether it was allowed or denied" width="100%"/>
-</p>
 
 ### The client's own permission layer
 
