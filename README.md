@@ -10,6 +10,10 @@ Lokalite is a local-first secrets manager for macOS, built for how developers wo
 
 **Project page:** [rubenglez.dev/lokalite](https://rubenglez.dev/lokalite)
 
+<p align="center">
+  <img src="assets/screenshots/manager-overview.png" alt="The Lokalite manager showing a project's environments, secrets, and CLI/MCP status" width="100%"/>
+</p>
+
 ## Why Lokalite
 
 - **vs. `.env` files**: values are encrypted at rest instead of sitting in plaintext, access is logged, and the same secrets are available to your shell, the CLI, and your AI agents without copy-pasting between files.
@@ -162,6 +166,10 @@ eval $(lokalite shell --keys OPENAI_API_KEY,ANTHROPIC_API_KEY)
 
 Click the armadillo icon in your menu bar (or press the global shortcut, default `⌘⇧Space`) to open the vault popover. The popover shows recently copied secrets at the top, then all secrets for the active project and environment. Use the project and environment menus in the header to switch context, and click **Open Lokalite** in the footer to open the full secrets manager window.
 
+<p align="center">
+  <img src="assets/screenshots/menu-bar-popover.png" alt="The menu bar popover: search, recently copied secrets, and quick copy/export actions" width="420"/>
+</p>
+
 The secrets manager is a three-column layout:
 - **Left sidebar**: project list; create, rename, and delete projects; set icon and link to a local directory
 - **Centre column**: environment switcher and searchable secrets list for the selected project
@@ -232,6 +240,10 @@ Pass `--read-write` to also expose write tools:
 > - **allow** — the default.
 >
 > The CLI `get`/`copy` won't print any secret to stdout or the clipboard when an AI agent is detected in the calling process tree — the same transcript-safety boundary as the MCP handoff, so an agent can't sidestep it by shelling out to read a value directly. Pass `--allow-agent` to override for your own use; a `block` secret is refused regardless (no override). An `approve`/`strict` secret is additionally routed through the Lokalite app for the Touch ID prompt, for every caller (and refused, with no override, when the app isn't reachable); bulk reveals (`shell`, plaintext `export`, bulk `run` injection, `backup`) skip `approve` secrets and name them on stderr. This detection is best-effort (see the `block` note above) — it protects the transcript, not a determined agent's own shell; lean on `approve`/`strict` consent for anything that must not be released without you in the loop. **Writes are governed too:** an agent's `set_secret`/`delete_secret` (or CLI `set`/`delete`) on a `block` secret is refused, and on an `approve`/`strict` secret it prompts for Touch ID — so an agent can't overwrite or delete a protected secret without consent. Also keep the server read-only (the default), scope it to a single project by setting `LOKALITE_PROJECT` in the server's `env` config, and prefer clients that ask for approval before tool calls. Every MCP access is recorded in the activity log.
+
+<p align="center">
+  <img src="assets/screenshots/activity-log.png" alt="The Activity tab: each read tagged with the agent that made it, its source, and whether it was allowed or denied" width="100%"/>
+</p>
 
 ### The client's own permission layer
 
