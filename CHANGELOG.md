@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `⌘F` now jumps to the Secrets tab and focuses its search, which previously had no shortcut of its own. It used to focus the search on Overview, which no longer lists secrets. `⌘N` for a new secret moved to the Secrets tab along with the table.
 
 ### Fixed
-- The CLI and MCP setup are now reachable before any project exists. The welcome screen replaces the whole window, sidebar included, so on a fresh vault there was no way to reach either without first creating a project that neither one needs.
+- The CLI and MCP setup are reachable again when the vault holds no projects at all. The welcome screen replaces the whole window, sidebar included, so deleting every project hid both, and neither one needs a project. A new install is unaffected: the vault is created with a Default project and goes straight to the dashboard.
 
 ## [2.6.1] - 2026-07-22
 
