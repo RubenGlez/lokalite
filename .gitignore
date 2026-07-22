@@ -2,6 +2,7 @@
 .swiftpm/
 *.o
 *.d
+*.profraw
 DerivedData/
 *.xcuserstate
 xcuserdata/
