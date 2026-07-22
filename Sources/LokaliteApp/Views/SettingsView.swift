@@ -630,6 +630,17 @@ struct SettingsView: View {
                 .buttonStyle(.link)
                 .help("Pick an existing .env file (or its folder) to create a project from it")
             }
+
+            // Onboarding replaces the whole dashboard, sidebar included, so without
+            // this the CLI and MCP setup would be unreachable until a project
+            // exists — neither of which needs one. First run is also when both are
+            // most likely still uninstalled.
+            VStack(spacing: 10) {
+                Divider().overlay(Theme.sep)
+                SidebarToolsSection()
+            }
+            .frame(width: 260)
+            .padding(.top, 6)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
