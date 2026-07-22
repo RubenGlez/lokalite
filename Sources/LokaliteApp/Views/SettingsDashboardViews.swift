@@ -516,16 +516,7 @@ struct MCPPanel: View {
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(Theme.panelBackground, in: .rect(cornerRadius: 8))
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.sep, lineWidth: 1))
-        .onAppear { isInstalled = checkMCPInstalled() }
-    }
-
-    private func checkMCPInstalled() -> Bool {
-        let claudeConfig = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".claude.json")
-        guard let data = try? Data(contentsOf: claudeConfig),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let servers = json["mcpServers"] as? [String: Any] else { return false }
-        return servers["lokalite"] != nil
+        .onAppear { isInstalled = isMCPInstalled() }
     }
 }
 
@@ -579,6 +570,68 @@ struct DeveloperActionsPanel: View {
         .background(Theme.panelBackground, in: .rect(cornerRadius: 8))
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.sep, lineWidth: 1))
         .onAppear { isInstalled = isCLIInstalled() }
+    }
+}
+
+/// Installing the CLI and registering the MCP server are machine-wide facts, not
+/// project ones, so they sit in the sidebar beside Activity rather than inside a
+/// project's Overview tab. The row itself stays a status glyph; the commands and
+/// docs live in a popover so the sidebar doesn't grow a second card column.
+struct SidebarToolsSection: View {
+    @State private var cliInstalled = false
+    @State private var mcpInstalled = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            SidebarToolRow(title: "CLI", installed: cliInstalled) {
+                DeveloperActionsPanel()
+            }
+            SidebarToolRow(title: "MCP Server", installed: mcpInstalled) {
+                MCPPanel()
+            }
+        }
+        .onAppear {
+            cliInstalled = isCLIInstalled()
+            mcpInstalled = isMCPInstalled()
+        }
+    }
+}
+
+struct SidebarToolRow<Detail: View>: View {
+    let title: String
+    let installed: Bool
+    @ViewBuilder let detail: Detail
+
+    @State private var showingDetail = false
+
+    var body: some View {
+        Button {
+            showingDetail = true
+        } label: {
+            HStack(spacing: 9) {
+                Circle()
+                    .fill(installed ? Theme.green : Theme.textDim)
+                    .frame(width: 6, height: 6)
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Theme.text)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Theme.textDim)
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 7)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(title), \(installed ? "installed" : "not installed")")
+        .help(installed ? "\(title) is installed" : "\(title) is not installed")
+        .popover(isPresented: $showingDetail, arrowEdge: .trailing) {
+            detail
+                .frame(width: 320)
+                .padding(4)
+        }
     }
 }
 
