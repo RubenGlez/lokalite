@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.0] - 2026-07-22
+
+### Changed
+- Installing the CLI and registering the MCP server moved out of a project's Overview tab into the sidebar, next to Activity. Neither has anything to do with the selected project, so sitting inside one implied a scope they never had. Each is now a row showing whether it is installed, and the commands and documentation link open on click.
+- The Overview tab no longer repeats the tabs beside it. It listed the same secrets as the Secrets tab (minus the actions) and the same environments as the Environments tab, so it now shows what only a project page can: its environments, its own recent accesses, and its metadata. The recent accesses are scoped to the project and cover reads from the CLI and from agents, not just the app, and "View all" opens the full activity log already filtered to that project.
+- `⌘F` now jumps to the Secrets tab and focuses its search, which previously had no shortcut of its own. It used to focus the search on Overview, which no longer lists secrets. `⌘N` for a new secret moved to the Secrets tab along with the table.
+
+### Fixed
+- The CLI and MCP setup are now reachable before any project exists. The welcome screen replaces the whole window, sidebar included, so on a fresh vault there was no way to reach either without first creating a project that neither one needs.
+
 ## [2.6.1] - 2026-07-22
 
 ### Fixed
