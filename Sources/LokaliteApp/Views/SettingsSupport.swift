@@ -161,3 +161,12 @@ func isCLIInstalled() -> Bool {
     return paths.contains { FileManager.default.fileExists(atPath: $0) }
 }
 
+func isMCPInstalled() -> Bool {
+    let claudeConfig = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent(".claude.json")
+    guard let data = try? Data(contentsOf: claudeConfig),
+          let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          let servers = json["mcpServers"] as? [String: Any] else { return false }
+    return servers["lokalite"] != nil
+}
+

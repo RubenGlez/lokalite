@@ -339,6 +339,14 @@ struct SettingsView: View {
                 .overlay(Theme.sep)
                 .padding(.horizontal, 14)
 
+            SidebarToolsSection()
+                .padding(.top, 8)
+
+            Divider()
+                .overlay(Theme.sep)
+                .padding(.horizontal, 14)
+                .padding(.top, 8)
+
             Button {
                 showingActivity = true
             } label: {
@@ -584,8 +592,6 @@ struct SettingsView: View {
     private var overviewSideColumn: some View {
         VStack(spacing: 14) {
             ProjectInfoPanel(project: vault.selectedProject, environmentCount: vault.environments.count, secretCount: vault.projectSecretCount)
-            DeveloperActionsPanel()
-            MCPPanel()
         }
     }
 
