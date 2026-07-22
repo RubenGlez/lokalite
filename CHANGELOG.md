@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2026-07-22
+
+### Added
+- The activity log can now be narrowed by project, source (app / CLI / MCP), action (read, created, updated, deleted, denied), and a text search across secret name, environment, and agent. Filters run against the stored log rather than the visible page, so narrowing to a quiet project surfaces entries older than the unfiltered list reaches.
+
+### Changed
+- Activity is now a vault-wide view in the sidebar, next to Settings, instead of a tab inside the selected project. It always listed accesses from every project, so sitting under one project implied a scope it never had.
+
 ## [2.5.1] - 2026-07-08
 
 ### Changed
