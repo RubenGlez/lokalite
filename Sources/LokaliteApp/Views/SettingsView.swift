@@ -104,6 +104,10 @@ struct SettingsView: View {
         .preferredColorScheme(vault.colorScheme)
         .onAppear {
             if vault.isLocked { vault.unlock() }
+            consumePendingAddSecret()
+        }
+        .onChange(of: vault.pendingAddSecret) { _, _ in
+            consumePendingAddSecret()
         }
         .onChange(of: vault.isLocked) { _, isLocked in
             if isLocked {
@@ -682,6 +686,13 @@ struct SettingsView: View {
     }
 
     // MARK: - Actions
+
+    /// The popover hands "new secret" over here (it can't host the sheet itself).
+    private func consumePendingAddSecret() {
+        guard vault.pendingAddSecret else { return }
+        vault.pendingAddSecret = false
+        presentedSheet = .addSecret
+    }
 
     private func tabIcon(_ tab: String) -> String {
         switch tab {

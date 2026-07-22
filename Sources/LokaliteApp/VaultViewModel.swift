@@ -20,6 +20,11 @@ final class VaultViewModel {
     /// Kept on the model so background reloads (a copy from the popover, a
     /// secret edit) don't drop the filters the Activity pane is showing.
     var activityFilter = ActivityFilter()
+    /// Set by the popover to hand the "new secret" action over to the manager
+    /// window: a `MenuBarExtra(.window)` popover closes as soon as a sheet takes
+    /// key focus, so the add form can't live there. The manager consumes and
+    /// clears this on appear (window opening) or on change (window already open).
+    var pendingAddSecret = false
 
     var sessionTimeoutSeconds: Double {
         get {

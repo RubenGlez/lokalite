@@ -6,7 +6,6 @@ struct VaultPopover: View {
     @Environment(VaultViewModel.self) private var vault
     @Environment(\.openWindow) private var openWindow
     @State private var searchText = ""
-    @State private var showingAddSecret = false
     @State private var selectedIndex = 0
     @State private var revealedSecretID: Secret.ID?
     @State private var envCopied = false
@@ -70,7 +69,6 @@ struct VaultPopover: View {
             if !locked { Task { @MainActor in searchFocused = true } }
         }
         .onDisappear {
-            showingAddSecret = false
             revealedSecretID = nil
         }
         .alert("Error", isPresented: Binding(
@@ -80,10 +78,6 @@ struct VaultPopover: View {
             Button("OK") { vault.errorMessage = nil }
         } message: {
             Text(vault.errorMessage ?? "")
-        }
-        .sheet(isPresented: $showingAddSecret) {
-            AddSecretView()
-                .environment(vault)
         }
     }
 
@@ -238,7 +232,7 @@ struct VaultPopover: View {
             DevBadge()
 
             Button {
-                showingAddSecret = true
+                openManageWindow(addingSecret: true)
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 12, weight: .semibold))
@@ -366,7 +360,7 @@ struct VaultPopover: View {
             Label("No secrets yet", systemImage: "key")
         } actions: {
             Button("Add your first secret") {
-                showingAddSecret = true
+                openManageWindow(addingSecret: true)
             }
             .disabled(vault.selectedProject == nil || vault.selectedEnvironment == nil)
         }
@@ -448,7 +442,10 @@ struct VaultPopover: View {
             .forEach { $0.orderOut(nil) }
     }
 
-    private func openManageWindow() {
+    // Set the request before opening so a freshly created manager window picks it
+    // up in `onAppear`; an already-open one reacts to the change instead.
+    private func openManageWindow(addingSecret: Bool = false) {
+        if addingSecret { vault.pendingAddSecret = true }
         closePopover()
         NSApp.activate(ignoringOtherApps: true)
         openWindow(id: "settings")
