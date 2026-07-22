@@ -50,6 +50,10 @@ struct VaultPopover: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            if let message = vault.errorMessage {
+                errorBanner(message)
+                Divider()
+            }
             if vault.isLocked {
                 lockedStateView
             } else {
@@ -59,6 +63,7 @@ struct VaultPopover: View {
         .frame(minWidth: 360, maxWidth: 360, minHeight: 230)
         .preferredColorScheme(vault.colorScheme)
         .animation(.easeInOut(duration: 0.2), value: vault.isLocked)
+        .animation(.easeInOut(duration: 0.15), value: vault.errorMessage)
         .onAppear {
             revealedSecretID = nil
             selectedIndex = 0
@@ -71,14 +76,35 @@ struct VaultPopover: View {
         .onDisappear {
             revealedSecretID = nil
         }
-        .alert("Error", isPresented: Binding(
-            get: { vault.errorMessage != nil },
-            set: { if !$0 { vault.errorMessage = nil } }
-        )) {
-            Button("OK") { vault.errorMessage = nil }
-        } message: {
-            Text(vault.errorMessage ?? "")
+    }
+
+    // Errors surface inline rather than through `.alert`: a `MenuBarExtra(.window)`
+    // popover closes the moment the alert takes key focus, which tore the alert
+    // down before it could be read and left `errorMessage` set for good.
+    private func errorBanner(_ message: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 11))
+                .foregroundStyle(Theme.red)
+            Text(message)
+                .font(.system(size: 11))
+                .foregroundStyle(Theme.text)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button {
+                vault.errorMessage = nil
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .semibold))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Theme.textMuted)
+            .accessibilityLabel("Dismiss error")
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.red.opacity(0.12))
     }
 
     private var lockedStateView: some View {
