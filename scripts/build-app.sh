@@ -53,6 +53,24 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
+# Embed Sparkle: the executable links @rpath/Sparkle.framework unconditionally,
+# so without it dyld fails and the app never launches (the updater itself stays
+# inert in dev builds). Mirrors the embed step in .github/workflows/release.yml.
+SPARKLE_FW="$(find "$PRODUCTS" -maxdepth 2 -name Sparkle.framework -type d 2>/dev/null | head -1)"
+if [ -z "$SPARKLE_FW" ]; then
+  SPARKLE_FW="$(find .build/artifacts -path '*macos-arm64_x86_64/Sparkle.framework' -type d 2>/dev/null | head -1)"
+fi
+if [ -z "$SPARKLE_FW" ]; then
+  echo "Sparkle.framework not found" >&2
+  exit 1
+fi
+mkdir -p "$APP/Contents/Frameworks"
+ditto "$SPARKLE_FW" "$APP/Contents/Frameworks/Sparkle.framework"
+# The executable's LC_RPATH points at build dirs, so add the bundle's Frameworks
+# dir. Must run before codesign — it invalidates the signature.
+install_name_tool -add_rpath "@executable_path/../Frameworks" \
+  "$APP/Contents/MacOS/LokaliteApp" 2>/dev/null || true
+
 codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || true
 
 echo "==> Done."
