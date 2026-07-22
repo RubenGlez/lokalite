@@ -47,3 +47,30 @@ public struct ActivityLogEntry: Identifiable, Sendable {
         case read, created, updated, deleted, denied
     }
 }
+
+/// Narrows an activity-log query. Applied in SQL, not over an already-fetched
+/// page, so a filter reaches entries older than the unfiltered listing shows.
+public struct ActivityFilter: Sendable, Equatable {
+    public var projectName: String?
+    public var source: ActivityLogEntry.AccessSource?
+    public var action: ActivityLogEntry.Action?
+    /// Matched against the secret name, environment name, and agent token.
+    public var search: String
+
+    public init(
+        projectName: String? = nil,
+        source: ActivityLogEntry.AccessSource? = nil,
+        action: ActivityLogEntry.Action? = nil,
+        search: String = ""
+    ) {
+        self.projectName = projectName
+        self.source = source
+        self.action = action
+        self.search = search
+    }
+
+    public var isEmpty: Bool {
+        projectName == nil && source == nil && action == nil
+            && search.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+}

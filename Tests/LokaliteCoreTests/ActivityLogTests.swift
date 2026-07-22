@@ -112,6 +112,38 @@ final class ActivityLogTests: XCTestCase {
         XCTAssertTrue(try vault.listActivity().isEmpty, "no source → no audit entry (preserves existing callers)")
     }
 
+    // MARK: - Filtering
+
+    func testListActivityFiltersByProjectSourceAndAction() throws {
+        let vault = try makeVault()
+        vault.logAccess(secretName: "A", projectName: "App", environmentName: "prod", source: .cli, action: .read)
+        vault.logAccess(secretName: "B", projectName: "App", environmentName: "prod", source: .mcp, agent: "claude", action: .denied)
+        vault.logAccess(secretName: "C", projectName: "Site", environmentName: "dev", source: .app, action: .created)
+
+        let byProject = try vault.listActivity(filter: ActivityFilter(projectName: "App"))
+        XCTAssertEqual(Set(byProject.map(\.secretName)), ["A", "B"])
+
+        let bySource = try vault.listActivity(filter: ActivityFilter(source: .mcp))
+        XCTAssertEqual(bySource.map(\.secretName), ["B"])
+
+        let byAction = try vault.listActivity(filter: ActivityFilter(action: .created))
+        XCTAssertEqual(byAction.map(\.secretName), ["C"])
+
+        // Filters combine, and a contradictory combination yields nothing.
+        XCTAssertTrue(try vault.listActivity(filter: ActivityFilter(projectName: "Site", source: .cli)).isEmpty)
+    }
+
+    func testListActivitySearchMatchesSecretEnvironmentAndAgent() throws {
+        let vault = try makeVault()
+        vault.logAccess(secretName: "STRIPE_KEY", projectName: "App", environmentName: "prod", source: .cli)
+        vault.logAccess(secretName: "DB_URL", projectName: "App", environmentName: "staging", source: .mcp, agent: "cursor")
+
+        XCTAssertEqual(try vault.listActivity(filter: ActivityFilter(search: "stripe")).map(\.secretName), ["STRIPE_KEY"])
+        XCTAssertEqual(try vault.listActivity(filter: ActivityFilter(search: "staging")).map(\.secretName), ["DB_URL"])
+        XCTAssertEqual(try vault.listActivity(filter: ActivityFilter(search: "curs")).map(\.secretName), ["DB_URL"])
+        XCTAssertEqual(try vault.listActivity(filter: ActivityFilter(search: "   ")).count, 2, "a blank search is not a filter")
+    }
+
     // MARK: - MCP denial logging (client side, for the blocked pre-check)
 
     func testMCPGetSecretLogsDenialForBlockedSecret() throws {

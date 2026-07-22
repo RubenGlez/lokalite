@@ -514,8 +514,8 @@ public final class Vault {
         try? store.insertActivityLog(record)
     }
 
-    public func listActivity(limit: Int = 100) throws -> [ActivityLogEntry] {
-        return try store.fetchActivityLogs(limit: limit).map { record in
+    public func listActivity(limit: Int = 100, filter: ActivityFilter = ActivityFilter()) throws -> [ActivityLogEntry] {
+        return try store.fetchActivityLogs(limit: limit, filter: filter).map { record in
             ActivityLogEntry(
                 id: record.id,
                 secretName: record.secretName,

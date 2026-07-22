@@ -17,6 +17,9 @@ final class VaultViewModel {
     var isLocked = true
     var errorMessage: String?
     var activityEntries: [ActivityLogEntry] = []
+    /// Kept on the model so background reloads (a copy from the popover, a
+    /// secret edit) don't drop the filters the Activity pane is showing.
+    var activityFilter = ActivityFilter()
 
     var sessionTimeoutSeconds: Double {
         get {
@@ -608,8 +611,8 @@ final class VaultViewModel {
         clipboard.copy(lines.joined(separator: "\n") + "\n", clearAfter: clipboardClearSeconds)
     }
 
-    private func reloadActivity() {
-        activityEntries = (try? Vault.shared.listActivity()) ?? []
+    func reloadActivity() {
+        activityEntries = (try? Vault.shared.listActivity(limit: 500, filter: activityFilter)) ?? []
     }
 
     private func recordRecent(_ secret: Secret) {

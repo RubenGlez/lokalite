@@ -11,6 +11,9 @@ struct SettingsView: View {
     @State private var selectedSecret: Secret?
     @State private var selectedTab = "Overview"
     @State private var projectSearchText = ""
+    /// The activity log spans every project, so it lives beside Settings in the
+    /// sidebar and replaces the project pane instead of being a project tab.
+    @State private var showingActivity = false
 
     private enum PresentedSheet: Identifiable {
         case addSecret
@@ -235,7 +238,12 @@ struct SettingsView: View {
             redesignedSidebar
                 .frame(width: 245)
             Divider().overlay(Theme.sep)
-            mainDashboard
+            if showingActivity {
+                ActivityView()
+                    .environment(vault)
+            } else {
+                mainDashboard
+            }
         }
         .background {
             Group {
@@ -301,15 +309,17 @@ struct SettingsView: View {
                     ForEach(filteredProjects) { project in
                         DashboardProjectRow(
                             project: project,
-                            isSelected: vault.selectedProject?.id == project.id,
+                            isSelected: !showingActivity && vault.selectedProject?.id == project.id,
                             onSelect: {
                                 selectedSecret = nil
+                                showingActivity = false
                                 vault.selectProject(project)
                             }
                         )
                         .contextMenu {
                             Button("Import from .env…") {
                                 selectedSecret = nil
+                                showingActivity = false
                                 vault.selectProject(project)
                                 beginImportFromEnv(mode: .existingProject(project))
                             }
@@ -320,6 +330,23 @@ struct SettingsView: View {
             }
 
             Spacer()
+
+            Divider()
+                .overlay(Theme.sep)
+                .padding(.horizontal, 14)
+
+            Button {
+                showingActivity = true
+            } label: {
+                Label("Activity", systemImage: "clock")
+                    .font(.system(size: 13, weight: .medium))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 12)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(showingActivity ? Theme.brand : Theme.text)
+            .padding(.top, 6)
 
             Button {
                 presentedSheet = .appSettings
@@ -358,9 +385,6 @@ struct SettingsView: View {
                 onAdd: { presentedSheet = .addSecret }
             )
             .environment(vault)
-        case "Activity":
-            ActivityTab()
-                .environment(vault)
         case "Settings":
             ProjectSettingsTab(
                 onEditAppearance: { presentedSheet = .projectAppearance(vault.selectedProject) },
@@ -426,7 +450,7 @@ struct SettingsView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 22) {
-                    ForEach(["Overview", "Environments", "Secrets", "Activity", "Settings"], id: \.self) { tab in
+                    ForEach(["Overview", "Environments", "Secrets", "Settings"], id: \.self) { tab in
                         Button {
                             selectedTab = tab
                         } label: {
@@ -664,7 +688,6 @@ struct SettingsView: View {
         case "Overview": return "square.grid.2x2"
         case "Environments": return "cube"
         case "Secrets": return "lock"
-        case "Activity": return "clock"
         default: return "gearshape"
         }
     }
