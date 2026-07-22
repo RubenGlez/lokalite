@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.1] - 2026-07-22
+
+### Fixed
+- Adding a secret from the menu-bar popover works again. The `[+]` button opened a form that closed itself the instant it appeared, so a secret could only be created from the manager window. The popover now opens the manager with the Add Secret form ready, because a menu-bar popover cannot host that form at all — it closes as soon as the form takes keyboard focus.
+- Errors raised from the popover are now visible. They were shown in an alert that the popover dismissed on sight, so failures passed silently and the popover suppressed every later error for the rest of the session. Errors appear as a dismissible banner at the top of the popover instead.
+
 ## [2.6.0] - 2026-07-22
 
 ### Added
