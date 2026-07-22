@@ -217,42 +217,6 @@ struct DashboardSecretsTable: View {
     }
 }
 
-struct SecretShortcutRow: View {
-    let onNewSecret: () -> Void
-
-    var body: some View {
-        HStack {
-            Button(action: onNewSecret) {
-                ShortcutHint(keys: "⌘N", title: "New secret")
-            }
-            .buttonStyle(.plain)
-            .keyboardShortcut("n", modifiers: .command)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, 12)
-    }
-}
-
-struct ShortcutHint: View {
-    let keys: String
-    let title: String
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Text(keys)
-                .font(Theme.mono(12, .medium))
-                .foregroundStyle(Theme.textMuted)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
-                .background(Theme.windowBackground, in: .rect(cornerRadius: 6))
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.sep, lineWidth: 1))
-            Text(title)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Theme.textMuted)
-        }
-    }
-}
-
 struct DashboardSecretHeader: View {
     var body: some View {
         HStack(spacing: 12) {

@@ -8,7 +8,6 @@ import SymbolPicker
 struct SettingsView: View {
     @Environment(VaultViewModel.self) private var vault
     @Environment(SoftwareUpdater.self) private var softwareUpdater
-    @State private var selectedSecret: Secret?
     @State private var selectedTab = "Overview"
     @State private var projectSearchText = ""
     /// The activity log spans every project, so it lives beside Settings in the
@@ -41,7 +40,6 @@ struct SettingsView: View {
     @State private var presentedSheet: PresentedSheet?
 
     // Search
-    @State private var searchText = ""
     @FocusState private var projectSearchFocused: Bool
     @FocusState private var secretSearchFocused: Bool
 
@@ -53,16 +51,6 @@ struct SettingsView: View {
     @State private var forceDeletingEnv: VaultEnvironment?
     @State private var deletingSecret: Secret?
 
-    private var filteredSecrets: [Secret] {
-        guard !searchText.isEmpty else { return vault.secrets }
-        let q = searchText.lowercased()
-        return vault.secrets.filter {
-            $0.name.lowercased().contains(q) ||
-            ($0.description?.lowercased().contains(q) ?? false) ||
-            $0.category.label.lowercased().contains(q)
-        }
-    }
-
     private var filteredProjects: [Project] {
         guard !projectSearchText.isEmpty else { return vault.projects }
         let q = projectSearchText.lowercased()
@@ -70,10 +58,6 @@ struct SettingsView: View {
             $0.name.lowercased().contains(q) ||
             ($0.path?.lowercased().contains(q) ?? false)
         }
-    }
-
-    private var selectedEnvironmentName: String {
-        vault.selectedEnvironment?.name ?? "No environment"
     }
 
     private var environmentCards: [DashboardEnvironment] {
@@ -118,11 +102,6 @@ struct SettingsView: View {
                 forceDeletingEnv = nil
                 deletingSecret = nil
             }
-        }
-        .onChange(of: vault.secrets) { _, newSecrets in
-            guard let selected = selectedSecret else { return }
-            let updated = newSecrets.first { $0.id == selected.id }
-            selectedSecret = updated
         }
         .sheet(item: $presentedSheet) { sheet in
             switch sheet {
@@ -253,8 +232,14 @@ struct SettingsView: View {
             Group {
                 Button("") { projectSearchFocused = true }
                     .keyboardShortcut("k", modifiers: .command)
-                Button("") { secretSearchFocused = true }
-                    .keyboardShortcut("f", modifiers: .command)
+                // ⌘F used to focus Overview's secret search; Overview no longer
+                // lists secrets, so it now lands on the tab that does.
+                Button("") {
+                    showingActivity = false
+                    selectedTab = "Secrets"
+                    Task { @MainActor in secretSearchFocused = true }
+                }
+                .keyboardShortcut("f", modifiers: .command)
             }
             .hidden()
         }
@@ -315,14 +300,12 @@ struct SettingsView: View {
                             project: project,
                             isSelected: !showingActivity && vault.selectedProject?.id == project.id,
                             onSelect: {
-                                selectedSecret = nil
                                 showingActivity = false
                                 vault.selectProject(project)
                             }
                         )
                         .contextMenu {
                             Button("Import from .env…") {
-                                selectedSecret = nil
                                 showingActivity = false
                                 vault.selectProject(project)
                                 beginImportFromEnv(mode: .existingProject(project))
@@ -394,7 +377,8 @@ struct SettingsView: View {
                 onEdit: { presentedSheet = .editSecret($0) },
                 onMove: { presentedSheet = .moveSecret($0) },
                 onDelete: { deletingSecret = $0 },
-                onAdd: { presentedSheet = .addSecret }
+                onAdd: { presentedSheet = .addSecret },
+                searchFocus: $secretSearchFocused
             )
             .environment(vault)
         case "Settings":
@@ -414,7 +398,7 @@ struct SettingsView: View {
                 HStack(alignment: .top, spacing: 18) {
                     VStack(alignment: .leading, spacing: 26) {
                         environmentsSection
-                        secretsSection
+                        recentActivitySection
                     }
                     .frame(maxWidth: .infinity, alignment: .topLeading)
 
@@ -530,63 +514,59 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    private var secretsSection: some View {
+    private var recentActivitySection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Secrets")
+                Text("Recent activity")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(Theme.text)
                 Spacer()
-                DashboardSearchField(
-                    placeholder: "Search secrets...",
-                    text: $searchText,
-                    shortcut: "⌘F",
-                    isFocused: $secretSearchFocused
-                )
-                .frame(width: 200)
+                BorderedActionButton(action: { showProjectActivity() }) {
+                    Label("View all", systemImage: "arrow.right")
+                }
             }
 
-        if filteredSecrets.isEmpty {
-                emptySecretsPanel
-        } else {
-                DashboardSecretsTable(
-                    secrets: filteredSecrets,
-                    environmentNames: vault.secretEnvironmentNames,
-                    environmentColors: vault.environmentColors,
-                    selectedEnvironmentName: selectedEnvironmentName,
-                    selectedSecret: selectedSecret,
-                    showActions: false,
-                    onSelect: { vault.copyToClipboard($0) },
-                    onCopy: { vault.copyToClipboard($0) },
-                    onEdit: { _ in },
-                    onMove: { _ in },
-                    onDelete: { _ in }
-                )
-                SecretShortcutRow(onNewSecret: { presentedSheet = .addSecret })
+            if vault.projectActivity.isEmpty {
+                emptyActivityPanel
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(vault.projectActivity) { entry in
+                        ActivityRow(entry: entry)
+                        if entry.id != vault.projectActivity.last?.id {
+                            Divider().overlay(Theme.sep)
+                        }
+                    }
+                }
+                .background(Theme.panelBackground, in: .rect(cornerRadius: 8))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.sep, lineWidth: 1))
             }
         }
     }
 
-    private var emptySecretsPanel: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "tray")
+    private var emptyActivityPanel: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "clock")
                 .font(.system(size: 24))
                 .foregroundStyle(Theme.textDim)
-            Text(searchText.isEmpty ? "No secrets in \(selectedEnvironmentName)" : "No matching secrets")
+            Text("No activity yet")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Theme.text)
-            Button {
-                presentedSheet = .addSecret
-            } label: {
-                Label("New secret", systemImage: "plus")
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(Theme.brand)
-            .controlSize(.small)
+            Text("Reads and edits from the app, the CLI, and your agents show up here.")
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.textMuted)
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, minHeight: 170)
         .background(Theme.panelBackground, in: .rect(cornerRadius: 8))
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.sep, lineWidth: 1))
+    }
+
+    /// "View all" hands the vault-wide Activity pane this project's filter, so the
+    /// jump lands on the rows this section previews rather than the whole vault.
+    private func showProjectActivity() {
+        vault.activityFilter = ActivityFilter(projectName: vault.selectedProject?.name)
+        vault.reloadActivity()
+        showingActivity = true
     }
 
     private var overviewSideColumn: some View {

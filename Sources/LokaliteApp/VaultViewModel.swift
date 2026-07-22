@@ -17,6 +17,8 @@ final class VaultViewModel {
     var isLocked = true
     var errorMessage: String?
     var activityEntries: [ActivityLogEntry] = []
+    /// The selected project's most recent accesses, for the Overview tab.
+    var projectActivity: [ActivityLogEntry] = []
     /// Kept on the model so background reloads (a copy from the popover, a
     /// secret edit) don't drop the filters the Activity pane is showing.
     var activityFilter = ActivityFilter()
@@ -280,8 +282,15 @@ final class VaultViewModel {
             projectSecretCount = 0
             environmentSecretCounts = [:]
             secretEnvironmentNames = [:]
+            projectActivity = []
             return
         }
+
+        // Scoped to this project, unlike `activityEntries`, which the Activity
+        // pane owns and narrows with whatever filters the user set there.
+        projectActivity = (try? Vault.shared.listActivity(
+            limit: 6, filter: ActivityFilter(projectName: project.name)
+        )) ?? []
 
         do {
             projectSecretCount = try Vault.shared.totalSecretCount(projectId: project.id)

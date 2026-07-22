@@ -166,6 +166,8 @@ struct SecretsTab: View {
     let onMove: (Secret) -> Void
     let onDelete: (Secret) -> Void
     let onAdd: () -> Void
+    /// Owned by SettingsView so ⌘F can jump here and land in the field.
+    var searchFocus: FocusState<Bool>.Binding? = nil
     @State private var searchText = ""
     @State private var selectedSecret: Secret?
 
@@ -190,7 +192,8 @@ struct SecretsTab: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(Theme.text)
                 Spacer()
-                DashboardSearchField(placeholder: "Search secrets...", text: $searchText, shortcut: "⌘F")
+                DashboardSearchField(placeholder: "Search secrets...", text: $searchText,
+                                     shortcut: "⌘F", isFocused: searchFocus)
                     .frame(width: 200)
                 BorderedActionButton(action: onAdd) {
                     Label("New secret", systemImage: "plus")
