@@ -2,3 +2,4 @@
 # Example:
 #   ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... alice@example.com
 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEAXwc1cDFXvdhE3rJCUdhVG00Kgbkv+qAx2Wa2563yv ruben.daren@gmail.com
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPWIUsi4Wze1lFo9U9J+h2Xq8Ku62BY5v4H9BJLA/Qx9 doctier-windows-lokalite
