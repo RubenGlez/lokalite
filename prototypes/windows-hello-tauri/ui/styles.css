@@ -1,0 +1,59 @@
+:root {
+  color: #e8f0ed;
+  background: #111817;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+}
+
+main {
+  width: min(36rem, calc(100vw - 4rem));
+}
+
+.eyebrow {
+  color: #7ed0ad;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+h1 {
+  margin-bottom: 0.5rem;
+}
+
+p {
+  color: #b9c7c2;
+  line-height: 1.55;
+}
+
+button {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: 0.5rem;
+  color: #0c1713;
+  background: #7ed0ad;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+pre {
+  min-height: 7rem;
+  padding: 1rem;
+  overflow: auto;
+  border: 1px solid #32443d;
+  border-radius: 0.5rem;
+  color: #d4e7df;
+  background: #0a100e;
+}
