@@ -7,6 +7,23 @@ on:
     branches: [main]
 
 jobs:
+  crypto-storage-compatibility:
+    name: crypto-storage-compatibility
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust formatting
+        run: cargo fmt --manifest-path Compatibility/Cargo.toml -- --check
+
+      - name: Build compatibility harnesses
+        run: |
+          cargo check --all-targets --manifest-path Compatibility/Cargo.toml
+          swift build --build-tests
+
+      - name: Run bidirectional Swift/Rust oracle
+        run: bash scripts/compatibility.sh
+
   build-and-test:
     runs-on: macos-latest
     steps:

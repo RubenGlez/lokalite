@@ -4,6 +4,7 @@
 *.d
 *.profraw
 DerivedData/
+Compatibility/target/
 *.xcuserstate
 xcuserdata/
 .claude/

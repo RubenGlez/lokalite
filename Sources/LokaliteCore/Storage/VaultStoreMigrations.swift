@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 extension VaultStore {
-    func migrate() throws {
+    func migrate(upTo target: String? = nil) throws {
         var migrator = DatabaseMigrator()
 
         migrator.registerMigration("v1") { db in
@@ -147,6 +147,10 @@ extension VaultStore {
             }
         }
 
-        try migrator.migrate(db)
+        if let target {
+            try migrator.migrate(db, upTo: target)
+        } else {
+            try migrator.migrate(db)
+        }
     }
 }
