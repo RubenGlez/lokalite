@@ -45,6 +45,36 @@ jobs:
       - name: Build x64
         run: cargo build --release
 
+  # Native ARM64. The runner's host target is aarch64-pc-windows-msvc, so this
+  # builds and runs the tests on the architecture itself rather than
+  # cross-compiling to a target no one executes. Free on public repositories.
+  windows-arm64-prototype:
+    name: windows-arm64-prototype
+    runs-on: windows-11-arm
+    defaults:
+      run:
+        working-directory: prototypes/windows-hello-tauri/src-tauri
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure a Rust toolchain
+        run: |
+          if (Get-Command cargo -ErrorAction SilentlyContinue) {
+            cargo --version
+            exit 0
+          }
+          $installer = Join-Path $env:RUNNER_TEMP 'rustup-init.exe'
+          Invoke-WebRequest -Uri 'https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe' -OutFile $installer
+          & $installer -y --default-toolchain stable --profile minimal
+          if ($LASTEXITCODE -ne 0) { throw "rustup-init failed with exit code $LASTEXITCODE" }
+          Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $env:USERPROFILE '.cargo\bin')
+
+      - name: Test
+        run: cargo test
+
+      - name: Build ARM64
+        run: cargo build --release
+
   build-and-test:
     runs-on: macos-latest
     steps:
