@@ -43,7 +43,12 @@ cargo build --release --target aarch64-pc-windows-msvc
 Everything compiles for ARM64, but linking needs the ARM64 MSVC toolset. If
 `link.exe` is reported missing, add the
 `Microsoft.VisualStudio.Component.VC.Tools.ARM64` component to the Visual Studio
-Build Tools installation. Running ARM64 binaries still needs real hardware.
+Build Tools installation.
+
+Cross-compiling is optional: the `windows-arm64-prototype` CI job builds and
+tests on a native ARM64 runner, which is stronger evidence than a binary the
+build host cannot execute. Windows Hello and the installed-package lifecycle on
+ARM64 still need real hardware.
 
 ## Interactive QA
 
