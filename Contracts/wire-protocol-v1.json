@@ -1,0 +1,31 @@
+{
+    "description":  "Frozen JSON encoding of the Lokalite daemon protocol, captured from the shipped Swift baseline. Values are exact bytes: compare literally, never semantically.",
+    "encoder":  "Foundation JSONEncoder with .sortedKeys",
+    "requests":  {
+                     "unlock":  "{\"unlock\":{}}",
+                     "resolveProject.named":  "{\"resolveProject\":{\"name\":\"demo\"}}",
+                     "resolveProject.byDirectory":  "{\"resolveProject\":{\"workingDirectory\":\"\\/tmp\\/demo\"}}",
+                     "listProjects":  "{\"listProjects\":{}}",
+                     "add.full":  "{\"add\":{\"category\":\"secret\",\"description\":\"d\",\"environmentName\":\"staging\",\"icon\":\"key\",\"name\":\"API_KEY\",\"projectId\":\"p1\",\"value\":\"v\"}}",
+                     "add.minimal":  "{\"add\":{\"name\":\"API_KEY\",\"projectId\":\"p1\",\"value\":\"v\"}}",
+                     "get":  "{\"get\":{\"environmentName\":\"staging\",\"name\":\"API_KEY\",\"projectId\":\"p1\"}}",
+                     "get.noEnvironment":  "{\"get\":{\"name\":\"API_KEY\",\"projectId\":\"p1\"}}",
+                     "set":  "{\"set\":{\"name\":\"API_KEY\",\"projectId\":\"p1\",\"value\":\"v\"}}",
+                     "delete":  "{\"delete\":{\"name\":\"API_KEY\",\"projectId\":\"p1\"}}",
+                     "list":  "{\"list\":{\"environmentName\":\"staging\",\"projectId\":\"p1\"}}",
+                     "listInfo":  "{\"listInfo\":{\"projectId\":\"p1\"}}",
+                     "listEnvironments":  "{\"listEnvironments\":{\"projectId\":\"p1\"}}",
+                     "setActiveEnvironment":  "{\"setActiveEnvironment\":{\"name\":\"staging\",\"projectId\":\"p1\"}}",
+                     "setActiveEnvironment.clear":  "{\"setActiveEnvironment\":{\"projectId\":\"p1\"}}",
+                     "importEnv":  "{\"importEnv\":{\"overwrite\":true,\"pairs\":[{\"name\":\"A\",\"value\":\"1\"}],\"projectId\":\"p1\"}}",
+                     "logAccess":  "{\"logAccess\":{\"action\":\"read\",\"environmentName\":\"Default\",\"projectName\":\"demo\",\"secretName\":\"API_KEY\",\"source\":\"cli\"}}"
+                 },
+    "responses":  {
+                      "ok":  "{\"ok\":{}}",
+                      "failure":  "{\"failure\":{\"message\":\"denied\"}}"
+                  },
+    "envelopes":  {
+                      "withHint":  "{\"agentContext\":\"claude\",\"request\":{\"listProjects\":{}}}",
+                      "withoutHint":  "{\"request\":{\"listProjects\":{}}}"
+                  }
+}

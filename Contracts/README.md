@@ -91,6 +91,31 @@ handshake that deliberately does **not** unlock (`:208`).
 **Existing**: `VaultWireTests.swift` round-trips through Swift's own coder,
 which cannot catch a shape a second implementation would render differently.
 
+**Frozen**: `wire-protocol-v1.json` holds the exact bytes for all 13 request
+cases, both model-free responses, and both envelope shapes, captured from the
+baseline and asserted verbatim by `WireEncodingContractTests`.
+
+Four properties of Swift's derivation that a Rust port gets wrong by default:
+
+1. **Payload-free cases are objects, not strings.** `.unlock` encodes as
+   `{"unlock":{}}`. Serde's externally-tagged default renders a unit variant as
+   the bare string `"unlock"`.
+2. **`nil` is omitted, never `null`.** `.resolveProject(name: "demo",
+   workingDirectory: nil)` encodes as `{"resolveProject":{"name":"demo"}}` with
+   no second key. Serde emits `"workingDirectory":null` unless every optional
+   carries `skip_serializing_if = "Option::is_none"`.
+3. **Forward slashes are escaped.** A path encodes as `"\/tmp\/demo"`, because
+   Foundation escapes `/` unless `.withoutEscapingSlashes` is set. `serde_json`
+   does not. Any byte-level comparison fails on the first path-shaped value.
+4. **Nested enums encode as their raw strings** — `"secret"`, `"cli"`, `"read"`
+   — not as wrapped objects like their parent.
+
+Point 2 is the one with teeth: `null` and *absent* both decode to `nil` in
+Swift, so a Rust daemon emitting `null` would interoperate fine and still fail
+any byte-identical comparison. Whether the protocol demands byte identity or
+only semantic equivalence is a decision Task 3.1 owes; the frozen bytes make it
+an explicit choice rather than an accident.
+
 ### 4. Schema versions
 
 **Surface**: migrations `v1`, `v3`, `v4`, `v5`, `v6`, `v7`
@@ -167,10 +192,20 @@ rather than repository inputs.
 
 ## Order of work
 
-1. **IPC encodings** — highest risk, smallest surface, and it blocks Task 3.1.
+1. ~~**IPC encodings**~~ — done: `wire-protocol-v1.json`.
 2. **MCP frames** — a published integration surface with existing user configs.
 3. **CLI output** — largest volume; user scripts depend on it byte-for-byte.
 4. **Governance matrix** — restating outcomes that are already well covered.
 
 Context resolution and backups fold into the CLI and the existing
 `Compatibility/` gate respectively.
+
+## Capturing a fixture
+
+Fixtures are lifted from the baseline, never hand-written — the escaping alone
+makes transcription unreliable. The pattern used for `wire-protocol-v1.json`:
+have the test print each encoding with a greppable prefix, read it from a CI
+run, generate the fixture from that output, then convert the test to assert
+verbatim. The generation step must not run on a developer machine and quietly
+"fix" a mismatch: a fixture regenerated to match a broken implementation proves
+only that the implementation agrees with itself.
