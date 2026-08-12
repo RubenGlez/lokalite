@@ -1,5 +1,7 @@
 const verifyButton = document.querySelector("#verify");
 const result = document.querySelector("#result");
+const lifecycleButton = document.querySelector("#refresh-lifecycle");
+const lifecycle = document.querySelector("#lifecycle");
 
 verifyButton.addEventListener("click", async () => {
   verifyButton.disabled = true;
@@ -18,5 +20,18 @@ verifyButton.addEventListener("click", async () => {
     }, null, 2);
   } finally {
     verifyButton.disabled = false;
+  }
+});
+
+lifecycleButton.addEventListener("click", async () => {
+  lifecycleButton.disabled = true;
+
+  try {
+    const state = await window.__TAURI__.core.invoke("read_lifecycle_state");
+    lifecycle.textContent = JSON.stringify(state, null, 2);
+  } catch {
+    lifecycle.textContent = "Lifecycle state unavailable.";
+  } finally {
+    lifecycleButton.disabled = false;
   }
 });

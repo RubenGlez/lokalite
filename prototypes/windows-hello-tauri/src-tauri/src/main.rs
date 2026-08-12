@@ -1,6 +1,16 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod lifecycle;
+
+use std::sync::Mutex;
+
+use lifecycle::{LifecycleAction, LifecycleEvent, LifecycleState};
 use serde::Serialize;
+use tauri::{
+    AppHandle, Manager, RunEvent, WindowEvent,
+    menu::{Menu, MenuItem},
+    tray::TrayIconBuilder,
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -135,7 +145,7 @@ mod windows_hello {
 }
 
 #[tauri::command]
-async fn verify_with_windows_hello(window: tauri::Window) -> AuthenticationOutcome {
+async fn verify_with_windows_hello(app: AppHandle, window: tauri::Window) -> AuthenticationOutcome {
     #[cfg(windows)]
     let status = tauri::async_runtime::spawn_blocking(move || {
         windows_hello::verify(
@@ -152,14 +162,112 @@ async fn verify_with_windows_hello(window: tauri::Window) -> AuthenticationOutco
         AuthenticationStatus::Unavailable
     };
 
-    AuthenticationOutcome::from_status(status)
+    let outcome = AuthenticationOutcome::from_status(status);
+    if outcome.session_started {
+        lifecycle_state(&app)
+            .lock()
+            .expect(LOCK_POISONED)
+            .start_session();
+    }
+
+    outcome
+}
+
+/// Exposes the observed lifecycle state so interactive QA reads recorded facts
+/// instead of inferring them from the window's appearance.
+#[tauri::command]
+fn read_lifecycle_state(app: AppHandle) -> LifecycleState {
+    *lifecycle_state(&app).lock().expect(LOCK_POISONED)
+}
+
+const LOCK_POISONED: &str = "lifecycle state mutex poisoned";
+
+fn lifecycle_state(app: &AppHandle) -> tauri::State<'_, Mutex<LifecycleState>> {
+    app.state::<Mutex<LifecycleState>>()
+}
+
+/// Applies one lifecycle event and performs the single action it allows.
+fn drive_lifecycle(app: &AppHandle, event: LifecycleEvent) {
+    let action = lifecycle_state(app)
+        .lock()
+        .expect(LOCK_POISONED)
+        .apply(event);
+
+    match action {
+        // The window is hidden, never destroyed: this process stays the one
+        // broker that owns the Vault key.
+        LifecycleAction::HideToTray => {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.hide();
+            }
+        }
+        LifecycleAction::FocusExistingWindow => {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+            }
+        }
+        LifecycleAction::ExitApplication => app.exit(0),
+    }
+}
+
+fn build_tray(app: &AppHandle) -> tauri::Result<()> {
+    let show = MenuItem::with_id(app, "show", "Show prototype", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&show, &quit])?;
+
+    TrayIconBuilder::with_id("lokalite-prototype")
+        .icon(tauri::include_image!("icons/icon.ico"))
+        .tooltip("Lokalite Windows Hello prototype")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match event.id().as_ref() {
+            "show" => drive_lifecycle(app, LifecycleEvent::ShowRequested),
+            "quit" => drive_lifecycle(app, LifecycleEvent::QuitRequested),
+            _ => {}
+        })
+        .build(app)?;
+
+    Ok(())
 }
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![verify_with_windows_hello])
-        .run(tauri::generate_context!())
-        .expect("failed to run Tauri Windows Hello prototype");
+        // Must stay the first plugin: a second launch has to be absorbed
+        // before it can build a window or claim the broker.
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            drive_lifecycle(app, LifecycleEvent::SecondInstanceLaunched);
+        }))
+        .manage(Mutex::new(LifecycleState::default()))
+        .setup(|app| {
+            build_tray(app.handle())?;
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                // Closing the window must not end the background service.
+                api.prevent_close();
+                drive_lifecycle(window.app_handle(), LifecycleEvent::WindowCloseRequested);
+            }
+        })
+        .invoke_handler(tauri::generate_handler![
+            verify_with_windows_hello,
+            read_lifecycle_state
+        ])
+        .build(tauri::generate_context!())
+        .expect("failed to build Tauri Windows Hello prototype")
+        .run(|_app, event| {
+            // `code` is set only when the tray's Quit called `app.exit`. Any
+            // other exit request (such as the last window disappearing) is
+            // refused so the tray keeps the process alive.
+            if let RunEvent::ExitRequested {
+                code: None, api, ..
+            } = event
+            {
+                api.prevent_exit();
+            }
+        });
 }
 
 #[cfg(test)]

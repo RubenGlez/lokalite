@@ -30,6 +30,24 @@ The script rejects incorrect PE architecture or GUI/console subsystem values,
 packs and unpacks each architecture, verifies manifest and payload contracts,
 builds and unbundles the complete bundle, and writes `SHA256SUMS`.
 
+## Background-lifecycle QA
+
+`invoke-lifecycle-qa.ps1` asserts the Windows background contract against a
+built desktop executable, without installing anything:
+
+```powershell
+./scripts/windows/invoke-lifecycle-qa.ps1 -Executable ./path/to/Lokalite.exe
+```
+
+It fails on the first violated check. It proves that a second launch is absorbed
+by the running instance, that closing the window hides it without ending the
+process, and that a launch while hidden restores the same window. It only stops
+processes it started from the given path.
+
+It does not prove tray menu behavior, Windows Hello, or the same contract under
+an installed MSIX identity — an installed package can move the single-instance
+claim and owns the startup task, so these checks must be repeated there.
+
 ## Local installation QA
 
 Local sideloading is useful before a private flight, but it is not Store

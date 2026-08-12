@@ -16,6 +16,15 @@
       </p>
       <button id="verify" type="button">Verify with Windows Hello</button>
       <pre id="result" aria-live="polite">No verification requested.</pre>
+
+      <h2>Background lifecycle</h2>
+      <p>
+        Closing this window hides it to the tray and keeps this process the only
+        broker. Launching the app again is absorbed by this instance and never
+        starts a session on its own.
+      </p>
+      <button id="refresh-lifecycle" type="button">Read lifecycle state</button>
+      <pre id="lifecycle" aria-live="polite">Lifecycle state not read yet.</pre>
     </main>
     <script type="module" src="main.js"></script>
   </body>

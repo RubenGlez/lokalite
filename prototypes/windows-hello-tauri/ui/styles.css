@@ -26,6 +26,11 @@ h1 {
   margin-bottom: 0.5rem;
 }
 
+h2 {
+  margin-top: 2rem;
+  font-size: 1.05rem;
+}
+
 p {
   color: #b9c7c2;
   line-height: 1.55;

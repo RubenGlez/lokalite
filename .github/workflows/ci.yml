@@ -24,6 +24,27 @@ jobs:
       - name: Run bidirectional Swift/Rust oracle
         run: bash scripts/compatibility.sh
 
+  windows-desktop-prototype:
+    name: windows-desktop-prototype
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: prototypes/windows-hello-tauri/src-tauri
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust formatting
+        run: cargo fmt --check
+
+      - name: Lint
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test
+
+      - name: Build x64
+        run: cargo build --release
+
   build-and-test:
     runs-on: macos-latest
     steps:
