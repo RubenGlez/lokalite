@@ -48,6 +48,13 @@ struct AppSettingsView: View {
                         Text("5 minutes").tag(300.0)
                         Text("15 minutes").tag(900.0)
                         Text("1 hour").tag(3600.0)
+                        Text("Never").tag(0.0)
+                    }
+
+                    if sessionTimeoutSeconds == 0 {
+                        Text("Never keeps the vault unlocked while Lokalite is running, so agent and CLI access stay available without a prompt.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
 
                     Picker("Clear Clipboard", selection: $clipboardClearSeconds) {

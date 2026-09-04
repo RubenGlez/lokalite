@@ -7,10 +7,13 @@ final class AppPreferences {
         self.defaults = defaults
     }
 
+    /// Session timeout before auto-lock. 0 means never — the vault stays
+    /// unlocked while the app runs. The key's absence (fresh install) defaults
+    /// to 300; a stored 0 is a real value, not the default.
     var sessionTimeoutSeconds: Double {
         get {
-            let value = defaults.double(forKey: "sessionTimeoutSeconds")
-            return value > 0 ? value : 300
+            guard defaults.object(forKey: "sessionTimeoutSeconds") != nil else { return 300 }
+            return defaults.double(forKey: "sessionTimeoutSeconds")
         }
         set {
             defaults.set(newValue, forKey: "sessionTimeoutSeconds")
