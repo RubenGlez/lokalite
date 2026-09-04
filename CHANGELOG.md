@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.0] - 2026-09-04
+
+### Added
+- A "Never" option for Auto-lock (Settings → Security). With it, the vault stays unlocked for as long as Lokalite is running, so CLI and agent (MCP) access keep working without a Touch ID prompt; you can still lock manually with "Lock Now". Per-secret agent settings still apply: secrets set to Blocked stay off-limits to agents, and Approve/Strict secrets still require Touch ID on every release.
+
 ## [2.7.0] - 2026-07-22
 
 ### Changed
