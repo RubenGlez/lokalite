@@ -50,7 +50,12 @@ let package = Package(
         ),
         .testTarget(
             name: "LokaliteCoreTests",
-            dependencies: ["LokaliteCore", "lokalite"],
+            dependencies: [
+                "LokaliteCore",
+                "lokalite",
+                .product(name: "GRDB", package: "GRDB.swift"),
+                .product(name: "argon2", package: "phc-winner-argon2"),
+            ],
             path: "Tests/LokaliteCoreTests",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lokalite Windows Hello prototype</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">PHASE 0 · TAURI HWND</p>
+      <h1>Windows Hello boundary</h1>
+      <p>
+        This disposable app verifies user presence through the Windows Hello
+        dialog owned by this Tauri window. It never opens a Vault.
+      </p>
+      <button id="verify" type="button">Verify with Windows Hello</button>
+      <pre id="result" aria-live="polite">No verification requested.</pre>
+
+      <h2>Background lifecycle</h2>
+      <p>
+        Closing this window hides it to the tray and keeps this process the only
+        broker. Launching the app again is absorbed by this instance and never
+        starts a session on its own.
+      </p>
+      <button id="refresh-lifecycle" type="button">Read lifecycle state</button>
+      <pre id="lifecycle" aria-live="polite">Lifecycle state not read yet.</pre>
+    </main>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
