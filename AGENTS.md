@@ -33,58 +33,17 @@ The workflow maps these to descriptive internal job-env names; the signing ident
 
 Managed by doctier — do not edit between the markers.
 
-Read these for project context:
+Entry points (read these first):
 
-- `.harness/adr/0001-storage-encryption.md`
-- `.harness/adr/0002-cli-runtime.md`
-- `.harness/adr/0003-unlock-model.md`
-- `.harness/adr/0004-vault-sharing.md`
-- `.harness/adr/0005-first-platform.md`
-- `.harness/adr/0006-cli-scope.md`
-- `.harness/adr/0007-cli-output-model.md`
-- `.harness/adr/0008-agent-integration.md`
-- `.harness/adr/0009-menu-bar-ux.md`
-- `.harness/adr/0010-export-format.md`
-- `.harness/adr/0011-distribution.md`
-- `.harness/adr/0012-env-import-create-project.md`
-- `.harness/adr/0013-mcp-inject-first-tool-surface.md`
-- `.harness/adr/0014-daemon-broker-vault-access.md`
-- `.harness/adr/0015-cli-local-process-boundary.md`
-- `.harness/adr/0016-agent-environment-switching.md`
-- `.harness/adr/0017-secret-references.md`
-- `.harness/adr/0018-enforcement-never-rides-detection.md`
-- `.harness/adr/0019-code-signature-peer-verification.md`
-- `.harness/adr/0020-agent-write-governance.md`
-- `.harness/adr/0021-rust-tauri-clean-cutover.md`
-- `.harness/adr/0022-platform-key-boundary-and-backup-portability.md`
-- `.harness/adr/0023-versioned-native-local-ipc.md`
-- `.harness/adr/0024-store-first-windows-distribution.md`
-- `.harness/adr/0025-one-time-sparkle-cutover-bridge.md`
 - `.harness/engineering/architecture.md`
-- `.harness/engineering/features/access-dashboard.md`
-- `.harness/engineering/features/caller-independent-approval.md`
-- `.harness/engineering/features/client-agent-context.md`
-- `.harness/engineering/features/env-import.md`
-- `.harness/engineering/features/full-macos-windows-experience.md`
-- `.harness/engineering/features/peer-code-signature-verification.md`
-- `.harness/engineering/features/per-call-approval.md`
-- `.harness/engineering/features/per-environment-agent-workflow.md`
-- `.harness/engineering/features/platform-authentication.md`
-- `.harness/engineering/features/popover-refactor.md`
-- `.harness/engineering/features/quality-gated-migration.md`
-- `.harness/engineering/features/requires-approval-tier.md`
-- `.harness/engineering/features/secret-references.md`
-- `.harness/engineering/features/strict-existing-user-compatibility.md`
-- `.harness/engineering/features/trusted-windows-distribution.md`
 - `.harness/engineering/implementation-plan.md`
-- `.harness/product/CONTEXT.md`
-- `.harness/product/competitors.md`
 - `.harness/product/product.md`
-- `.harness/product/roadmap.md`
-- `.harness/product/ux.md`
-- `.harness/qa/adversarial-audit-2026-07-03.md`
-- `.harness/qa/broker-qa-cowork.md`
-- `.harness/qa/broker-qa-self.md`
-- `.harness/qa/peer-verification-qa.md`
-- `.harness/qa/report.md`
+
+Further docs, by directory:
+
+- `.harness/adr/` (25 docs)
+- `.harness/engineering/` (1 docs)
+- `.harness/engineering/features/` (15 docs)
+- `.harness/product/` (4 docs)
+- `.harness/qa/` (5 docs)
 <!-- doctier:end -->
