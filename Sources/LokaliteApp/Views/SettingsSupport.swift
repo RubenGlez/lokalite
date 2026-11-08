@@ -107,20 +107,14 @@ private extension NSAppearance {
 // MARK: - Shared control helpers
 
 struct BorderedActionButton<Label: View>: View {
+    var kind: SurfaceButtonStyle.Kind = .secondary
+    var isOn: Bool = false
     let action: () -> Void
     @ViewBuilder let label: Label
 
     var body: some View {
-        Button(action: action) {
-            label
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(Theme.text)
-                .frame(height: Theme.controlHeight)
-                .padding(.horizontal, 10)
-                .background(Theme.bgHigh, in: .rect(cornerRadius: 7))
-                .overlay(RoundedRectangle(cornerRadius: 7).stroke(Theme.sep, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
+        Button(action: action) { label }
+            .buttonStyle(SurfaceButtonStyle(kind: kind, isOn: isOn))
     }
 }
 
@@ -156,17 +150,39 @@ func withCopyFeedback(_ copied: Binding<Bool>, action: () -> Void) {
     }
 }
 
-func isCLIInstalled() -> Bool {
-    let paths = ["/usr/local/bin/lokalite", "/opt/homebrew/bin/lokalite", "/usr/bin/lokalite"]
-    return paths.contains { FileManager.default.fileExists(atPath: $0) }
+/// Where the `lokalite` CLI is installed, if anywhere. The app doesn't bundle
+/// the CLI (it ships via Homebrew or the .pkg), so this is a filesystem probe.
+func installedCLIPath() -> String? {
+    let home = FileManager.default.homeDirectoryForCurrentUser.path
+    let candidates = [
+        "/opt/homebrew/bin/lokalite",
+        "/usr/local/bin/lokalite",
+        "\(home)/.local/bin/lokalite",
+        "/usr/bin/lokalite",
+    ]
+    return candidates.first { FileManager.default.isExecutableFile(atPath: $0) }
 }
 
-func isMCPInstalled() -> Bool {
-    let claudeConfig = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent(".claude.json")
-    guard let data = try? Data(contentsOf: claudeConfig),
-          let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-          let servers = json["mcpServers"] as? [String: Any] else { return false }
-    return servers["lokalite"] != nil
+/// Snapshot of the developer tooling state the sidebar shows: CLI on disk and
+/// which MCP clients have a `lokalite` server entry.
+struct ToolingStatus: Equatable {
+    var cliPath: String?
+    var registeredClients: Set<MCPClient>
+
+    var cliInstalled: Bool { cliPath != nil }
+    var mcpInstalled: Bool { !registeredClients.isEmpty }
+
+    static func probe() -> ToolingStatus {
+        ToolingStatus(
+            cliPath: installedCLIPath(),
+            registeredClients: Set(MCPClient.allCases.filter { $0.isRegistered() })
+        )
+    }
+}
+
+enum LokaliteLinks {
+    static let docs = URL(string: "https://github.com/RubenGlez/lokalite#readme")!
+    static let latestRelease = URL(string: "https://github.com/RubenGlez/lokalite/releases/latest")!
+    static let brewInstall = "brew install RubenGlez/lokalite/lokalite"
 }
 

@@ -109,107 +109,6 @@ struct AppSettingsView: View {
 
 // MARK: - Secret Detail
 
-struct SecretDetailView: View {
-    let secret: Secret
-    var onEdit: (() -> Void)? = nil
-    @Environment(VaultViewModel.self) private var vault
-    @State private var revealed = false
-    @State private var copied = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: 12) {
-                CategoryIconTile(category: secret.category, size: 38)
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        Text(secret.name)
-                            .font(.system(size: 16, design: .monospaced).weight(.semibold))
-                            .foregroundStyle(Theme.text)
-                        CategoryPill(category: secret.category)
-                        if let badge = secret.agentAccess.detailBadge {
-                            Label(badge.label, systemImage: badge.symbol)
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(Theme.textMuted)
-                                .help(secret.agentAccess.editorHelp)
-                        }
-                    }
-                    if let desc = secret.description, !desc.isEmpty {
-                        Text(desc)
-                            .font(.system(size: 12))
-                            .foregroundStyle(Theme.textMuted)
-                    }
-                }
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 24)
-            .padding(.bottom, 20)
-
-            Color.clear.frame(height: 8)
-
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text("VALUE")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Theme.textDim)
-                        .kerning(1.0)
-                    if copied {
-                        Label("Copied", systemImage: "checkmark")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(Theme.brand)
-                            .transition(.scale.combined(with: .opacity))
-                    }
-                    Spacer()
-                    Button {
-                        revealed.toggle()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: revealed ? "eye.slash" : "eye")
-                                .font(.system(size: 11))
-                            Text(revealed ? "Hide" : "Reveal")
-                                .font(.system(size: 11))
-                        }
-                        .foregroundStyle(Theme.textMuted)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(revealed ? "Hide secret value" : "Reveal secret value")
-                }
-
-                Button {
-                    vault.copyToClipboard(secret)
-                    withAnimation { copied = true }
-                    Task {
-                        try? await Task.sleep(for: .seconds(1.5))
-                        withAnimation { copied = false }
-                    }
-                } label: {
-                    if revealed {
-                        Text(secret.value)
-                            .font(.system(size: 13, design: .monospaced))
-                            .foregroundStyle(Theme.text)
-                            .frame(maxWidth: .infinity, alignment: .topLeading)
-                    } else {
-                        Text(String(repeating: "•", count: min(secret.value.count, 24)))
-                            .font(.system(size: 18, design: .monospaced))
-                            .foregroundStyle(Theme.text)
-                    }
-                }
-                .buttonStyle(.plain)
-                .keyboardShortcut("c", modifiers: .command)
-                .help("Click to copy (⌘C)")
-                .accessibilityLabel("Copy \(secret.name)")
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 20)
-            .animation(.easeInOut(duration: 0.15), value: copied)
-
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-}
-
-// MARK: - Edit Secret
-
 struct EditSecretView: View {
     let secret: Secret
     @Environment(VaultViewModel.self) private var vault
@@ -256,7 +155,8 @@ struct EditSecretView: View {
                         } label: {
                             Image(systemName: revealed ? "eye.slash" : "eye")
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(IconButtonStyle(size: 24, isOn: revealed))
+                        .help(revealed ? "Hide value" : "Reveal value")
                         .foregroundStyle(.secondary)
                     }
                 }

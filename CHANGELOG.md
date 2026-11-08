@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.0] - 2026-11-08
+
+### Added
+- Register the MCP server from the app. The sidebar's MCP Server popover lists Claude Code, Claude Desktop, Cursor, and Windsurf with whether each already has Lokalite, and an **Add** button writes that client's config for you, using the CLI's full path so GUI clients that don't inherit your shell's `PATH` can still launch it. The status dot now reflects all four clients instead of Claude Code alone.
+- The sidebar collapses to an icon rail (toggle beside the wordmark, or `⌃⌘S`); the choice is remembered. `⌘K` re-expands it straight into project search.
+- The project's info (repository, counts, last activity, creation date) sits in a side column next to the secrets, and can be hidden from a toggle in the project header. Its lines are shortcuts: open the repository in the browser, reveal the linked folder in Finder, link a folder when there is none, or jump to Activity already filtered to the project.
+- The lock screens and the welcome screen show the Lokalite armadillo.
+
+### Changed
+- A project opens straight on its secrets. The Overview and Environments tabs are gone: environments are chips above the secrets table (name, secret count, and an Active badge); clicking one switches the list, and right-clicking makes it active, edits its name and color, or deletes it. A `+` chip adds an environment. Project settings open from the gear in the project header as a full pane, like Activity, with `⌘[` back to the secrets.
+- The CLI popover adapts to whether the CLI is installed: the Homebrew command and installer download when it's missing, its location and quick-start commands when it's there.
+- One consistent set of controls across the manager and the menu-bar popover: every button, row, chip, and menu has the same hover, pressed, selected, and disabled states, the Activity filters use themed dropdowns, and selection is marked with a green accent instead of tinted system controls. Environment color now shows only in each chip's dot, environments are always capsules and categories squared tags, and info values are no longer link-blue when they aren't links.
+- The secrets table narrows with the window instead of scrolling sideways; the window's minimum width is slightly larger to make room for the info column.
+
+### Fixed
+- Renaming or deleting the active environment keeps its Active badge in sync instead of leaving a stale one.
+
 ## [2.8.1] - 2026-11-07
 
 ### Security

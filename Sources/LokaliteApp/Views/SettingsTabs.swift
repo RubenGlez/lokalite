@@ -2,162 +2,6 @@ import SwiftUI
 import LokaliteCore
 import SymbolPicker
 
-// MARK: - Environments Tab
-
-struct EnvironmentsTab: View {
-    @Environment(VaultViewModel.self) private var vault
-    @State private var newName = ""
-    @State private var newColor = Theme.environmentPalette[0]
-    @State private var editingEnvironment: VaultEnvironment?
-    @State private var deletingEnvironment: VaultEnvironment?
-    @State private var forceDeletingEnvironment: VaultEnvironment?
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Environments")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Theme.text)
-
-                    if vault.environments.isEmpty {
-                        Text("No custom environments. All secrets are in the default environment.")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Theme.textMuted)
-                            .padding(.vertical, 8)
-                    } else {
-                        VStack(spacing: 0) {
-                            ForEach(vault.environments, id: \.id) { env in
-                                EnvironmentTabRow(
-                                    environment: env,
-                                    onEdit: { editingEnvironment = env },
-                                    onDelete: { deletingEnvironment = env }
-                                )
-                                .environment(vault)
-                                if env.id != vault.environments.last?.id {
-                                    Divider().overlay(Theme.sep)
-                                }
-                            }
-                        }
-                        .background(Theme.panelBackground, in: .rect(cornerRadius: 8))
-                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.sep, lineWidth: 1))
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("New Environment")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Theme.text)
-
-                    HStack(spacing: 10) {
-                        TextField("Name (e.g. staging)", text: $newName)
-                            .textFieldStyle(.plain)
-                            .font(.system(size: 13))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 8)
-                            .background(Theme.neutral(0.045), in: .rect(cornerRadius: 7))
-                            .overlay(RoundedRectangle(cornerRadius: 7).stroke(Theme.sep, lineWidth: 1))
-
-                        ColorSwatches(selection: $newColor)
-
-                        BorderedActionButton(action: {
-                            let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-                            guard !trimmed.isEmpty else { return }
-                            vault.addEnvironment(name: trimmed, color: newColor)
-                            newName = ""
-                            newColor = Theme.environmentPalette[0]
-                        }) {
-                            Text("Add")
-                        }
-                        .disabled(newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    }
-                }
-            }
-            .padding(.horizontal, 36)
-            .padding(.top, 24)
-            .padding(.bottom, 28)
-        }
-        .sheet(item: $editingEnvironment) { env in
-            EnvironmentAppearanceView(environment: env).environment(vault)
-        }
-        .confirmationDialog(
-            "Delete \"\(deletingEnvironment?.name ?? "")\"?",
-            isPresented: Binding(
-                get: { deletingEnvironment != nil },
-                set: { if !$0 { deletingEnvironment = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button("Delete", role: .destructive) {
-                if let e = deletingEnvironment, !vault.deleteEnvironment(e) {
-                    forceDeletingEnvironment = e
-                }
-                deletingEnvironment = nil
-            }
-            Button("Cancel", role: .cancel) { deletingEnvironment = nil }
-        } message: { Text("This cannot be undone.") }
-        .confirmationDialog(
-            "Delete \"\(forceDeletingEnvironment?.name ?? "")\" and its secrets?",
-            isPresented: Binding(
-                get: { forceDeletingEnvironment != nil },
-                set: { if !$0 { forceDeletingEnvironment = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button("Delete Environment and Secrets", role: .destructive) {
-                if let e = forceDeletingEnvironment {
-                    vault.deleteEnvironment(e, includingContents: true)
-                }
-                forceDeletingEnvironment = nil
-            }
-            Button("Cancel", role: .cancel) { forceDeletingEnvironment = nil }
-        } message: {
-            Text("This environment contains secret values. Deleting anyway removes those values and deletes secrets that only existed in this environment.")
-        }
-    }
-}
-
-struct EnvironmentTabRow: View {
-    let environment: VaultEnvironment
-    let onEdit: () -> Void
-    let onDelete: () -> Void
-    @Environment(VaultViewModel.self) private var vault
-    @State private var isHovered = false
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Circle()
-                .fill(Theme.color(hex: environment.color))
-                .frame(width: 8, height: 8)
-
-            Text(environment.name)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Theme.text)
-
-            Spacer()
-
-            if isHovered {
-                HStack(spacing: 8) {
-                    Button("Edit", action: onEdit)
-                        .buttonStyle(.plain)
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.textMuted)
-                    Button(role: .destructive, action: onDelete) {
-                        Image(systemName: "trash")
-                            .font(.system(size: 11))
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Theme.red)
-                }
-                .transition(.opacity)
-            }
-        }
-        .padding(.horizontal, 16)
-        .frame(height: Theme.rowHeight)
-        .onHover { h in withAnimation(.easeInOut(duration: 0.12)) { isHovered = h } }
-    }
-}
-
 // MARK: - Secrets Tab
 
 struct SecretsTab: View {
@@ -166,10 +10,17 @@ struct SecretsTab: View {
     let onMove: (Secret) -> Void
     let onDelete: (Secret) -> Void
     let onAdd: () -> Void
+    let onEditEnvironment: (VaultEnvironment) -> Void
+    let onDeleteEnvironment: (VaultEnvironment) -> Void
+    var showProjectInfo: Bool = true
+    var onOpenActivity: () -> Void = {}
     /// Owned by SettingsView so ⌘F can jump here and land in the field.
     var searchFocus: FocusState<Bool>.Binding? = nil
     @State private var searchText = ""
     @State private var selectedSecret: Secret?
+    @State private var isAddingEnvironment = false
+    @State private var newEnvironmentName = ""
+    @State private var newEnvironmentColor = Theme.environmentPalette[0]
 
     private var filteredSecrets: [Secret] {
         guard !searchText.isEmpty else { return vault.secrets }
@@ -187,11 +38,9 @@ struct SecretsTab: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("Secrets")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Theme.text)
-                Spacer()
+            HStack(spacing: 10) {
+                environmentChips
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 DashboardSearchField(placeholder: "Search secrets...", text: $searchText,
                                      shortcut: "⌘F", isFocused: searchFocus)
                     .frame(width: 200)
@@ -204,43 +53,207 @@ struct SecretsTab: View {
             .padding(.top, 24)
             .padding(.bottom, 16)
 
-            if filteredSecrets.isEmpty {
-                VStack(spacing: 14) {
-                    Image(systemName: "tray")
-                        .font(.system(size: 24))
-                        .foregroundStyle(Theme.textDim)
-                    Text(searchText.isEmpty ? "No secrets in \(selectedEnvironmentName)" : "No matching secrets")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Theme.text)
-                    Button { onAdd() } label: {
-                        Label("New secret", systemImage: "plus")
+            HStack(alignment: .top, spacing: 0) {
+                Group {
+                    if filteredSecrets.isEmpty {
+                        VStack(spacing: 14) {
+                            Image(systemName: "tray")
+                                .font(.system(size: 24))
+                                .foregroundStyle(Theme.textDim)
+                            Text(searchText.isEmpty ? "No secrets in \(selectedEnvironmentName)" : "No matching secrets")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Theme.text)
+                            Button { onAdd() } label: {
+                                Label("New secret", systemImage: "plus")
+                            }
+                            .buttonStyle(SurfaceButtonStyle(kind: .primary))
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 0) {
+                                DashboardSecretsTable(
+                                    secrets: filteredSecrets,
+                                    environmentNames: vault.secretEnvironmentNames,
+                                    environmentColors: vault.environmentColors,
+                                    selectedEnvironmentName: selectedEnvironmentName,
+                                    selectedSecret: selectedSecret,
+                                    showActions: true,
+                                    onSelect: { selectedSecret = $0 },
+                                    onCopy: { vault.copyToClipboard($0) },
+                                    onEdit: onEdit,
+                                    onMove: onMove,
+                                    onDelete: onDelete
+                                )
+                            }
+                            .padding(.leading, 36)
+                            .padding(.trailing, showProjectInfo ? 20 : 36)
+                            .padding(.bottom, 28)
+                        }
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Theme.brand)
-                    .controlSize(.small)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        DashboardSecretsTable(
-                            secrets: filteredSecrets,
-                            environmentNames: vault.secretEnvironmentNames,
-                            environmentColors: vault.environmentColors,
-                            selectedEnvironmentName: selectedEnvironmentName,
-                            selectedSecret: selectedSecret,
-                            showActions: true,
-                            onSelect: { selectedSecret = $0 },
-                            onCopy: { vault.copyToClipboard($0) },
-                            onEdit: onEdit,
-                            onMove: onMove,
-                            onDelete: onDelete
-                        )
-                    }
-                    .padding(.horizontal, 36)
+
+                // Floating project summary beside the list, in a narrower column.
+                if showProjectInfo {
+                    ProjectInfoPanel(
+                        project: vault.selectedProject,
+                        environmentCount: vault.environments.count,
+                        secretCount: vault.projectSecretCount,
+                        onLinkFolder: linkFolder,
+                        onOpenActivity: onOpenActivity
+                    )
+                    .frame(width: 230)
+                    .padding(.trailing, 36)
                     .padding(.bottom, 28)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
+        }
+    }
+
+    /// Environment switcher. Selecting a chip only changes what this list shows;
+    /// "Make Active" (context menu) changes what the CLI and agents resolve.
+    private var environmentChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(vault.environments, id: \.id) { env in
+                    EnvironmentChip(
+                        environment: env,
+                        count: vault.environmentSecretCounts[env.id] ?? 0,
+                        isSelected: vault.selectedEnvironment?.id == env.id,
+                        isActive: vault.isActiveEnvironment(env),
+                        onSelect: { vault.selectEnvironment(env) },
+                        onMakeActive: { vault.makeEnvironmentActive(env) },
+                        onEdit: { onEditEnvironment(env) },
+                        onDelete: { onDeleteEnvironment(env) }
+                    )
+                }
+
+                Button {
+                    isAddingEnvironment = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Theme.textMuted)
+                        .frame(width: 28)
+                }
+                .buttonStyle(ChipButtonStyle(isSelected: isAddingEnvironment))
+                .help("New environment")
+                .popover(isPresented: $isAddingEnvironment, arrowEdge: .bottom) {
+                    newEnvironmentForm
+                }
+            }
+            .padding(.vertical, 2)
+        }
+    }
+
+    private var newEnvironmentForm: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("New environment")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.text)
+            TextField("Name (e.g. staging)", text: $newEnvironmentName)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(Theme.neutral(0.045), in: .rect(cornerRadius: 7))
+                .overlay(RoundedRectangle(cornerRadius: 7).stroke(Theme.sep, lineWidth: 1))
+                .onSubmit(addEnvironment)
+            ColorSwatches(selection: $newEnvironmentColor)
+            HStack {
+                Spacer()
+                BorderedActionButton(kind: .primary, action: addEnvironment) {
+                    Text("Add")
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(trimmedNewEnvironmentName.isEmpty)
+            }
+        }
+        .padding(16)
+        .frame(width: 280)
+    }
+
+    private func linkFolder() {
+        guard let project = vault.selectedProject else { return }
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Link"
+        panel.message = "Choose the folder for \(project.name)."
+        if panel.runModal() == .OK, let url = panel.url {
+            vault.linkProject(project, path: url.path)
+        }
+    }
+
+    private var trimmedNewEnvironmentName: String {
+        newEnvironmentName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func addEnvironment() {
+        let name = trimmedNewEnvironmentName
+        guard !name.isEmpty else { return }
+        vault.addEnvironment(name: name, color: newEnvironmentColor)
+        // Land on the new (empty) environment so the next step, adding a secret, is one click.
+        if let created = vault.environments.first(where: { $0.name == name }) {
+            vault.selectEnvironment(created)
+        }
+        newEnvironmentName = ""
+        newEnvironmentColor = Theme.environmentPalette[0]
+        isAddingEnvironment = false
+    }
+}
+
+struct EnvironmentChip: View {
+    let environment: VaultEnvironment
+    let count: Int
+    let isSelected: Bool
+    let isActive: Bool
+    let onSelect: () -> Void
+    let onMakeActive: () -> Void
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+
+    private var color: Color { Theme.color(hex: environment.color) }
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(color)
+                    .frame(width: 7, height: 7)
+                Text(environment.name)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(isSelected ? Theme.text : Theme.textMuted)
+                    .lineLimit(1)
+                Text("\(count)")
+                    .font(.system(size: 11).monospacedDigit())
+                    .foregroundStyle(Theme.textDim)
+                if isActive {
+                    Text("Active")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(Theme.green)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(Theme.green.opacity(0.13), in: .rect(cornerRadius: 4))
+                }
+            }
+            .padding(.horizontal, 11)
+        }
+        // Environment color lives only in the dot; selection uses neutral UI tones.
+        .buttonStyle(ChipButtonStyle(isSelected: isSelected))
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .help(isActive
+              ? "Active: terminals and agents resolve this environment"
+              : "Right-click to make active, edit, or delete")
+        .contextMenu {
+            Button("Make Active", action: onMakeActive)
+                .disabled(isActive)
+            Button("Edit…", action: onEdit)
+            Divider()
+            Button("Delete…", role: .destructive, action: onDelete)
         }
     }
 }
@@ -272,7 +285,8 @@ struct ActivityView: View {
                     .background(Theme.panelBackground, in: .rect(cornerRadius: 8))
                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.sep, lineWidth: 1))
                     .padding(.horizontal, 36)
-                    .padding(.vertical, 24)
+                    .padding(.top, 16)
+                    .padding(.bottom, 24)
                 }
             }
         }
@@ -291,54 +305,48 @@ struct ActivityView: View {
             )
             .frame(width: 260)
 
-            Picker("", selection: $vault.activityFilter.projectName) {
-                Text("All projects").tag(String?.none)
-                ForEach(vault.projects) { project in
-                    Text(project.name).tag(String?.some(project.name))
-                }
-            }
-            .labelsHidden()
+            ThemedDropdown(
+                selection: $vault.activityFilter.projectName,
+                options: [("All projects", String?.none)]
+                    + vault.projects.map { ($0.name, String?.some($0.name)) }
+            )
             .frame(width: 150)
 
-            Picker("", selection: $vault.activityFilter.source) {
-                Text("All sources").tag(ActivityLogEntry.AccessSource?.none)
-                Text("App").tag(ActivityLogEntry.AccessSource?.some(.app))
-                Text("CLI").tag(ActivityLogEntry.AccessSource?.some(.cli))
-                Text("MCP").tag(ActivityLogEntry.AccessSource?.some(.mcp))
-            }
-            .labelsHidden()
+            ThemedDropdown(
+                selection: $vault.activityFilter.source,
+                options: [
+                    ("All sources", ActivityLogEntry.AccessSource?.none),
+                    ("App", .some(.app)),
+                    ("CLI", .some(.cli)),
+                    ("MCP", .some(.mcp)),
+                ]
+            )
             .frame(width: 120)
 
-            Picker("", selection: $vault.activityFilter.action) {
-                Text("All actions").tag(ActivityLogEntry.Action?.none)
-                ForEach([ActivityLogEntry.Action.read, .created, .updated, .deleted, .denied], id: \.self) { action in
-                    Text(action.rawValue.capitalized).tag(ActivityLogEntry.Action?.some(action))
-                }
-            }
-            .labelsHidden()
+            ThemedDropdown(
+                selection: $vault.activityFilter.action,
+                options: [("All actions", ActivityLogEntry.Action?.none)]
+                    + [ActivityLogEntry.Action.read, .created, .updated, .deleted, .denied]
+                        .map { ($0.rawValue.capitalized, ActivityLogEntry.Action?.some($0)) }
+            )
             .frame(width: 120)
 
             Spacer()
 
             if !vault.activityFilter.isEmpty {
-                Button("Clear") { vault.activityFilter = ActivityFilter() }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Theme.brand)
+                // Same plate as the dropdowns beside it, not a stray text link.
+                BorderedActionButton(action: { vault.activityFilter = ActivityFilter() }) {
+                    Label("Clear filters", systemImage: "xmark")
+                }
             }
         }
         .padding(.horizontal, 36)
-        .padding(.vertical, 14)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Theme.sep)
-                .frame(height: 1)
-        }
+        .padding(.top, 24)
     }
 
     private var emptyState: some View {
         VStack(spacing: 12) {
-            Image(systemName: vault.activityFilter.isEmpty ? "clock" : "line.3.horizontal.decrease.circle")
+            Image(systemName: vault.activityFilter.isEmpty ? "clock.arrow.circlepath" : "line.3.horizontal.decrease.circle")
                 .font(.system(size: 28))
                 .foregroundStyle(Theme.textDim)
             Text(vault.activityFilter.isEmpty ? "No activity yet" : "No matching activity")
@@ -361,8 +369,8 @@ struct ActivityView: View {
                     .fill(Theme.brand.opacity(0.16))
                 RoundedRectangle(cornerRadius: 9)
                     .strokeBorder(Theme.brand.opacity(0.28), lineWidth: 1)
-                Image(systemName: "clock")
-                    .font(.system(size: 24, weight: .medium))
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 22, weight: .medium))
                     .foregroundStyle(Theme.brand)
             }
             .frame(width: 52, height: 52)
@@ -380,12 +388,6 @@ struct ActivityView: View {
         }
         .padding(.horizontal, 36)
         .padding(.top, 24)
-        .padding(.bottom, 20)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Theme.sep)
-                .frame(height: 1)
-        }
     }
 }
 
@@ -562,10 +564,11 @@ struct ProjectSettingsTab: View {
                                 .foregroundStyle(Theme.text)
                             Image(systemName: "chevron.down")
                                 .font(.system(size: 9, weight: .semibold))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Theme.textMuted)
                         }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(SurfaceButtonStyle(height: 26, horizontalPadding: 8, cornerRadius: 6))
+                    .accessibilityLabel("Choose project icon")
                 }
                 .onChange(of: icon) { _, newIcon in saveIcon(newIcon) }
 
@@ -576,7 +579,7 @@ struct ProjectSettingsTab: View {
                         HStack(spacing: 8) {
                             Text(shortPath(path) ?? "Not linked")
                                 .font(.system(size: 13))
-                                .foregroundStyle(path.isEmpty ? Theme.textDim : Theme.blue)
+                                .foregroundStyle(path.isEmpty ? Theme.textDim : Theme.text)
                                 .lineLimit(1)
                             Image(systemName: "folder")
                                 .font(.system(size: 12))
@@ -588,15 +591,15 @@ struct ProjectSettingsTab: View {
                                 } label: {
                                     Image(systemName: "xmark.circle.fill")
                                         .font(.system(size: 12))
-                                        .foregroundStyle(Theme.textMuted)
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(IconButtonStyle(size: 22))
+                                .help("Unlink folder")
                             }
                         }
                     }
                 }
-                .buttonStyle(.plain)
-                .contentShape(.rect)
+                .buttonStyle(RowButtonStyle(cornerRadius: 0, showsSelectionBar: false))
+                .help("Choose the linked folder")
             }
             .background(Theme.panelBackground, in: .rect(cornerRadius: 8))
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.sep, lineWidth: 1))
@@ -619,10 +622,10 @@ struct ProjectSettingsTab: View {
                         .foregroundStyle(Theme.textMuted)
                 }
                 Spacer()
-                Button("Delete Project", role: .destructive, action: onDelete)
-                    .buttonStyle(.borderedProminent)
-                    .tint(Theme.red)
-                    .controlSize(.small)
+                Button(role: .destructive, action: onDelete) {
+                    Label("Delete Project", systemImage: "trash")
+                }
+                .buttonStyle(SurfaceButtonStyle(kind: .destructive))
             }
             .padding(16)
             .background(Theme.red.opacity(0.06), in: .rect(cornerRadius: 8))

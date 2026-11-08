@@ -24,7 +24,7 @@ struct LokaliteApp: App {
             SettingsView()
                 .environment(appDelegate.vault)
                 .environment(appDelegate.softwareUpdater)
-                .frame(minWidth: 980, minHeight: 620)
+                .frame(minWidth: 1060, minHeight: 620)
         }
         .defaultSize(width: 1180, height: 720)
         .windowStyle(.hiddenTitleBar)

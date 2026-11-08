@@ -97,8 +97,7 @@ struct VaultPopover: View {
                 Image(systemName: "xmark")
                     .font(.system(size: 9, weight: .semibold))
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(Theme.textMuted)
+            .buttonStyle(IconButtonStyle(size: 18, cornerRadius: 4))
             .accessibilityLabel("Dismiss error")
         }
         .padding(.horizontal, 12)
@@ -111,32 +110,26 @@ struct VaultPopover: View {
         VStack(spacing: 16) {
             Spacer()
 
-            ZStack {
-                Circle()
-                    .fill(Theme.brand.opacity(0.12))
-                    .frame(width: 52, height: 52)
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 21, weight: .medium))
-                    .foregroundStyle(Theme.brand)
-            }
+            LokaliteLogo(size: 76)
+                .padding(.bottom, -8)
 
             VStack(spacing: 6) {
-                Text("Lokalite")
+                Text("lokalite")
                     .font(Theme.mono(14, .semibold))
-                    .foregroundStyle(.primary)
-                Text("Vault locked. Unlock to reach your secrets.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 230)
+                    .foregroundStyle(Theme.text)
+                Label("Vault locked", systemImage: "lock.fill")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Theme.textMuted)
             }
 
-            Button("Unlock") {
+            Button {
                 vault.unlock()
+            } label: {
+                Label("Unlock", systemImage: "lock.open")
+                    .font(.system(size: 12, weight: .semibold))
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Theme.brand)
-            .controlSize(.small)
+            .buttonStyle(SurfaceButtonStyle(kind: .primary, height: 28, horizontalPadding: 14))
+            .keyboardShortcut(.defaultAction)
 
             Spacer()
         }
@@ -209,10 +202,12 @@ struct VaultPopover: View {
                         .lineLimit(1)
                     Image(systemName: "chevron.up.chevron.down")
                         .font(.system(size: 8, weight: .semibold))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(Theme.textDim)
                 }
+                .foregroundStyle(Theme.text)
             }
-            .menuStyle(.borderlessButton)
+            .menuStyle(.button)
+            .buttonStyle(SurfaceButtonStyle(kind: .ghost, height: 24, horizontalPadding: 6, cornerRadius: 6))
             .menuIndicator(.hidden)
             .fixedSize()
             .disabled(vault.projects.isEmpty)
@@ -244,10 +239,11 @@ struct VaultPopover: View {
                         .lineLimit(1)
                     Image(systemName: "chevron.up.chevron.down")
                         .font(.system(size: 8, weight: .semibold))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(Theme.textDim)
                 }
             }
-            .menuStyle(.borderlessButton)
+            .menuStyle(.button)
+            .buttonStyle(SurfaceButtonStyle(kind: .ghost, height: 24, horizontalPadding: 6, cornerRadius: 6))
             .menuIndicator(.hidden)
             .fixedSize()
             .disabled(vault.selectedProject == nil || vault.environments.isEmpty)
@@ -262,10 +258,8 @@ struct VaultPopover: View {
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 12, weight: .semibold))
-                    .frame(width: 24, height: 22)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(Theme.brand)
+            .buttonStyle(IconButtonStyle(size: 24, tint: Theme.brand))
             .disabled(vault.selectedProject == nil || vault.selectedEnvironment == nil)
             .keyboardShortcut("n", modifiers: .command)
             .help("New secret")
@@ -317,9 +311,9 @@ struct VaultPopover: View {
                     searchText = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(IconButtonStyle(size: 20, cornerRadius: 10))
+                .help("Clear search")
             }
         }
         .padding(.horizontal, 12)
@@ -409,8 +403,7 @@ struct VaultPopover: View {
                     .font(.system(size: 13, weight: .medium))
                     .frame(minHeight: 24)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(Theme.text)
+            .buttonStyle(LinkButtonStyle(tone: .muted))
             .keyboardShortcut("o", modifiers: .command)
 
             Spacer()
@@ -422,8 +415,7 @@ struct VaultPopover: View {
                     .font(.system(size: 13, weight: .medium))
                     .frame(minHeight: 24)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(envCopied ? Theme.brand : Theme.textMuted)
+            .buttonStyle(LinkButtonStyle(tone: envCopied ? .brand : .muted))
             .disabled(vault.secrets.isEmpty)
             .help("Copy all secrets in this view as a .env file")
 
@@ -434,8 +426,7 @@ struct VaultPopover: View {
                     .font(.system(size: 13, weight: .medium))
                     .frame(minHeight: 24)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(Theme.textMuted)
+            .buttonStyle(LinkButtonStyle(tone: .muted))
             .keyboardShortcut("l", modifiers: .command)
 
             Button("") {
@@ -516,23 +507,25 @@ private struct PopoverSecretRow: View {
                 }
                 .contentShape(.rect)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressFeedbackStyle())
 
             if hovering || isRevealed {
                 Button(action: onToggleReveal) {
                     Image(systemName: isRevealed ? "eye.slash" : "eye")
                         .font(.system(size: 11))
-                        .foregroundStyle(Theme.textMuted)
-                        .frame(width: 22, height: 22)
-                        .contentShape(.rect)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(IconButtonStyle(size: 22, isOn: isRevealed))
                 .help(isRevealed ? "Hide value" : "Reveal value")
             }
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 7)
-        .background(isSelected ? Theme.neutral(0.07) : .clear, in: .rect(cornerRadius: 6))
+        // Keyboard selection and hover share the row tokens used in the main window.
+        .background(isSelected ? Theme.selectedFill : hovering ? Theme.hoverFill : .clear,
+                    in: .rect(cornerRadius: 6))
+        .overlay(alignment: .leading) {
+            if isSelected { SelectionGlowBar().offset(x: -4) }
+        }
         .onHover { hovering = $0 }
         .animation(.easeInOut(duration: 0.15), value: copied)
         .contextMenu {
