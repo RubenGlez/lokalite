@@ -4,14 +4,6 @@ import LokaliteCore
 
 // MARK: - Dashboard Components
 
-struct DashboardEnvironment: Identifiable {
-    let id: String
-    let name: String
-    let color: Color
-    let count: Int
-    let isActive: Bool
-}
-
 struct DashboardSearchField: View {
     let placeholder: String
     @Binding var text: String
@@ -119,46 +111,6 @@ struct MainProjectIcon: View {
             Text(icon)
                 .font(.system(size: 25))
         }
-    }
-}
-
-struct EnvironmentSummaryCard: View {
-    let environment: DashboardEnvironment
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 15) {
-                HStack(spacing: 7) {
-                    Circle()
-                        .fill(environment.color)
-                        .frame(width: 8, height: 8)
-                    Text(environment.name)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Theme.text)
-                    Spacer()
-                    if environment.isActive {
-                        Text("Active")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(Theme.green)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(Theme.green.opacity(0.13), in: .rect(cornerRadius: 5))
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("\(environment.count) secret\(environment.count == 1 ? "" : "s")")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.textMuted)
-                }
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.panelBackground, in: .rect(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.sep, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
     }
 }
 
@@ -355,7 +307,6 @@ struct ProjectInfoPanel: View {
     var body: some View {
         InspectorCard(title: "Project Info") {
             VStack(alignment: .leading, spacing: 15) {
-                InfoLine(icon: "folder", title: "Linked folder", value: shortPath(project?.path) ?? "Not linked")
                 InfoLine(icon: "point.3.connected.trianglepath.dotted", title: "Repository", value: gitRemote ?? "Not configured")
                 InfoLine(icon: "square.stack.3d.up", title: "\(environmentCount) environments", value: nil)
                 InfoLine(icon: "lock", title: "\(secretCount) secrets", value: nil)
@@ -539,7 +490,7 @@ struct DeveloperActionsPanel: View {
 
 /// Installing the CLI and registering the MCP server are machine-wide facts, not
 /// project ones, so they sit in the sidebar beside Activity rather than inside a
-/// project's Overview tab. The row itself stays a status glyph; the commands and
+/// project's tabs. The row itself stays a status glyph; the commands and
 /// docs live in a popover so the sidebar doesn't grow a second card column.
 struct SidebarToolsSection: View {
     @State private var cliInstalled = false
