@@ -144,17 +144,24 @@ struct EnvironmentAppearanceView: View {
     let environment: VaultEnvironment
     @Environment(VaultViewModel.self) private var vault
     @Environment(\.dismiss) private var dismiss
+    @State private var name: String
     @State private var color: String
 
     init(environment: VaultEnvironment) {
         self.environment = environment
+        _name = State(initialValue: environment.name)
         _color = State(initialValue: environment.color ?? Theme.environmentPalette[0])
+    }
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     var body: some View {
         NavigationStack {
             Form {
-                Section(environment.name) {
+                Section {
+                    TextField("Name", text: $name)
                     HStack(spacing: 10) {
                         ForEach(Theme.environmentPalette, id: \.self) { hex in
                             Button {
@@ -187,14 +194,21 @@ struct EnvironmentAppearanceView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        vault.setEnvironmentColor(environment, color: color)
+                        var updated = environment
+                        if trimmedName != environment.name {
+                            vault.renameEnvironment(environment, newName: trimmedName)
+                            updated = VaultEnvironment(id: environment.id, projectId: environment.projectId,
+                                                       name: trimmedName, color: environment.color)
+                        }
+                        vault.setEnvironmentColor(updated, color: color)
                         dismiss()
                     }
                     .keyboardShortcut(.defaultAction)
+                    .disabled(trimmedName.isEmpty)
                 }
             }
         }
-        .frame(width: 420, height: 190)
+        .frame(width: 420, height: 230)
     }
 }
 

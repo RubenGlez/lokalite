@@ -8,11 +8,15 @@ import SymbolPicker
 struct SettingsView: View {
     @Environment(VaultViewModel.self) private var vault
     @Environment(SoftwareUpdater.self) private var softwareUpdater
-    @State private var selectedTab = "Secrets"
     @State private var projectSearchText = ""
-    /// The activity log spans every project, so it lives beside Settings in the
-    /// sidebar and replaces the project pane instead of being a project tab.
-    @State private var showingActivity = false
+    /// What fills the main area. Secrets is the project's landing view; project
+    /// Settings and the (vault-wide) Activity log replace it as full panes with a
+    /// back button, instead of sitting on a tab bar.
+    @State private var pane: MainPane = .secrets
+
+    private enum MainPane {
+        case secrets, settings, activity
+    }
 
     private enum PresentedSheet: Identifiable {
         case addSecret
@@ -209,10 +213,23 @@ struct SettingsView: View {
             redesignedSidebar
                 .frame(width: 245)
             Divider().overlay(Theme.sep)
-            if showingActivity {
-                ActivityView()
+            switch pane {
+            case .activity:
+                VStack(alignment: .leading, spacing: 0) {
+                    paneBackBar
+                    ActivityView()
+                        .environment(vault)
+                }
+            case .settings:
+                VStack(alignment: .leading, spacing: 0) {
+                    paneBackBar
+                    ProjectSettingsTab(
+                        onEditAppearance: { presentedSheet = .projectAppearance(vault.selectedProject) },
+                        onDelete: { deletingProject = vault.selectedProject }
+                    )
                     .environment(vault)
-            } else {
+                }
+            case .secrets:
                 mainDashboard
             }
         }
@@ -220,15 +237,19 @@ struct SettingsView: View {
             Group {
                 Button("") { projectSearchFocused = true }
                     .keyboardShortcut("k", modifiers: .command)
-                // ⌘F lands on the Secrets tab's search, from Settings or Activity too.
+                // ⌘F lands on the Secrets search, from Settings or Activity too.
                 Button("") {
-                    showingActivity = false
-                    selectedTab = "Secrets"
+                    pane = .secrets
                     Task { @MainActor in secretSearchFocused = true }
                 }
                 .keyboardShortcut("f", modifiers: .command)
             }
             .hidden()
+        }
+        // Deleting the project from its Settings pane selects another project;
+        // land on that project's Secrets rather than on its Settings.
+        .onChange(of: vault.selectedProject?.id) { _, _ in
+            if pane == .settings { pane = .secrets }
         }
     }
 
@@ -285,16 +306,15 @@ struct SettingsView: View {
                     ForEach(filteredProjects) { project in
                         DashboardProjectRow(
                             project: project,
-                            isSelected: !showingActivity && vault.selectedProject?.id == project.id,
+                            isSelected: pane != .activity && vault.selectedProject?.id == project.id,
                             onSelect: {
-                                showingActivity = false
-                                selectedTab = "Secrets"
+                                pane = .secrets
                                 vault.selectProject(project)
                             }
                         )
                         .contextMenu {
                             Button("Import from .env…") {
-                                showingActivity = false
+                                pane = .secrets
                                 vault.selectProject(project)
                                 beginImportFromEnv(mode: .existingProject(project))
                             }
@@ -319,7 +339,7 @@ struct SettingsView: View {
                 .padding(.top, 8)
 
             Button {
-                showingActivity = true
+                pane = .activity
             } label: {
                 Label("Activity", systemImage: "clock")
                     .font(.system(size: 13, weight: .medium))
@@ -328,7 +348,7 @@ struct SettingsView: View {
                     .padding(.vertical, 12)
             }
             .buttonStyle(.plain)
-            .foregroundStyle(showingActivity ? Theme.brand : Theme.text)
+            .foregroundStyle(pane == .activity ? Theme.brand : Theme.text)
             .padding(.top, 6)
 
             Button {
@@ -350,31 +370,39 @@ struct SettingsView: View {
     private var mainDashboard: some View {
         VStack(alignment: .leading, spacing: 0) {
             projectHeader
-            tabContent
+            secretsContent
         }
     }
 
-    @ViewBuilder
-    private var tabContent: some View {
-        switch selectedTab {
-        case "Settings":
-            ProjectSettingsTab(
-                onEditAppearance: { presentedSheet = .projectAppearance(vault.selectedProject) },
-                onDelete: { deletingProject = vault.selectedProject }
-            )
-            .environment(vault)
-        default:
-            SecretsTab(
-                onEdit: { presentedSheet = .editSecret($0) },
-                onMove: { presentedSheet = .moveSecret($0) },
-                onDelete: { deletingSecret = $0 },
-                onAdd: { presentedSheet = .addSecret },
-                onEditEnvironment: { presentedSheet = .environmentAppearance($0) },
-                onDeleteEnvironment: { deletingEnv = $0 },
-                searchFocus: $secretSearchFocused
-            )
-            .environment(vault)
+    private var secretsContent: some View {
+        SecretsTab(
+            onEdit: { presentedSheet = .editSecret($0) },
+            onMove: { presentedSheet = .moveSecret($0) },
+            onDelete: { deletingSecret = $0 },
+            onAdd: { presentedSheet = .addSecret },
+            onEditEnvironment: { presentedSheet = .environmentAppearance($0) },
+            onDeleteEnvironment: { deletingEnv = $0 },
+            searchFocus: $secretSearchFocused
+        )
+        .environment(vault)
+    }
+
+    /// Back to the selected project's Secrets view, from Settings or Activity.
+    private var paneBackBar: some View {
+        Button {
+            pane = .secrets
+        } label: {
+            Label(vault.selectedProject?.name ?? "Back", systemImage: "chevron.left")
+                .font(.system(size: 12, weight: .medium))
+                .lineLimit(1)
         }
+        .buttonStyle(.plain)
+        .foregroundStyle(Theme.textMuted)
+        .keyboardShortcut("[", modifiers: .command)
+        .help("Back to \(vault.selectedProject?.name ?? "the project")'s secrets (⌘[)")
+        .padding(.horizontal, 36)
+        .padding(.top, 22)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var projectHeader: some View {
@@ -403,55 +431,23 @@ struct SettingsView: View {
 
                 Spacer()
 
-                BorderedActionButton(action: { showProjectActivity() }) {
-                    Label("Activity", systemImage: "clock")
+                // Icon-only so it doesn't read as a second copy of the sidebar's
+                // app-wide Settings; the vault-wide Activity stays in the sidebar.
+                BorderedActionButton(action: { pane = .settings }) {
+                    Image(systemName: "gearshape")
+                        .accessibilityLabel("Project settings")
                 }
-                .help("This project's reads and edits from the app, the CLI, and agents")
+                .help("Project settings: name, icon, linked folder, and deletion")
             }
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 22) {
-                    ForEach(["Secrets", "Settings"], id: \.self) { tab in
-                        Button {
-                            selectedTab = tab
-                        } label: {
-                            VStack(spacing: 10) {
-                                HStack(spacing: 7) {
-                                    Image(systemName: tabIcon(tab))
-                                        .font(.system(size: 13, weight: .medium))
-                                    Text(tab)
-                                        .font(.system(size: 12, weight: .medium))
-                                        .lineLimit(1)
-                                        .fixedSize(horizontal: true, vertical: false)
-                                }
-                                Rectangle()
-                                    .fill(selectedTab == tab ? Theme.brand : .clear)
-                                    .frame(height: 2)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(selectedTab == tab ? Theme.text : Theme.textMuted)
-                    }
-                }
-                .fixedSize(horizontal: true, vertical: false)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 36)
         .padding(.top, 24)
-        .padding(.bottom, 0)
+        .padding(.bottom, 20)
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(Theme.sep)
                 .frame(height: 1)
         }
-    }
-
-    /// Opens the vault-wide Activity pane already filtered to this project.
-    private func showProjectActivity() {
-        vault.activityFilter = ActivityFilter(projectName: vault.selectedProject?.name)
-        vault.reloadActivity()
-        showingActivity = true
     }
 
     // MARK: - States
@@ -568,12 +564,5 @@ struct SettingsView: View {
         guard vault.pendingAddSecret else { return }
         vault.pendingAddSecret = false
         presentedSheet = .addSecret
-    }
-
-    private func tabIcon(_ tab: String) -> String {
-        switch tab {
-        case "Secrets": return "lock"
-        default: return "gearshape"
-        }
     }
 }

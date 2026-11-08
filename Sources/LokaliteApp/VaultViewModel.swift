@@ -361,6 +361,16 @@ final class VaultViewModel {
                 try Vault.shared.deleteEnvironment(name: env.name, projectId: env.projectId)
             }
             environments.removeAll { $0.id == env.id }
+            // The vault clears the project's active environment when it is the
+            // one deleted; mirror that so no chip keeps a stale Active badge.
+            if let project = selectedProject, project.id == env.projectId,
+               project.activeEnvironment == env.name {
+                let updated = Project(id: project.id, name: project.name, path: project.path,
+                                      activeEnvironment: nil, icon: project.icon,
+                                      createdAt: project.createdAt)
+                if let idx = projects.firstIndex(where: { $0.id == project.id }) { projects[idx] = updated }
+                selectedProject = updated
+            }
             if selectedEnvironment?.id == env.id {
                 selectEnvironment(environments.first)
             }
@@ -395,6 +405,16 @@ final class VaultViewModel {
             let renamed = VaultEnvironment(id: env.id, projectId: env.projectId, name: newName, color: env.color)
             if let idx = environments.firstIndex(where: { $0.id == env.id }) { environments[idx] = renamed }
             if selectedEnvironment?.id == env.id { selectedEnvironment = renamed }
+            // The vault carries the project's active environment over to the new
+            // name; mirror that so the Active badge stays on the renamed chip.
+            if let project = selectedProject, project.id == env.projectId,
+               project.activeEnvironment == env.name {
+                let updated = Project(id: project.id, name: project.name, path: project.path,
+                                      activeEnvironment: newName, icon: project.icon,
+                                      createdAt: project.createdAt)
+                if let idx = projects.firstIndex(where: { $0.id == project.id }) { projects[idx] = updated }
+                selectedProject = updated
+            }
             reloadDashboardSummaries()
         } catch {
             errorMessage = error.localizedDescription
