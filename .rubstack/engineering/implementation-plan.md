@@ -2,9 +2,11 @@
 
 ## Status
 
-Lokalite v2.7.0 is the shipped Swift/macOS baseline. The active initiative is a
-quality-gated replacement with full capability and security parity on macOS 14+
-and Windows 11 (x64 and ARM64). It takes priority over new product features;
+Lokalite v2.7.0 is the shipped Swift/macOS baseline. **The migration below is
+paused as of 2026-11-08** — on hold, not abandoned, and no longer prioritized over
+other work. Phase 0 evidence lives on `codex/windows-migration-phase0` (draft
+PR #79). When it resumes, the initiative is a quality-gated replacement with full
+capability and security parity on macOS 14+ and Windows 11 (x64 and ARM64), and
 only critical fixes continue on the shipped Swift application while migration is
 underway.
 

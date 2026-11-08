@@ -4,7 +4,7 @@
 
 Lokalite is a local-first secrets manager for individual developers. The shipped product is a Swift-only macOS 14 application with an independent CLI/MCP surface, an app-owned daemon broker, an encrypted SQLite vault, four agent-access tiers, and an audit log. The target architecture replaces the Swift implementation with a Rust Cargo workspace and a Tauri 2 desktop shell for macOS 14+ and Windows 11, while preserving the current vault, encryption, backup, CLI, MCP, and policy contracts exactly for existing macOS users. The desktop application remains the sole owner of the unlocked vault key and daemon; the React frontend is an untrusted presentation layer over a narrow Rust command surface. Linux, mobile, cloud services, accounts, synchronization, and team features are outside the first multiplatform release.
 
-The migration is developed incrementally behind the shipped Swift product, then released as a clean replacement. There is no public Swift/Rust hybrid and no supported state in which the old and new daemons run side by side.
+The migration is paused as of 2026-11-08 (see the implementation plan's Status); the target architecture below describes where it resumes. It is developed incrementally behind the shipped Swift product, then released as a clean replacement. There is no public Swift/Rust hybrid and no supported state in which the old and new daemons run side by side.
 
 ```text
 React + TypeScript UI
