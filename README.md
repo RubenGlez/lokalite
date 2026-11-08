@@ -215,7 +215,7 @@ By default the server is **read-only** and exposes these tools:
 | `get_secret` | Load a secret into the agent's shell environment via a one-time handoff — the value is never returned to the model |
 
 <p align="center">
-  <img src="assets/screenshots/secrets-list.png" alt="The Secrets tab: names, categories, and environments, which is the metadata list_secrets exposes to an agent, never the values" width="100%"/>
+  <img src="assets/screenshots/secrets-list.png" alt="A project's secrets: names, categories, and environments, which is the metadata list_secrets exposes to an agent, never the values" width="100%"/>
 </p>
 
 `use_environment` switches the project's **single active environment**, the same one the menu bar app, the manager, and `lokalite env use` use — switching from the agent updates all of them, and the app refreshes live. For a one-off read from a different environment without switching, pass an `environment` argument to `get_secret` instead.
