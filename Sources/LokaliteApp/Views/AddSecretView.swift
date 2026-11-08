@@ -41,7 +41,8 @@ struct AddSecretView: View {
                         } label: {
                             Image(systemName: revealed ? "eye.slash" : "eye")
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(IconButtonStyle(size: 24, isOn: revealed))
+                        .help(revealed ? "Hide value" : "Reveal value")
                         .foregroundStyle(.secondary)
                         .accessibilityLabel(revealed ? "Hide secret value" : "Reveal secret value")
                     }

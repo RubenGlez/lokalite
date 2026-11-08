@@ -123,6 +123,7 @@ struct ImportEnvView: View {
                 Button("Import") { performImport() }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
+                    .tint(Theme.brand)
                     .disabled(!canImport)
             }
         }

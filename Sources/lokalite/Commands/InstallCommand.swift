@@ -1,5 +1,6 @@
 import ArgumentParser
 import Foundation
+import LokaliteCore
 
 struct InstallCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
@@ -83,63 +84,11 @@ struct InstallCommand: ParsableCommand {
 
     @discardableResult
     private func registerMCPServer() throws -> URL {
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        let configURL = client.configURL(home: home)
-        try FileManager.default.createDirectory(
-            at: configURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-
-        var config = readJSON(at: configURL)
-        var mcpServers = config["mcpServers"] as? [String: Any] ?? [:]
-        mcpServers["lokalite"] = ["command": "lokalite", "args": ["mcp"]]
-        config["mcpServers"] = mcpServers
-
-        let data = try JSONSerialization.data(
-            withJSONObject: config,
-            options: [.prettyPrinted, .sortedKeys]
-        )
-        try data.write(to: configURL, options: .atomic)
-        return configURL
-    }
-
-    private func readJSON(at url: URL) -> [String: Any] {
-        guard let data = try? Data(contentsOf: url),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else { return [:] }
-        return json
+        try client.register()
     }
 }
 
-// MARK: - MCP clients
-
-enum MCPClient: String, ExpressibleByArgument, CaseIterable {
-    case claude
-    case claudeDesktop = "claude-desktop"
-    case cursor
-    case windsurf
-
-    var displayName: String {
-        switch self {
-        case .claude: return "Claude Code"
-        case .claudeDesktop: return "Claude Desktop"
-        case .cursor: return "Cursor"
-        case .windsurf: return "Windsurf"
-        }
-    }
-
-    // All clients use the same `{ "mcpServers": { ... } }` schema; only the
-    // config file location differs.
-    func configURL(home: URL) -> URL {
-        switch self {
-        case .claude:   return home.appendingPathComponent(".claude.json")
-        case .claudeDesktop:
-            return home.appendingPathComponent("Library/Application Support/Claude/claude_desktop_config.json")
-        case .cursor:   return home.appendingPathComponent(".cursor/mcp.json")
-        case .windsurf: return home.appendingPathComponent(".codeium/windsurf/mcp_config.json")
-        }
-    }
-}
+extension MCPClient: ExpressibleByArgument {}
 
 // MARK: - Errors
 

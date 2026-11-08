@@ -59,6 +59,25 @@ final class MCPClientRegistrationTests: XCTestCase {
         XCTAssertEqual(url.path, "/Users/test/Library/Application Support/Claude/claude_desktop_config.json")
     }
 
+    func testRegisterKeepsOtherServersAndIsDetected() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: home) }
+        let url = MCPClient.cursor.configURL(home: home)
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(#"{"mcpServers":{"other":{"command":"x"}},"theme":"dark"}"#.utf8).write(to: url)
+
+        XCTAssertFalse(MCPClient.cursor.isRegistered(home: home))
+        try MCPClient.cursor.register(command: "/opt/homebrew/bin/lokalite", home: home)
+        XCTAssertTrue(MCPClient.cursor.isRegistered(home: home))
+        XCTAssertFalse(MCPClient.windsurf.isRegistered(home: home))
+
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        let servers = try XCTUnwrap(json["mcpServers"] as? [String: Any])
+        XCTAssertNotNil(servers["other"])
+        XCTAssertEqual(json["theme"] as? String, "dark")
+        XCTAssertEqual((servers["lokalite"] as? [String: Any])?["command"] as? String, "/opt/homebrew/bin/lokalite")
+    }
+
     func testSupportedClients() {
         XCTAssertEqual(Set(MCPClient.allCases.map(\.rawValue)), ["claude", "claude-desktop", "cursor", "windsurf"])
     }
