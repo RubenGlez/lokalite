@@ -9,7 +9,7 @@
 Lokalite is a local-first secrets manager for macOS, built for how developers work with AI coding agents. Your API keys, tokens, and credentials live in an encrypted vault on your machine. When an agent needs one, the value is delivered into its shell runtime, never into the chat — so secrets stay out of the model's context and your conversation history. Reaches Claude Code, Cursor, and Windsurf through MCP, on your terms, with every access logged. Menu bar app, CLI, and MCP server in one. No cloud, no accounts, no telemetry.
 
 <p align="center">
-  <img src="assets/screenshots/manager-overview.png" alt="The Lokalite manager showing a project's environments, secrets, and CLI/MCP status" width="100%"/>
+  <img src="assets/screenshots/manager-overview.png" alt="The Lokalite manager: a project's environment chips, secrets table, and project info column, with CLI/MCP status in the sidebar" width="100%"/>
 </p>
 
 ## Why Lokalite
@@ -33,7 +33,7 @@ Lokalite is a local-first secrets manager for macOS, built for how developers wo
 - **Clipboard auto-clear**: copied values are wiped after 30 seconds
 - **Session timeout**: vault auto-locks after inactivity
 - **In-app auto-updates**: the menu bar app keeps itself current via Sparkle — a manual *Check for Updates…* item plus opt-in automatic background checks
-- **MCP integration**: expose your vault as tools to Claude Code, Cursor, Windsurf, and any other MCP-compatible agent
+- **MCP integration**: expose your vault as tools to Claude Code, Cursor, Windsurf, and any other MCP-compatible agent — register it with `lokalite install` or in one click from the app
 - **Secret references**: commit `lokalite://project/KEY` instead of a token in MCP configs; `lokalite run --refs-only` resolves it at spawn time
 - **Zero runtime dependencies**: no cloud, no telemetry, no vendor lock-in
 
@@ -168,12 +168,13 @@ Click the armadillo icon in your menu bar (or press the global shortcut, default
   <img src="assets/screenshots/menu-bar-popover.png" alt="The menu bar popover: search, recently copied secrets, and quick copy/export actions" width="420"/>
 </p>
 
-The secrets manager is a three-column layout:
-- **Left sidebar**: project list; create, rename, and delete projects; set icon and link to a local directory
-- **Centre column**: environment switcher and searchable secrets list for the selected project
-- **Right panel**: edit the selected secret's value; save or delete
+The secrets manager window:
+- **Sidebar**: your projects, plus vault-wide tools — CLI and MCP status (install the CLI or register the MCP server with Claude Code, Claude Desktop, Cursor, or Windsurf in one click), Activity, and Settings. Collapse it to an icon rail with `⌃⌘S`.
+- **Secrets**: the project's landing view — environment chips to switch which environment you're looking at (right-click one to make it the active environment, edit, or delete it), search (`⌘F`), and the secrets table with category and environments per secret. `⌘N` adds a secret.
+- **Project info**: a side column with the project's repository, counts, and last activity — each a shortcut (open the repo, link a folder, jump to the project's filtered activity). Hide it from the header when you want the room.
+- **Project settings** (gear in the header) and **Activity** (sidebar) open as full panes; `⌘[` goes back to the secrets.
 
-On first launch, an onboarding screen guides you through creating your first project.
+On first launch, a welcome screen guides you through creating your first project or importing one from a `.env` file.
 
 Right-click the menu bar icon (or open Settings → Updates) for **Check for Updates…**; once you opt in, the app also checks in the background and installs updates in place.
 
